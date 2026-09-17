@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('questions', function (Blueprint $table) {
+        Schema::create('ar_marker_models', function (Blueprint $table) {
             $table->id();
-            $table->string('text');
-            $table->integer('order')->default(0);
+            $table->foreignId('ar_marker_id')->constrained()->onDelete('cascade');
+            $table->foreignId('ar_model_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('questions');
+        Schema::dropIfExists('ar_marker_models');
     }
 };

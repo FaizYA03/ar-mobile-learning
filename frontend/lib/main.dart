@@ -90,7 +90,7 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF0A8477)),
+            borderSide: BorderSide(Color(0xFF0A8477)),
           ),
         ),
       ),
@@ -106,9 +106,9 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
       return const LoginScreen();
     }
     if (_userRole == 'siswa') {
-      return StudentDashboard(
-        studentName: _userName!,
-        role: _userRole!,
+      return const StudentDashboard(
+        studentName: 'Andi Saputra',
+        role: 'siswa',
       );
     }
     return const LoginScreen();

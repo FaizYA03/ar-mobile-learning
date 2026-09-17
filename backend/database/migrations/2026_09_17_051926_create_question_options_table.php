@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('question_options', function (Blueprint $table) {
             $table->id();
+            $table->string('text');
+            $table->boolean('is_correct')->default(false);
+            $table->integer('order')->default(0);
             $table->timestamps();
         });
     }

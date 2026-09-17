@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('questions', function (Blueprint $table) {
+        Schema::create('ar_markers', function (Blueprint $table) {
             $table->id();
-            $table->string('text');
-            $table->integer('order')->default(0);
+            $table->string('marker_id'); // Unique marker identifier
+            $table->string('marker_type'); // Type/pattern of marker
+            $table->string('image_path'); // Path to marker image
+            $table->string('status')->default('active'); // active, inactive
             $table->timestamps();
         });
     }
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('questions');
+        Schema::dropIfExists('ar_markers');
     }
 };
