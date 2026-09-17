@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,28 +25,38 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final result = await ApiService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final email = _emailController.text.trim();
-    String role;
-    if (email.startsWith('admin')) {
-      role = 'admin';
-    } else if (email.startsWith('guru')) {
-      role = 'guru';
-    } else {
-      role = 'siswa';
+      if (result['success'] == true) {
+        final data = result['data'];
+        await ApiService.setToken(data['token']);
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userRole', data['user']['role']);
+        await prefs.setString('userName', data['user']['name']);
+        await prefs.setString('userEmail', data['user']['email']);
+
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/${data['user']['role']}');
+      } else {
+        setState(() {
+          _errorMessage = result['message'] ?? 'Login gagal';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Gagal terhubung ke server. Pastikan server berjalan.';
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userRole', role);
-    await prefs.setString('userName', email.split('@').first);
-    await prefs.setString('userEmail', email);
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushReplacementNamed('/$role');
   }
 
   @override

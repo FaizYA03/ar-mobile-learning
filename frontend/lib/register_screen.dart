@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -27,18 +28,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _errorMessage = null;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final result = await ApiService.register(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        passwordConfirmation: _confirmPasswordController.text,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userRole', 'siswa');
-    await prefs.setString('userName', _nameController.text.trim());
-    await prefs.setString('userEmail', _emailController.text.trim());
+      if (result['success'] == true) {
+        final data = result['data'];
+        await ApiService.setToken(data['token']);
 
-    if (!mounted) return;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userRole', data['user']['role']);
+        await prefs.setString('userName', data['user']['name']);
+        await prefs.setString('userEmail', data['user']['email']);
 
-    Navigator.of(context).pushReplacementNamed('/siswa');
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/${data['user']['role']}');
+      } else {
+        setState(() {
+          _errorMessage = result['message'] ?? 'Registrasi gagal';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Gagal terhubung ke server. Pastikan server berjalan.';
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
