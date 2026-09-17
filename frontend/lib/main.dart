@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'splash_screen.dart';
 import 'login_screen.dart';
 import 'student_dashboard.dart';
@@ -23,18 +24,27 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
   @override
   void initState() {
     super.initState();
-    _checkFirstLaunch();
+    _loadSharedPreferences();
   }
 
-  Future<void> _checkFirstLaunch() async {
-    // TODO: Replace with actual shared preferences / local storage
-    // For now, simulate first launch
-    await Future.delayed(const Duration(milliseconds: 500));
+  Future<void> _loadSharedPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _hasSeenOnboarding = true;
-      _userRole = 'siswa'; // Default role for demo
-      _userName = 'Andi Saputra';
+      _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+      _userRole = prefs.getString('userRole');
+      _userName = prefs.getString('userName');
     });
+  }
+
+  Future<void> _saveSharedPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenOnboarding', _hasSeenOnboarding);
+    if (_userRole != null) {
+      await prefs.setString('userRole', _userRole!);
+    }
+    if (_userName != null) {
+      await prefs.setString('userName', _userName!);
+    }
   }
 
   Route<dynamic>? _route(RouteSettings? settings) {
@@ -106,7 +116,7 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Color(0xFF0A8477), width: 2),
+            borderSide: BorderSide(Color(0xFF0A8477), width: 2),
           ),
         ),
       ),
