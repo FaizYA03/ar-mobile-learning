@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class StudentDashboard extends StatefulWidget {
-  const StudentDashboard({super.key});
+class GuruDashboard extends StatefulWidget {
+  const GuruDashboard({super.key});
 
   @override
-  State<StudentDashboard> createState() => _StudentDashboardState();
+  State<GuruDashboard> createState() => _GuruDashboardState();
 }
 
-class _StudentDashboardState extends State<StudentDashboard> {
+class _GuruDashboardState extends State<GuruDashboard> {
   int _currentIndex = 0;
 
   @override
@@ -19,8 +19,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           index: _currentIndex,
           children: [
             _buildHome(),
-            const _ComingSoonPage(title: 'Materi'),
-            const _ComingSoonPage(title: 'AR 3D'),
+            const _ComingSoonPage(title: 'Konten'),
             const _ComingSoonPage(title: 'Quiz'),
             const _ComingSoonPage(title: 'Profil'),
           ],
@@ -43,14 +42,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_outlined),
-            activeIcon: Icon(Icons.menu_book),
-            label: 'Materi',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.view_in_ar_outlined),
-            activeIcon: Icon(Icons.view_in_ar),
-            label: 'AR',
+            icon: Icon(Icons.folder_outlined),
+            activeIcon: Icon(Icons.folder),
+            label: 'Konten',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.quiz_outlined),
@@ -74,7 +68,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Halo, Siswa 👋',
+            'Halo, Guru 👋',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
@@ -83,14 +77,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Mari lanjutkan belajar',
+            'Kelola pembelajaran Anda',
             style: TextStyle(fontSize: 14, color: Color(0xFF637080)),
           ),
           const SizedBox(height: 24),
-          _buildProgressCard(),
+          _buildSummaryRow(),
           const SizedBox(height: 20),
           const Text(
-            'Pilih Pembelajaran',
+            'Aksi Cepat',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -98,97 +92,68 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
           ),
           const SizedBox(height: 14),
-          _buildLearningCard(
-            icon: Icons.book_outlined,
-            title: 'Materi',
-            subtitle: 'Pelajari materi Informatika',
+          _buildQuickAction(
+            icon: Icons.add_circle_outline,
+            title: 'Tambah Materi',
             color: const Color(0xFF0A8477),
           ),
-          const SizedBox(height: 12),
-          _buildLearningCard(
+          const SizedBox(height: 10),
+          _buildQuickAction(
             icon: Icons.view_in_ar_outlined,
-            title: 'AR 3D',
-            subtitle: 'Lihat objek pembelajaran 3D',
+            title: 'Buat AR',
             color: const Color(0xFF5B6ABF),
           ),
-          const SizedBox(height: 12),
-          _buildLearningCard(
+          const SizedBox(height: 10),
+          _buildQuickAction(
             icon: Icons.quiz_outlined,
-            title: 'Quiz',
-            subtitle: 'Uji pemahamanmu',
+            title: 'Buat Quiz',
             color: const Color(0xFFE67E22),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0A8477), Color(0xFF0D9E8F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          const SizedBox(height: 24),
           const Text(
-            'Progress Pembelajaran',
+            'Manajemen',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: Color(0xFF1A1A2E),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildProgressItem('Materi', '3/5'),
-              _buildProgressItem('AR', '2/3'),
-              _buildProgressItem('Quiz', '1/2'),
-            ],
+          const SizedBox(height: 14),
+          _buildManagementCard(
+            icon: Icons.track_changes_outlined,
+            title: 'TP / ATP',
+            subtitle: 'Kelola tujuan pembelajaran',
+          ),
+          const SizedBox(height: 10),
+          _buildManagementCard(
+            icon: Icons.menu_book_outlined,
+            title: 'Materi',
+            subtitle: 'Buat, edit, dan hapus materi',
+          ),
+          const SizedBox(height: 10),
+          _buildManagementCard(
+            icon: Icons.view_in_ar_outlined,
+            title: 'AR Content',
+            subtitle: 'Marker, model 3D, hotspot',
+          ),
+          const SizedBox(height: 10),
+          _buildManagementCard(
+            icon: Icons.quiz_outlined,
+            title: 'Quiz',
+            subtitle: 'Buat dan kelola quiz',
+          ),
+          const SizedBox(height: 10),
+          _buildManagementCard(
+            icon: Icons.assessment_outlined,
+            title: 'Hasil Quiz',
+            subtitle: 'Lihat hasil siswa',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildProgressItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.8),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLearningCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-  }) {
+  Widget _buildSummaryRow() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -204,17 +169,88 @@ class _StudentDashboardState extends State<StudentDashboard> {
         ],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
+          _buildSummaryItem('12', 'Materi', const Color(0xFF0A8477)),
+          _buildSummaryItem('5', 'AR', const Color(0xFF5B6ABF)),
+          _buildSummaryItem('8', 'Quiz', const Color(0xFFE67E22)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String count, String label, Color color) {
+    return Column(
+      children: [
+        Text(
+          count,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: color,
           ),
-          const SizedBox(width: 16),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF637080)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAction({
+    required IconData icon,
+    required String title,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManagementCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF0A8477), size: 22),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +258,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1A1A2E),
                   ),
@@ -238,10 +274,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
               ],
             ),
           ),
-          const Icon(
-            Icons.chevron_right,
-            color: Color(0xFFD0D5D8),
-          ),
+          const Icon(Icons.chevron_right, color: Color(0xFFD0D5D8)),
         ],
       ),
     );

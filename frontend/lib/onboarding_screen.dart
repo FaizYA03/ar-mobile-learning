@@ -1,260 +1,219 @@
 import 'package:flutter/material.dart';
-
-enum OnboardingSlide { slide1, slide2, slide3 }
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  final PageController pageController;
-  final Function(int) onPageChanged;
-  final Function()? onSkip;
-  final Function()? onNext;
-
-  const OnboardingScreen({
-    super.key,
-    required this.pageController,
-    required this.onPageChanged,
-    this.onSkip,
-    this.onNext,
-  });
+  const OnboardingScreen({super.key});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
   int _currentIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    widget.pageController.addListener(() {
-      final page = widget.pageController.page!.round();
-      setState(() {
-        _currentIndex = page;
-      });
-    });
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
-  @override
-  void dispose() {
-    widget.pageController.dispose();
-    super.dispose();
+  void _onNext() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  Future<void> _onFinish() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenOnboarding', true);
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/login');
+  }
+
+  void _onSkip() {
+    _pageController.animateToPage(
+      2,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          PageView(
-            controller: widget.pageController,
-            onPageChanged: widget.onPageChanged,
-            children: const [
-              _OnboardingSlide1(),
-              _OnboardingSlide2(),
-              _OnboardingSlide3(),
-            ],
-          ),
-          _buildBottomIndicator(),
-          _buildActionButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomIndicator() {
-    return Positioned(
-      bottom: 24,
-      left: 0,
-      right: 0,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (index) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: _currentIndex == index ? 20 : 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: _currentIndex == index ? Color(0xFF0A8477) : Color(0xFFD0D5D8),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Positioned(
-      bottom: 32,
-      left: 0,
-      right: 0,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          if (_currentIndex != 0)
-            TextButton(
-              onPressed: widget.onSkip,
-              child: const Text('Skip'),
-            ),
-          if (_currentIndex == 2)
-            ElevatedButton(
-              onPressed: widget.onNext,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0A8477),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 52),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() => _currentIndex = index);
+                },
+                children: const [
+                  _OnboardingSlide(
+                    icon: Icons.menu_book_rounded,
+                    title: 'Belajar Informatika\nLebih Menarik',
+                    description:
+                        'Pelajari konsep Informatika melalui materi yang terstruktur dan mudah dipahami.',
+                  ),
+                  _OnboardingSlide(
+                    icon: Icons.view_in_ar_rounded,
+                    title: 'Temukan\nDunia 3D',
+                    description:
+                        'Scan marker dan lihat objek pembelajaran dalam bentuk 3D secara interaktif.',
+                  ),
+                  _OnboardingSlide(
+                    icon: Icons.quiz_rounded,
+                    title: 'Uji\nPemahamanmu',
+                    description:
+                        'Uji pemahaman setelah belajar dan lihat hasilnya.',
+                  ),
+                ],
               ),
-              child: const Text(
-                'Mulai Belajar',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+            ),
+            _buildIndicator(),
+            const SizedBox(height: 12),
+            _buildButtons(),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (index) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: _currentIndex == index ? 24 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: _currentIndex == index
+                ? const Color(0xFF0A8477)
+                : const Color(0xFFD0D5D8),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: _currentIndex == 2
+          ? SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _onFinish,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A8477),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Mulai Belajar',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             )
-          else
-            ElevatedButton(
-              onPressed: () {
-                widget.pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0A8477),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 52),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Next',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+          : Row(
+              children: [
+                if (_currentIndex > 0)
+                  TextButton(
+                    onPressed: _onSkip,
+                    child: const Text(
+                      'Skip',
+                      style: TextStyle(
+                        color: Color(0xFF637080),
+                        fontSize: 14,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(width: 80),
+                const Spacer(),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _onNext,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0A8477),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Next',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 80),
+              ],
             ),
-        ],
-      ),
     );
   }
 }
 
-class _OnboardingSlide1 extends StatelessWidget {
-  const _OnboardingSlide1();
+class _OnboardingSlide extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _OnboardingSlide({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.school,
-            size: 80,
-            color: Color(0xFF0A8477),
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A8477).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Icon(icon, size: 72, color: const Color(0xFF0A8477)),
+          ),
+          const SizedBox(height: 40),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E),
+              height: 1.2,
+            ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'Belajar Informatika Lebih Menarik',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w400,
-              letterSpacing: -0.5,
-              color: Color(0xFF2D3436),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Pelajari konsep Informatika melalui materi yang terstruktur dan mudah dipahami.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF636E72),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OnboardingSlide2 extends StatelessWidget {
-  const _OnboardingSlide2();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.qr_code_scanner,
-            size: 80,
-            color: Color(0xFF0A8477),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Temukan Dunia 3D',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w400,
-              letterSpacing: -0.5,
-              color: Color(0xFF2D3436),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Scan marker dan lihat objek pembelajaran dalam bentuk 3D secara interaktif.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF636E72),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OnboardingSlide3 extends StatelessWidget {
-  const _OnboardingSlide3();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.quiz_rounded,
-            size: 80,
-            color: Color(0xFF0A8477),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Uji Pemahamanmu',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w400,
-              letterSpacing: -0.5,
-              color: Color(0xFF2D3436),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Uji pemahaman setelah belajar dan lihat hasilnya.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF636E72),
+            description,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Color(0xFF637080),
+              height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),

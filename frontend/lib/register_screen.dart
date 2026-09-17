@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _obscureText = true;
+  bool _obscureConfirmText = true;
   String? _errorMessage;
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -28,30 +31,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    final email = _emailController.text.trim();
-    String role;
-    if (email.startsWith('admin')) {
-      role = 'admin';
-    } else if (email.startsWith('guru')) {
-      role = 'guru';
-    } else {
-      role = 'siswa';
-    }
-
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userRole', role);
-    await prefs.setString('userName', email.split('@').first);
-    await prefs.setString('userEmail', email);
+    await prefs.setString('userRole', 'siswa');
+    await prefs.setString('userName', _nameController.text.trim());
+    await prefs.setString('userEmail', _emailController.text.trim());
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacementNamed('/$role');
+    Navigator.of(context).pushReplacementNamed('/siswa');
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -67,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 48),
+                const SizedBox(height: 32),
                 Center(
                   child: Container(
                     width: 72,
@@ -77,16 +72,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Icon(
-                      Icons.view_in_ar,
+                      Icons.person_add_outlined,
                       size: 40,
                       color: Color(0xFF0A8477),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 const Center(
                   child: Text(
-                    'Selamat Datang',
+                    'Buat Akun',
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
@@ -97,11 +92,50 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 const Center(
                   child: Text(
-                    'Masuk untuk melanjutkan belajar',
+                    'Daftar untuk memulai belajar',
                     style: TextStyle(fontSize: 14, color: Color(0xFF637080)),
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
+                const Text(
+                  'Nama Lengkap',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    hintText: 'Masukkan nama lengkap',
+                    prefixIcon: const Icon(Icons.person_outline, size: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                          color: Color(0xFF0A8477), width: 1.5),
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8F9FA),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Nama wajib diisi';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
                 const Text(
                   'Email',
                   style: TextStyle(
@@ -116,17 +150,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     hintText: 'contoh@email.com',
-                    prefixIcon:
-                        const Icon(Icons.email_outlined, size: 20),
+                    prefixIcon: const Icon(Icons.email_outlined, size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFD0D5D8)),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFD0D5D8)),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -146,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 const Text(
                   'Password',
                   style: TextStyle(
@@ -161,8 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _obscureText,
                   decoration: InputDecoration(
                     hintText: 'Masukkan password',
-                    prefixIcon:
-                        const Icon(Icons.lock_outline, size: 20),
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureText
@@ -176,13 +206,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFD0D5D8)),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFD0D5D8)),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -198,6 +226,60 @@ class _LoginScreenState extends State<LoginScreen> {
                     }
                     if (value.length < 6) {
                       return 'Password minimal 6 karakter';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Konfirmasi Password',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmText,
+                  decoration: InputDecoration(
+                    hintText: 'Ulangi password',
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmText
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        setState(
+                            () => _obscureConfirmText = !_obscureConfirmText);
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                          color: Color(0xFF0A8477), width: 1.5),
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF8F9FA),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Konfirmasi password wajib diisi';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Password tidak cocok';
                     }
                     return null;
                   },
@@ -229,17 +311,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
+                    onPressed: _isLoading ? null : _register,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0A8477),
                       foregroundColor: Colors.white,
                       disabledBackgroundColor:
-                          const Color(0xFF0A8477).withValues(alpha: 0.5),
+                          const Color(0xFF0A8477).withOpacity(0.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -255,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            'Masuk',
+                            'Daftar',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -263,23 +344,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Belum punya akun? ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF637080),
-                      ),
+                      'Sudah punya akun? ',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF637080)),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).pushNamed('/register');
-                      },
+                      onTap: () => Navigator.of(context).pop(),
                       child: const Text(
-                        'Daftar',
+                        'Masuk',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -289,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 40),
               ],
             ),
           ),

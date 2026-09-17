@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'splash_screen.dart';
+import 'onboarding_screen.dart';
 import 'login_screen.dart';
+import 'register_screen.dart';
 import 'student_dashboard.dart';
+import 'guru_dashboard.dart';
+import 'admin_dashboard.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,9 +21,9 @@ class ARMobileLearningApp extends StatefulWidget {
 }
 
 class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
+  bool _isLoading = true;
   bool _hasSeenOnboarding = false;
   String? _userRole;
-  String? _userName;
 
   @override
   void initState() {
@@ -32,7 +36,7 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     setState(() {
       _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
       _userRole = prefs.getString('userRole');
-      _userName = prefs.getString('userName');
+      _isLoading = false;
     });
   }
 
@@ -46,55 +50,33 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
         colorScheme: const ColorScheme.light(
           primary: Color(0xFF0A8477),
           surface: Colors.white,
-          onSurface: Color(0xFF2D3436),
+          onSurface: Color(0xFF1A1A2E),
           error: Color(0xFFC62828),
         ),
         scaffoldBackgroundColor: const Color(0xFFF5F7FA),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          foregroundColor: Color(0xFF2D3436),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0A8477),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 52),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: Color(0xFF0A8477),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          hintStyle: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF637080),
-          ),
-          labelStyle: const TextStyle(
-            fontSize: 14,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(Color(0xFF0A8477)),
-          ),
+          foregroundColor: Color(0xFF1A1A2E),
         ),
       ),
-      home: _buildInitialRoute(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => _isLoading
+            ? const Scaffold(
+                backgroundColor: Color(0xFF0A8477),
+                body: Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              )
+            : _buildInitialRoute(),
+        '/onboarding': (context) => const OnboardingScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/siswa': (context) => const StudentDashboard(),
+        '/guru': (context) => const GuruDashboard(),
+        '/admin': (context) => const AdminDashboard(),
+      },
     );
   }
 
@@ -105,12 +87,15 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     if (_userRole == null) {
       return const LoginScreen();
     }
-    if (_userRole == 'siswa') {
-      return const StudentDashboard(
-        studentName: 'Andi Saputra',
-        role: 'siswa',
-      );
+    switch (_userRole) {
+      case 'siswa':
+        return const StudentDashboard();
+      case 'guru':
+        return const GuruDashboard();
+      case 'admin':
+        return const AdminDashboard();
+      default:
+        return const LoginScreen();
     }
-    return const LoginScreen();
   }
 }
