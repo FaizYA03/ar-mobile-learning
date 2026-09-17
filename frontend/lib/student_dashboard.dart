@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ar_mobile_learning/core/theme/app_theme.dart';
-import 'package:ar_mobile_learning/core/widgets/common_widgets.dart';
 
 class StudentDashboard extends StatelessWidget {
   final String studentName;
@@ -18,21 +16,24 @@ class StudentDashboard extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: AppColors.onSurface,
-        title: AppBarTitle(
-          title: 'Dashboard',
-          showBackButton: false,
+        foregroundColor: const Color(0xFF2D3436),
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w300,
+          ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 24),
             _buildProgressSection(),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 24),
             _buildLearningOptions(context),
           ],
         ),
@@ -46,14 +47,18 @@ class StudentDashboard extends StatelessWidget {
       children: [
         Text(
           'Halo, $studentName 👋',
-          style: AppTypography.displayLarge.copyWith(
-            color: AppColors.onSurface,
+          style: const TextStyle(
+            fontSize: 40,
+            fontWeight: FontWeight.w300,
+            color: Color(0xFF2D3436),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 8),
         const Text(
           'Mari lanjutkan belajar',
-          style: AppTypography.bodyMedium,
+          style: TextStyle(
+            fontSize: 14,
+          ),
         ),
       ],
     );
@@ -62,15 +67,18 @@ class StudentDashboard extends StatelessWidget {
   Widget _buildProgressSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Progress Pembelajaran',
-              style: AppTypography.titleMedium,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 16),
             _buildProgressItem(
               icon: Icons.menu_book,
               title: 'Materi',
@@ -98,30 +106,34 @@ class StudentDashboard extends StatelessWidget {
     required String value,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+color: Color(0xFF0A8477),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
-          const SizedBox(width: AppSpacing.md),
+            child: Icon(icon, color: Color(0xFF0A8477), size: 20),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: AppTypography.bodyMedium,
+                  style: const TextStyle(
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF637080),
                   ),
                 ),
               ],
@@ -141,29 +153,23 @@ class StudentDashboard extends StatelessWidget {
           icon: Icons.book,
           title: 'Materi',
           subtitle: 'Pelajari materi Informatika',
-          onTap: () {
-            // TODO: Navigate to materi
-          },
+          onTap: () {},
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: 16),
         _buildOptionCard(
           context,
           icon: Icons.qr_code,
           title: 'AR 3D',
           subtitle: 'Belajar menggunakan AR',
-          onTap: () {
-            // TODO: Navigate to AR
-          },
+          onTap: () {},
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: 16),
         _buildOptionCard(
           context,
           icon: Icons.quiz,
           title: 'Quiz',
           subtitle: 'Uji pemahamanmu',
-          onTap: () {
-            // TODO: Navigate to quiz
-          },
+          onTap: () {},
         ),
       ],
     );
@@ -178,43 +184,45 @@ class StudentDashboard extends StatelessWidget {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppBorderRadius.md),
+      borderRadius: BorderRadius.circular(12),
       child: Card(
-        elevation: 0,
-        color: AppColors.surface,
+        color: Color(0xFFFFFFFF),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(24),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppBorderRadius.md),
+color: Color(0x1A0A8477),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 28),
+                child: Icon(icon, color: Color(0xFF0A8477), size: 28),
               ),
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: 24),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: AppTypography.bodyLarge,
+                      style: const TextStyle(
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF637080),
                       ),
                     ),
                   ],
                 ),
               ),
               const Icon(Icons.arrow_forward_ios,
-                  size: 16, color: AppColors.outline),
+                  size: 16, color: Color(0xFFD0D5D8)),
             ],
           ),
         ),

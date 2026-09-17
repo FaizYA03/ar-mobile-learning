@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ar_mobile_learning/core/theme/app_theme.dart';
-import 'package:ar_mobile_learning/core/widgets/common_widgets.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -47,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: AppColors.primary,
+        color: Color(0xFF0A8477),
         child: Center(
           child: FadeTransition(
             opacity: _opacityAnimation,

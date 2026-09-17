@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ar_mobile_learning/core/theme/app_theme.dart';
-import 'package:ar_mobile_learning/core/widgets/common_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  dispose() {
+  void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -53,21 +51,32 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: AppSpacing.xl),
-                PrimaryButton(
-                  title: 'AR Mobile Learning',
+                const SizedBox(height: 40),
+                ElevatedButton(
                   onPressed: () {},
-                  height: 60,
-                  expanded: true,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF0A8477),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 60),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: const Text(
+                    'AR Mobile Learning',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: 24),
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -85,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscureText,
@@ -113,32 +122,54 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: 16),
                 if (_errorMessage != null) ...[
                   Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    color: AppColors.error.withOpacity(0.1),
+                    padding: const EdgeInsets.all(8),
+                    color: Color(0x1FC62828),
                     child: Row(
                       children: [
-                        const Icon(Icons.error, color: AppColors.error),
-                        const SizedBox(width: AppSpacing.sm),
+                        const Icon(Icons.error, color: Color(0xFFC62828)),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.error,
+                            style: const TextStyle(
+                              color: Color(0xFFC62828),
+                              fontSize: 12,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: 16),
                 ],
-                PrimaryButton(
-                  title: 'Login',
+                ElevatedButton(
                   onPressed: _login,
-                  loading: _isLoading,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF0A8477),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Login',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
                 TextButton(
                   onPressed: () {
@@ -146,10 +177,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: const Text('Lupa Password?'),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: 24),
                 const Text(
                   'Dengan login, Anda setuju dengan Persyaratan dan Ketentuan',
-                  style: AppTypography.bodySmall,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF636E72),
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],

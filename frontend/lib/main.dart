@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ar_mobile_learning/core/theme/app_theme.dart';
-import 'package:ar_mobile_learning/screens/splash_screen.dart';
-import 'package:ar_mobile_learning/screens/onboarding_screen.dart';
-import 'package:ar_mobile_learning/screens/login_screen.dart';
-import 'package:ar_mobile_learning/screens/student_dashboard.dart';
+import 'splash_screen.dart';
+import 'login_screen.dart';
+import 'student_dashboard.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,18 +37,10 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     });
   }
 
-  Route<dynamic> _routeForRole() {
+  Route<dynamic>? _route(RouteSettings? settings) {
     if (!_hasSeenOnboarding) {
-      return _routeSplash();
+      return MaterialPageRoute(builder: (_) => const SplashScreen());
     }
-    return _routeAfterOnboarding();
-  }
-
-  Route<dynamic> _routeSplash() {
-    return MaterialPageRoute(builder: (_) => const SplashScreen());
-  }
-
-  Route<dynamic> _routeAfterOnboarding() {
     if (_userRole == null) {
       return MaterialPageRoute(builder: (_) => const LoginScreen());
     }
@@ -62,20 +52,66 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     );
   }
 
-  void _markOnboardingSeen() {
-    setState(() {
-      _hasSeenOnboarding = true;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AR Mobile Learning',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF0A8477),
+          surface: Colors.white,
+          onSurface: Color(0xFF2D3436),
+          error: Color(0xFFC62828),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          foregroundColor: Color(0xFF2D3436),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF0A8477),
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 52),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Color(0xFF0A8477),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          hintStyle: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF637080),
+          ),
+          labelStyle: const TextStyle(
+            fontSize: 14,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD0D5D8)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Color(0xFF0A8477), width: 2),
+          ),
+        ),
+      ),
       initialRoute: '/',
-      onGenerateRoute: _routeForRole,
+      onGenerateRoute: _route,
     );
   }
 }
