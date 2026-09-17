@@ -90,7 +90,7 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(Color(0xFF0A8477), width: 2),
+            borderSide: BorderSide(color: Color(0xFF0A8477)),
           ),
         ),
       ),
