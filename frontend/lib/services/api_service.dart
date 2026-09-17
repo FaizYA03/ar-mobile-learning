@@ -133,4 +133,27 @@ class ApiService {
       _post('/guru/quizzes/$quizId/questions', data);
   static Future<Map<String, dynamic>> guruDeleteQuestion(int questionId) =>
       _delete('/guru/questions/$questionId');
+
+  // TP/ATP (Siswa / Guru / Admin)
+  static Future<Map<String, dynamic>> getTpAtpList() => _get('/tp-atp');
+  static Future<Map<String, dynamic>> getTpAtpDetail(int id) => _get('/tp-atp/$id');
+  static Future<Map<String, dynamic>> guruCreateTpAtp(Map<String, dynamic> data) =>
+      _post('/guru/tp-atp', data);
+  static Future<Map<String, dynamic>> guruUpdateTpAtp(int id, Map<String, dynamic> data) =>
+      _put('/guru/tp-atp/$id', data);
+  static Future<Map<String, dynamic>> guruDeleteTpAtp(int id) =>
+      _delete('/guru/tp-atp/$id');
+
+  // Materi (Siswa / Guru / Admin)
+  static Future<Map<String, dynamic>> getMateriList({int? tpAtpId}) {
+    final query = tpAtpId != null ? '?tp_atp_id=$tpAtpId' : '';
+    return _get('/materi$query');
+  }
+  static Future<Map<String, dynamic>> getMateriDetail(int id) => _get('/materi/$id');
+  static Future<Map<String, dynamic>> guruCreateMateri(Map<String, dynamic> data) =>
+      _post('/guru/materi', data);
+  static Future<Map<String, dynamic>> guruUpdateMateri(int id, Map<String, dynamic> data) =>
+      _put('/guru/materi/$id', data);
+  static Future<Map<String, dynamic>> guruDeleteMateri(int id) =>
+      _delete('/guru/materi/$id');
 }
