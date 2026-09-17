@@ -1,8 +1,8 @@
 # AR MOBILE LEARNING — PROJECT STATUS REPORT
 
-> **Tanggal:** 17 September 2026
-> **Versi:** 0.1.0-alpha
-> **Stack:** Flutter (Frontend) + Laravel 12 (Backend) + MySQL
+> **Tanggal:** 18 September 2026
+> **Versi:** 0.3.0-alpha
+> **Stack:** Flutter (Frontend) + Laravel 12 (Backend) + SQLite (dev) / MySQL (prod)
 
 ---
 
@@ -10,11 +10,47 @@
 
 | Komponen | Status | Persentase |
 |----------|--------|------------|
-| Backend API | Partial | ~35% |
-| Frontend UI | Partial | ~40% |
-| Database Schema | Partial | ~60% |
+| Backend API | Partial | ~55% |
+| Frontend UI | Partial | ~60% |
+| Database Schema | Partial | ~70% |
 | AR System | Belum ada | 0% |
-| Integrasi FE↔BE | Partial | ~30% |
+| Integrasi FE↔BE | Partial | ~50% |
+
+---
+
+## UPDATE LOG
+
+### ✅ Fase 1 — Data Foundation (Selesai: 18 Sep 2026)
+- Migration + Model + API untuk **TP/ATP** dan **Materi**
+- 5 Eloquent Models: `TpAtp`, `Materi`, `ArModel`, `ArMarker`, `ArHotspot`
+- 2 Controllers: `TpAtpController` (5 methods), `MateriController` (5 methods + file upload)
+- Routes: `GET /api/tp-atp`, `GET /api/tp-atp/{id}`, `GET /api/materi`, `GET /api/materi/{id}`, CRUD guru
+- Seeder: 3 TP/ATP, 4 Materi, 2 AR Models (Kurikulum Informatika Fase E)
+- ApiService Flutter: 10 methods baru
+- **Tests: 10 passed (70 assertions)**
+
+### ✅ Fase 2 — Siswa Learning Flow (Selesai: 18 Sep 2026)
+- 7 screen baru di `frontend/lib/screens/`:
+  - `tp_atp_screen.dart` — Pilih TP/ATP
+  - `materi_list_screen.dart` — Daftar materi per TP/ATP
+  - `materi_detail_screen.dart` — Baca materi lengkap
+  - `quiz_list_screen.dart` — Daftar quiz
+  - `quiz_take_screen.dart` — Kerjakan quiz interaktif
+  - `quiz_result_screen.dart` — Hasil quiz (pass/fail)
+  - `ar_hub_screen.dart` — Katalog AR (placeholder)
+- `student_dashboard.dart` terintegrasi: 3 placeholder → real screens
+- Learning cards di Home tappable → navigasi ke tab terkait
+- **flutter analyze: 0 new issues**
+
+### ✅ Fase 3 — Guru Content Management (Selesai: 18 Sep 2026)
+- 2 screen baru di `frontend/lib/screens/`:
+  - `guru_tp_atp_screen.dart` — CRUD TP/ATP (list, add, edit, delete)
+  - `guru_materi_screen.dart` — CRUD Materi (list, add, edit, delete, filter, upload gambar)
+- `guru_dashboard.dart` diperluas: 3 tab → 5 tab (Home, TP/ATP, Materi, Quiz, Profil)
+- Quick actions di Home navigasi ke tab yang benar
+- `api_service.dart`: multipart upload support (`_postMultipart`) untuk file gambar cover
+- Package baru: `image_picker: ^1.1.2`
+- **flutter analyze: 0 new issues** (4 pre-existing info-level deprecations only)
 
 ---
 
@@ -29,6 +65,10 @@
 | `/api/logout` | POST | Hapus token | Sanctum |
 | `/api/user` | GET | Data user dari token | Sanctum |
 | `/api/dashboard` | GET | Dashboard stats per role | Sanctum |
+| `/api/tp-atp` | GET | List TP/ATP aktif + materi count | Sanctum |
+| `/api/tp-atp/{id}` | GET | Detail TP/ATP + materi published | Sanctum |
+| `/api/materi` | GET | List materi (filter ?tp_atp_id=) | Sanctum |
+| `/api/materi/{id}` | GET | Detail materi + relasi TP/ATP + AR | Sanctum |
 | `/api/admin/users` | GET | List semua user | Admin |
 | `/api/admin/users` | POST | Tambah user baru | Admin |
 | `/api/admin/users/{id}` | PUT | Edit user | Admin |
@@ -42,6 +82,12 @@
 | `/api/guru/quizzes/{id}` | DELETE | Hapus quiz | Guru/Admin |
 | `/api/guru/quizzes/{id}/questions` | POST | Tambah soal + opsi | Guru/Admin |
 | `/api/guru/questions/{id}` | DELETE | Hapus soal | Guru/Admin |
+| `/api/guru/tp-atp` | POST | Buat TP/ATP | Guru/Admin |
+| `/api/guru/tp-atp/{id}` | PUT | Edit TP/ATP | Guru/Admin |
+| `/api/guru/tp-atp/{id}` | DELETE | Hapus TP/ATP | Guru/Admin |
+| `/api/guru/materi` | POST | Buat materi (multipart) | Guru/Admin |
+| `/api/guru/materi/{id}` | POST/PUT | Edit materi (multipart) | Guru/Admin |
+| `/api/guru/materi/{id}` | DELETE | Hapus materi | Guru/Admin |
 
 ### 1.2 Models
 
@@ -52,6 +98,11 @@
 | Question | questions | quiz_id, text, order | belongsTo Quiz, hasMany Options | ✅ |
 | QuestionOption | question_options | question_id, text, is_correct, order | belongsTo Question | ✅ |
 | QuizAttempt | quiz_attempts | user_id, quiz_id, score, passed | belongsTo User, belongsTo Quiz | ✅ |
+| TpAtp | tp_atp | kode, fase, elemen, judul, deskripsi, order, is_active | hasMany Materi | ✅ |
+| Materi | materi | tp_atp_id, ar_model_id, judul, slug, ringkasan, konten, gambar_cover, estimasi_menit, order, is_published | belongsTo TpAtp, belongsTo ArModel | ✅ |
+| ArModel | ar_models | model_name, glb_path, thumbnail_path, description, category, is_active | hasMany ArMarker, hasMany ArHotspot | ✅ |
+| ArMarker | ar_markers | marker_id, marker_type, image_path, status | belongsToMany ArModel | ✅ |
+| ArHotspot | ar_hotspots | ar_model_id, title, description, latitude, longitude, image_path, is_active | belongsTo ArModel | ✅ |
 
 ### 1.3 Middleware
 
@@ -61,26 +112,7 @@
 | RoleMiddleware | Cek role user (admin/guru/siswa) | ✅ |
 | Sanctum | API token authentication | ✅ |
 
-### 1.4 Database Schema (14 Migrations)
-
-| Tabel | Kolom Utama | Foreign Keys | Status |
-|-------|-------------|--------------|--------|
-| `users` | id, name, email, password, role, avatar | — | ✅ |
-| `quizzes` | id, title, description, time_limit, passing_score | — | ✅ |
-| `questions` | id, quiz_id, text, order | quiz_id → quizzes | ✅ |
-| `question_options` | id, question_id, text, is_correct, order | question_id → questions | ✅ |
-| `quiz_attempts` | id, user_id, quiz_id, score, passed | user_id → users, quiz_id → quizzes | ✅ |
-| `ar_markers` | id, marker_id, marker_type, image_path, status | — | ⚠️ Tabel ada, tidak ada Model/API |
-| `ar_models` | id, model_name, glb_path, thumbnail_path, description, category, is_active | — | ⚠️ Tabel ada, tidak ada Model/API |
-| `ar_marker_models` | id, ar_marker_id, ar_model_id | ar_marker_id → ar_markers, ar_model_id → ar_models | ⚠️ Tabel ada, tidak ada Model/API |
-| `ar_hotspots` | id, ar_model_id, title, description, latitude, longitude, image_path, is_active | ar_model_id → ar_models | ⚠️ Tabel ada, tidak ada Model/API |
-| `marker_3d_mappings` | id, ar_marker_id, ar_model_id, mapping_method, mapping_status, mapping_notes | ar_marker_id → ar_markers, ar_model_id → ar_models | ⚠️ Tabel ada, tidak ada Model/API |
-| `personal_access_tokens` | id, tokenable_type, tokenable_id, name, token, abilities | (Sanctum) | ✅ |
-| `cache` | key, value, expiration | — | ✅ |
-| `cache_locks` | key, owner, expiration | — | ✅ |
-| `jobs` / `job_batches` / `failed_jobs` | Standard Laravel | — | ✅ |
-
-### 1.5 Seeder
+### 1.4 Seeder
 
 | Data | Jumlah | Status |
 |------|--------|--------|
@@ -88,12 +120,12 @@
 | Quiz (Algoritma, Jaringan, Basis Data) | 3 | ✅ |
 | Questions | 6 | ✅ |
 | Question Options | 24 | ✅ |
-| TP/ATP | 0 | ❌ Belum ada |
-| Materi | 0 | ❌ Belum ada |
+| TP/ATP (Informatika Fase E) | 3 | ✅ |
+| Materi (terhubung ke TP/ATP) | 4 | ✅ |
+| AR Models (CPU, Router) | 2 | ✅ |
 | AR Markers | 0 | ❌ Belum ada |
-| AR Models | 0 | ❌ Belum ada |
 
-### 1.6 Akun Demo
+### 1.5 Akun Demo
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -115,12 +147,21 @@ frontend/lib/
 ├── onboarding_screen.dart             # 3 slide onboarding
 ├── login_screen.dart                  # Login form + API integration
 ├── register_screen.dart               # Register form + API integration
-├── student_dashboard.dart             # Dashboard siswa + bottom nav + logout
-├── guru_dashboard.dart                # Dashboard guru + quiz CRUD + logout
+├── student_dashboard.dart             # Dashboard siswa + 5 tab + real screens
+├── guru_dashboard.dart                # Dashboard guru + 5 tab (Home/TP-ATP/Materi/Quiz/Profil)
 ├── admin_dashboard.dart               # Dashboard admin + user CRUD + logout
 ├── services/
-│   └── api_service.dart               # HTTP client ke backend
-└── features/                          # (kosong)
+│   └── api_service.dart               # HTTP client + multipart upload
+└── screens/
+    ├── tp_atp_screen.dart             # [Siswa] Pilih TP/ATP
+    ├── materi_list_screen.dart        # [Siswa] Daftar materi per TP/ATP
+    ├── materi_detail_screen.dart      # [Siswa] Baca materi lengkap
+    ├── quiz_list_screen.dart          # [Siswa] Daftar quiz
+    ├── quiz_take_screen.dart          # [Siswa] Kerjakan quiz interaktif
+    ├── quiz_result_screen.dart        # [Siswa] Hasil quiz (pass/fail)
+    ├── ar_hub_screen.dart             # [Siswa] Katalog AR placeholder
+    ├── guru_tp_atp_screen.dart        # [Guru] CRUD TP/ATP
+    └── guru_materi_screen.dart        # [Guru] CRUD Materi + upload gambar
 ```
 
 ### 2.2 Screens yang Sudah Berfungsi ✅
@@ -131,28 +172,30 @@ frontend/lib/
 | **Onboarding** | 3 slide (Belajar, AR, Quiz) + page indicator + Next/Skip/Mulai Belajar |
 | **Login** | Email + password + show/hide + loading/error state + validasi + link Daftar + panggil API |
 | **Register** | Nama + email + password + konfirmasi + loading/error + validasi + panggil API |
-| **Student Dashboard** | Header nama + progress card + 3 learning cards (Materi/AR/Quiz) + bottom nav 5 tab + Logout |
-| **Guru Dashboard** | Header + summary stats + quick actions + **Quiz Management** (list/buat/hapus/tambah soal) + bottom nav + Logout |
-| **Admin Dashboard** | Header + stats cards (Users/Guru/Siswa/Quiz) + **User Management** (list/tambah/edit/hapus + role) + bottom nav + Logout |
-| **ApiService** | Token management + semua endpoint terhubung + error handling |
+| **Student Dashboard** | 5 tab: Home (progress + learning cards), Materi (TP/ATP), AR Hub, Quiz List, Profil |
+| **Siswa — TP/ATP Selection** | List TP/ATP cards, pull-to-refresh, empty/error states |
+| **Siswa — Materi List** | Daftar materi per TP/ATP, numbered items, AR badge |
+| **Siswa — Materi Detail** | Konten reader, gambar cover, AR model banner, aksi quiz |
+| **Siswa — Quiz List** | List quiz dengan badges (waktu, soal, KKM), "Mulai Quiz" |
+| **Siswa — Quiz Take** | Progress bar, pilihan A/B/C/D, navigasi prev/next, confirm submit |
+| **Siswa — Quiz Result** | Skor pass/fail, statistik benar/salah, "Kembali ke Dashboard" |
+| **Siswa — AR Hub** | Katalog 3D models placeholder |
+| **Guru Dashboard** | 5 tab: Home (summary + quick actions), TP/ATP, Materi, Quiz, Profil |
+| **Guru — TP/ATP Management** | CRUD TP/ATP (list/tambah/edit/hapus), badges kode/fase/status, pull-to-refresh |
+| **Guru — Materi Management** | CRUD Materi (list/tambah/edit/hapus), filter TP/ATP, upload gambar cover, badges published/draft/AR |
+| **Guru — Quiz Management** | CRUD Quiz (list/buat/hapus/tambah soal) |
+| **Admin Dashboard** | Header + stats cards (Users/Guru/Siswa/Quiz) + **User Management** (list/tambah/edit/hapus + role) |
+| **ApiService** | Token management + semua endpoint + multipart upload + error handling |
 
 ### 2.3 Screens yang BELUM ❌
 
 | Screen | Deskripsi | Prioritas |
-|--------|-----------|-----------|
-| **Siswa — TP/ATP Selection** | Pilih tujuan pembelajaran | 🔴 Tinggi |
-| **Siswa — Materi List** | Daftar materi per TP/ATP | 🔴 Tinggi |
-| **Siswa — Materi Detail** | Baca materi (judul, konten, gambar) | 🔴 Tinggi |
-| **Siswa — Quiz List** | Daftar quiz tersedia | 🔴 Tinggi |
-| **Siswa — Quiz Take** | Kerjakan soal pilihan ganda | 🔴 Tinggi |
-| **Siswa — Quiz Result** | Lihat skor + pembahasan | 🔴 Tinggi |
-| **Siswa — Profile** | Edit profil | 🟡 Sedang |
-| **Guru — Materi Management** | CRUD materi | 🔴 Tinggi |
+|--------|-----------|-----------| 
+| **Siswa — Profile Edit** | Edit profil siswa | 🟡 Sedang |
 | **Guru — AR Management** | Upload marker + model + hotspot | 🔴 Tinggi |
 | **Guru — Hasil Quiz Siswa** | Lihat skor siswa | 🟡 Sedang |
-| **Guru — TP/ATP Management** | Kelola tujuan pembelajaran | 🟡 Sedang |
-| **Admin — TP/ATP Management** | CRUD TP/ATP | 🔴 Tinggi |
-| **Admin — Materi Management** | CRUD materi | 🔴 Tinggi |
+| **Admin — TP/ATP Management** | CRUD TP/ATP (admin view) | 🟡 Sedang |
+| **Admin — Materi Management** | CRUD materi (admin view) | 🟡 Sedang |
 | **Admin — AR Management** | CRUD marker + model + hotspot + mapping | 🔴 Tinggi |
 | **Admin — Quiz Management** | Lihat semua quiz + soal | 🟡 Sedang |
 | **Admin — Hasil Quiz** | Lihat semua hasil siswa | 🟡 Sedang |
@@ -166,6 +209,7 @@ frontend/lib/
 | `shared_preferences` | Token + role storage | ✅ |
 | `http` | HTTP client ke API | ✅ |
 | `cupertino_icons` | Icon | ✅ |
+| `image_picker` | Upload gambar cover materi | ✅ |
 | AR package | Marker detection + 3D rendering | ❌ Belum dipilih |
 
 ---
@@ -183,8 +227,8 @@ Register (nama + email + password) → API → Token + Role
     ↓
 Dashboard (data dari API berdasarkan role):
     ├── admin@demo.com → Admin Panel (stats real dari DB + User CRUD)
-    ├── guru@demo.com  → Guru Dashboard (stats + Quiz CRUD)
-    └── siswa@demo.com → Student Dashboard (stats + learning cards)
+    ├── guru@demo.com  → Guru Dashboard (TP/ATP CRUD + Materi CRUD + Quiz CRUD)
+    └── siswa@demo.com → Student Dashboard (TP/ATP → Materi → Quiz → Result)
     ↓
 Logout → Konfirmasi → Hapus token → Kembali ke Login
 ```
@@ -193,18 +237,15 @@ Logout → Konfirmasi → Hapus token → Kembali ke Login
 
 ```
 Siswa:
-  Pilih TP/ATP → Pilih Materi → Baca Materi → Buka AR
   → Scan Marker → Marker Detected → Load 3D Model → Render
   → Interaksi (rotate/zoom) → Buka Hotspot → Baca Penjelasan
-  → Kerjakan Quiz → Submit → Lihat Skor → Lihat Pembahasan
 
 Guru:
-  Buat Materi → Edit Materi → Hapus Materi
   → Upload Marker → Upload Model 3D → Hubungkan Marker↔Model
-  → Buat Hotspot → Buat Quiz → Tambah Soal → Lihat Hasil Siswa
+  → Buat Hotspot → Lihat Hasil Siswa
 
 Admin:
-  Kelola TP/ATP → Kelola Materi
+  → Kelola TP/ATP → Kelola Materi
   → Kelola Marker → Kelola Model 3D → Kelola Hotspot → Kelola Mapping
   → Kelola Quiz → Kelola Soal → Lihat Semua Hasil
 ```
@@ -213,41 +254,18 @@ Admin:
 
 ## 5. PRIORITAS PENGERJAAN
 
-### Fase 1 — Data Foundation 🔴 Mendesak
-
-| # | Task | Tipe | File Terkait |
-|---|------|------|-------------|
-| 1 | Migration + Model + API **TP/ATP** | Backend | `database/migrations/`, `app/Models/`, `app/Http/Controllers/`, `routes/api.php` |
-| 2 | Migration + Model + API **Materi** | Backend | Sama + relasi ke TP/ATP |
-| 3 | Seeder data dummy **TP/ATP + Materi** | Backend | `database/seeders/DatabaseSeeder.php` |
-| 4 | Storage config untuk **file upload** | Backend | `config/filesystems.php` |
-
-### Fase 2 — Siswa Learning Flow 🔴
-
-| # | Task | Tipe |
-|---|------|------|
-| 5 | Screen **TP/ATP Selection** | Flutter |
-| 6 | Screen **Materi List** + **Materi Detail** | Flutter |
-| 7 | Screen **Quiz List** + **Quiz Take** + **Quiz Result** | Flutter |
-| 8 | Integrasi semua ke API | Flutter + BE |
-
-### Fase 3 — Guru Content Management 🔴
-
-| # | Task | Tipe |
-|---|------|------|
-| 9 | Screen **Materi Management** (CRUD) | Flutter + BE |
-| 10 | Screen **AR Management** (CRUD marker + model + hotspot) | Flutter + BE |
-| 11 | Screen **Lihat Hasil Quiz Siswa** | Flutter + BE |
-| 12 | Seeder data dummy **AR markers + models** | Backend |
+### ✅ Fase 1 — Data Foundation (SELESAI)
+### ✅ Fase 2 — Siswa Learning Flow (SELESAI)
+### ✅ Fase 3 — Guru Content Management (SELESAI)
 
 ### Fase 4 — Admin Management 🔴
 
 | # | Task | Tipe |
 |---|------|------|
-| 13 | Screen **TP/ATP Management** | Flutter + BE |
-| 14 | Screen **Materi Management** | Flutter + BE |
-| 15 | Screen **AR Management** | Flutter + BE |
-| 16 | Screen **Quiz Management** (view semua) | Flutter + BE |
+| 13 | Screen **TP/ATP Management** (admin view) | Flutter |
+| 14 | Screen **Materi Management** (admin view) | Flutter |
+| 15 | Screen **Quiz Management** (view semua) | Flutter |
+| 16 | Screen **Hasil Quiz** (lihat semua hasil siswa) | Flutter |
 
 ### Fase 5 — AR System 🔴 Kompleks
 
@@ -279,20 +297,22 @@ Admin:
 - Sanctum untuk API token authentication
 - CORS middleware manual untuk Flutter web
 - Role middleware untuk otorisasi per endpoint
-- Database: MySQL `armobile_learning`
+- Database: SQLite untuk dev (`database/database.sqlite`), MySQL untuk production
+- **PENTING:** File PHP via PowerShell harus disimpan tanpa BOM (gunakan `[System.Text.UTF8Encoding]($false)`)
 
 ### Frontend
-- Flutter dengan Material 3
+- Flutter 3.47.4 stable dengan Material 3
 - State: StatefulWidget + shared_preferences
-- HTTP: `package:http` (bukan Dio)
+- HTTP: `package:http` (bukan Dio) + multipart upload support
+- File upload: `image_picker` untuk gambar cover materi
 - Routing: `Navigator.pushReplacementNamed` + routes di MaterialApp
 - API URL: `127.0.0.1:8000` (Chrome) / `10.0.2.2:8000` (Android emulator)
+- Theme: Primary `Color(0xFF0A8477)`, Surface white, Text `Color(0xFF1A1A2E)`
 
 ### Known Issues
-- `flutter analyze`: 0 issues
+- `flutter analyze`: 4 info-level deprecation warnings (pre-existing di admin_dashboard dan guru_dashboard)
 - Backend berjalan di `http://127.0.0.1:8000`
 - Frontend berjalan di Chrome via `flutter run -d chrome`
-- Untuk Android physical device: ganti URL ke IP laptop + pastikan USB debugging aktif
 
 ---
 
@@ -303,26 +323,28 @@ Bagian-bagian master prompt yang sudah diimplementasi:
 - ✅ 3 Onboarding Slides (Belajar, AR, Quiz)
 - ✅ Login Experience (modern, email, password, show/hide, loading/error)
 - ✅ Register (nama, email, password)
-- ✅ Student Dashboard (header, progress, learning cards)
-- ✅ Guru Dashboard (summary, quick actions, quiz management)
+- ✅ Student Dashboard (header, progress, learning cards, 5 tab navigasi)
+- ✅ Siswa TP/ATP Selection + Materi List + Materi Detail
+- ✅ Siswa Quiz List + Quiz Take + Quiz Result
+- ✅ Siswa AR Hub (placeholder catalog)
+- ✅ Guru Dashboard (summary, quick actions, 5 tab navigasi)
+- ✅ Guru TP/ATP Management (CRUD)
+- ✅ Guru Materi Management (CRUD + upload gambar)
+- ✅ Guru Quiz Management (CRUD + tambah soal)
 - ✅ Admin Dashboard (user management, stats)
 - ✅ Role-based routing
 - ✅ Logout dengan konfirmasi
 
 Bagian master prompt yang belum diimplementasi:
-- ❌ Materi system (CRUD + baca)
-- ❌ TP/ATP system
-- ❌ AR system (camera, marker, 3D, hotspot)
-- ❌ Quiz taking flow (siswa kerjakan soal)
-- ❌ Quiz result + pembahasan
-- ❌ Guru content management lengkap
-- ❌ Admin content management lengkap
-- ❌ File upload (gambar, GLB)
-- ❌ Bottom navigation yang fully functional
+- ❌ AR system (camera, marker detection, 3D rendering, hotspot)
+- ❌ Admin content management (TP/ATP, Materi, AR, Quiz)
+- ❌ Guru AR management (marker, model, hotspot)
+- ❌ Guru lihat hasil quiz siswa
 - ❌ Profile edit screen
-- ❌ Error/empty states yang konsisten
+- ❌ File upload GLB/3D model
+- ❌ Error/empty states yang konsisten di semua halaman
 
 ---
 
 *Report ini dibuat untuk referensi pengerjaan selanjutnya.*
-*Terakhir diperbarui: 17 September 2026*
+*Terakhir diperbarui: 18 September 2026, 02:15 WIB*

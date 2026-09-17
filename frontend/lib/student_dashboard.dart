@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
+import 'screens/tp_atp_screen.dart';
+import 'screens/ar_hub_screen.dart';
+import 'screens/quiz_list_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -64,9 +67,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
           index: _currentIndex,
           children: [
             _buildHome(),
-            const _ComingSoonPage(title: 'Materi'),
-            const _ComingSoonPage(title: 'AR 3D'),
-            const _ComingSoonPage(title: 'Quiz'),
+            const TpAtpScreen(),
+            const ArHubScreen(),
+            const QuizListScreen(),
             _buildProfile(),
           ],
         ),
@@ -107,11 +110,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
           const SizedBox(height: 20),
           const Text('Pilih Pembelajaran', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 14),
-          _buildLearningCard(icon: Icons.book_outlined, title: 'Materi', subtitle: 'Pelajari materi Informatika', color: const Color(0xFF0A8477)),
+          _buildLearningCard(icon: Icons.book_outlined, title: 'Materi', subtitle: 'Pelajari materi Informatika', color: const Color(0xFF0A8477), onTap: () => setState(() => _currentIndex = 1)),
           const SizedBox(height: 12),
-          _buildLearningCard(icon: Icons.view_in_ar_outlined, title: 'AR 3D', subtitle: 'Lihat objek pembelajaran 3D', color: const Color(0xFF5B6ABF)),
+          _buildLearningCard(icon: Icons.view_in_ar_outlined, title: 'AR 3D', subtitle: 'Lihat objek pembelajaran 3D', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 2)),
           const SizedBox(height: 12),
-          _buildLearningCard(icon: Icons.quiz_outlined, title: 'Quiz', subtitle: '$_totalQuizzes quiz tersedia', color: const Color(0xFFE67E22)),
+          _buildLearningCard(icon: Icons.quiz_outlined, title: 'Quiz', subtitle: '$_totalQuizzes quiz tersedia', color: const Color(0xFFE67E22), onTap: () => setState(() => _currentIndex = 3)),
         ],
       ),
     );
@@ -151,32 +154,35 @@ class _StudentDashboardState extends State<StudentDashboard> {
     ]);
   }
 
-  Widget _buildLearningCard({required IconData icon, required String title, required String subtitle, required Color color}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Row(children: [
-        Container(
-          width: 48, height: 48,
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: color, size: 24),
+  Widget _buildLearningCard({required IconData icon, required String title, required String subtitle, required Color color, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
         ),
-        const SizedBox(width: 16),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
-            const SizedBox(height: 2),
-            Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF637080))),
-          ],
-        )),
-        const Icon(Icons.chevron_right, color: Color(0xFFD0D5D8)),
-      ]),
+        child: Row(children: [
+          Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+              const SizedBox(height: 2),
+              Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF637080))),
+            ],
+          )),
+          const Icon(Icons.chevron_right, color: Color(0xFFD0D5D8)),
+        ]),
+      ),
     );
   }
 
@@ -227,19 +233,4 @@ class _StudentDashboardState extends State<StudentDashboard> {
       ),
     );
   }
-}
-
-class _ComingSoonPage extends StatelessWidget {
-  final String title;
-  const _ComingSoonPage({required this.title});
-  @override
-  Widget build(BuildContext context) {
-    return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.construction, size: 64, color: Colors.grey[300]),
-      const SizedBox(height: 16),
-      Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
-      const SizedBox(height: 8),
-      const Text('Segera hadir', style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
-    ]));
-  }
-}
+}

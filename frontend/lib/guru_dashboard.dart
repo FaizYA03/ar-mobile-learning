@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
+import 'screens/guru_tp_atp_screen.dart';
+import 'screens/guru_materi_screen.dart';
 
 class GuruDashboard extends StatefulWidget {
   const GuruDashboard({super.key});
@@ -182,6 +184,8 @@ class _GuruDashboardState extends State<GuruDashboard> {
           index: _currentIndex,
           children: [
             _buildHome(),
+            const GuruTpAtpScreen(),
+            const GuruMateriScreen(),
             _buildQuizManagement(),
             _buildProfile(),
           ],
@@ -199,6 +203,8 @@ class _GuruDashboardState extends State<GuruDashboard> {
         elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.school_outlined), activeIcon: Icon(Icons.school), label: 'TP/ATP'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'Materi'),
           BottomNavigationBarItem(icon: Icon(Icons.quiz_outlined), activeIcon: Icon(Icons.quiz), label: 'Quiz'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
         ],
@@ -232,11 +238,11 @@ class _GuruDashboardState extends State<GuruDashboard> {
           const SizedBox(height: 20),
           const Text('Aksi Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 14),
-          _buildQuickAction(icon: Icons.add_circle_outline, title: 'Buat Quiz', color: const Color(0xFFE67E22), onTap: _showCreateQuizDialog),
+          _buildQuickAction(icon: Icons.add_circle_outline, title: 'Buat Quiz', color: const Color(0xFFE67E22), onTap: () => setState(() => _currentIndex = 3)),
           const SizedBox(height: 10),
-          _buildQuickAction(icon: Icons.menu_book_outlined, title: 'Tambah Materi', color: const Color(0xFF0A8477), onTap: () {}),
+          _buildQuickAction(icon: Icons.menu_book_outlined, title: 'Tambah Materi', color: const Color(0xFF0A8477), onTap: () => setState(() => _currentIndex = 2)),
           const SizedBox(height: 10),
-          _buildQuickAction(icon: Icons.view_in_ar_outlined, title: 'Buat AR', color: const Color(0xFF5B6ABF), onTap: () {}),
+          _buildQuickAction(icon: Icons.school_outlined, title: 'Kelola TP/ATP', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 1)),
         ],
       ),
     );

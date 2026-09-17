@@ -150,10 +150,43 @@ class ApiService {
     return _get('/materi$query');
   }
   static Future<Map<String, dynamic>> getMateriDetail(int id) => _get('/materi/$id');
-  static Future<Map<String, dynamic>> guruCreateMateri(Map<String, dynamic> data) =>
-      _post('/guru/materi', data);
-  static Future<Map<String, dynamic>> guruUpdateMateri(int id, Map<String, dynamic> data) =>
-      _put('/guru/materi/$id', data);
+
+  // Guru Materi (with multipart file upload support)
+  static Future<Map<String, dynamic>> guruCreateMateri(Map<String, dynamic> data, {String? filePath}) =>
+      _postMultipart('/guru/materi', data, filePath: filePath, fileField: 'gambar_cover');
+
+  static Future<Map<String, dynamic>> guruUpdateMateri(int id, Map<String, dynamic> data, {String? filePath}) =>
+      _postMultipart('/guru/materi/$id', data, filePath: filePath, fileField: 'gambar_cover');
+
   static Future<Map<String, dynamic>> guruDeleteMateri(int id) =>
       _delete('/guru/materi/$id');
+
+  // Multipart upload helper
+  static Future<Map<String, dynamic>> _postMultipart(
+    String path,
+    Map<String, dynamic> fields, {
+    String? filePath,
+    String fileField = 'file',
+  }) async {
+    final token = await getToken();
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'));
+    request.headers.addAll({
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    });
+
+    // Add text fields
+    fields.forEach((key, value) {
+      if (value != null) request.fields[key] = value.toString();
+    });
+
+    // Add file if provided
+    if (filePath != null) {
+      request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+    }
+
+    final streamedResponse = await request.send();
+    final responseBody = await streamedResponse.stream.bytesToString();
+    return jsonDecode(responseBody);
+  }
 }
