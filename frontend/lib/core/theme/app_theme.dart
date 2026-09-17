@@ -6,17 +6,17 @@ class AppColors {
   static const Color secondary = Color(0xFF636E72);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color background = Color(0xFFF5F7FA);
-  static const onPrimary = Color(0xFFFFFFFF);
-  static const onSecondary = Color(0xFFFFFFFF);
-  static const onSurface = Color(0xFF2D3436);
-  static const onBackground = Color(0xFF2D3436);
-  static const outline = Color(0xFFD0D5D8);
-  static const surfaceVariant = Color(0xFFECEFF1);
-  static const onSurfaceVariant = Color(0xFF454A4E);
-  static const error = Color(0xFFC62828);
-  static const info = Color(0xFF0288D1);
-  static const success = Color(0xFF2E7D32);
-  static const warning = Color(0xFFF9A825);
+  static const Color onPrimary = Color(0xFFFFFFFF);
+  static const Color onSecondary = Color(0xFFFFFFFF);
+  static const Color onSurface = Color(0xFF2D3436);
+  static const Color onBackground = Color(0xFF2D3436);
+  static const Color outline = Color(0xFFD0D5D8);
+  static const Color surfaceVariant = Color(0xFFECEFF1);
+  static const Color onSurfaceVariant = Color(0xFF454A4E);
+  static const Color error = Color(0xFFC62828);
+  static const Color info = Color(0xFF0288D1);
+  static const Color success = Color(0xFF2E7D32);
+  static const Color warning = Color(0xFFF9A825);
 }
 
 class AppTypography {
@@ -27,98 +27,98 @@ class AppTypography {
     color: AppColors.onSurface,
   );
 
-  static const displayMedium = TextStyle(
+  static const TextStyle displayMedium = TextStyle(
     fontSize: 45,
     fontWeight: FontWeight.w400,
     letterSpacing: -0.5,
     color: AppColors.onSurface,
   );
 
-  static const displaySmall = TextStyle(
+  static const TextStyle displaySmall = TextStyle(
     fontSize: 36,
     fontWeight: FontWeight.w400,
     letterSpacing: -0.5,
     color: AppColors.onSurface,
   );
 
-  static const headlineLarge = TextStyle(
+  static const TextStyle headlineLarge = TextStyle(
     fontSize: 32,
     fontWeight: FontWeight.w300,
     letterSpacing: -0.5,
     color: AppColors.onSurface,
   );
 
-  static const headlineMedium = TextStyle(
+  static const TextStyle headlineMedium = TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.w300,
     letterSpacing: -0.3,
     color: AppColors.onSurface,
   );
 
-  static const headlineSmall = TextStyle(
+  static const TextStyle headlineSmall = TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.w400,
     letterSpacing: -0.25,
     color: AppColors.onSurface,
   );
 
-  static const titleLarge = TextStyle(
+  static const TextStyle titleLarge = TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w500,
     letterSpacing: -0.25,
     color: AppColors.onSurface,
   );
 
-  static const titleMedium = TextStyle(
+  static const TextStyle titleMedium = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.15,
     color: AppColors.onSurface,
   );
 
-  static const titleSmall = TextStyle(
+  static const TextStyle titleSmall = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
     color: AppColors.onSecondary,
   );
 
-  static const bodyLarge = TextStyle(
+  static const TextStyle bodyLarge = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.5,
     color: AppColors.onSurface,
   );
 
-  static const bodyMedium = TextStyle(
+  static const TextStyle bodyMedium = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.25,
     color: AppColors.onSurface,
   );
 
-  static const bodySmall = TextStyle(
+  static const TextStyle bodySmall = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.4,
     color: AppColors.onSurfaceVariant,
   );
 
-  static const labelLarge = TextStyle(
+  static const TextStyle labelLarge = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
     color: AppColors.onSurface,
   );
 
-  static const labelMedium = TextStyle(
+  static const TextStyle labelMedium = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.5,
     color: AppColors.onSurface,
   );
 
-  static const labelSmall = TextStyle(
+  static const TextStyle labelSmall = TextStyle(
     fontSize: 10,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.5,
@@ -148,16 +148,4 @@ class AppAssets {
   static const String arIcon = 'assets/icons/ar.png';
   static const String quizIcon = 'assets/icons/quiz.png';
   static const String profileIcon = 'assets/icons/profile.png';
-}
-
-extension ThemeExtension on ThemeData {
-  ThemeData copyWith({
-    Color? colorScheme,
-    TextTheme? textTheme,
-  }) {
-    return copyWith(
-      colorScheme: colorScheme ?? defaultColorScheme,
-      textTheme: textTheme ?? defaultTextTheme,
-    );
-  }
 }
