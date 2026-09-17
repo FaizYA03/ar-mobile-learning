@@ -320,7 +320,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       backgroundColor: const Color(0xFF0A8477),
                       foregroundColor: Colors.white,
                       disabledBackgroundColor:
-                          const Color(0xFF0A8477).withOpacity(0.5),
+                          const Color(0xFF0A8477).withValues(alpha: 0.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
