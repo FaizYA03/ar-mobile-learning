@@ -36,32 +36,6 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     });
   }
 
-  Future<void> _saveSharedPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('hasSeenOnboarding', _hasSeenOnboarding);
-    if (_userRole != null) {
-      await prefs.setString('userRole', _userRole!);
-    }
-    if (_userName != null) {
-      await prefs.setString('userName', _userName!);
-    }
-  }
-
-  Route<dynamic>? _route(RouteSettings? settings) {
-    if (!_hasSeenOnboarding) {
-      return MaterialPageRoute(builder: (_) => const SplashScreen());
-    }
-    if (_userRole == null) {
-      return MaterialPageRoute(builder: (_) => const LoginScreen());
-    }
-    return MaterialPageRoute(
-      builder: (_) => StudentDashboard(
-        studentName: _userName!,
-        role: _userRole!,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -120,8 +94,20 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
           ),
         ),
       ),
-      initialRoute: '/',
-      onGenerateRoute: _route,
+      home: _buildInitialRoute(),
+    );
+  }
+
+  Widget _buildInitialRoute() {
+    if (!_hasSeenOnboarding) {
+      return const SplashScreen();
+    }
+    if (_userRole == null) {
+      return const LoginScreen();
+    }
+    return StudentDashboard(
+      studentName: _userName!,
+      role: _userRole!,
     );
   }
 }
