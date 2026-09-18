@@ -21,6 +21,6 @@ class ArMarker extends Model
 
     public function models(): BelongsToMany
     {
-        return $this->belongsToMany(ArModel::class, 'ar_marker_model', 'ar_marker_id', 'ar_model_id');
+        return $this->belongsToMany(ArModel::class, 'ar_marker_models', 'ar_marker_id', 'ar_model_id');
     }
 }

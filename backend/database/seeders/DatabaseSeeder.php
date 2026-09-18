@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\ArModel;
+use App\Models\ArMarker;
+use App\Models\ArHotspot;
 use App\Models\Materi;
 use App\Models\Question;
 use App\Models\QuestionOption;
@@ -62,6 +64,85 @@ class DatabaseSeeder extends Seeder
             'thumbnail_path' => 'thumbnails/router_thumb.png',
             'description' => 'Model 3D perangkat router jaringan dengan antena eksternal dan port RJ-45.',
             'category' => 'Jaringan Komputer',
+            'is_active' => true,
+        ]);
+
+        // === 2b. AR MARKERS ===
+        $marker1 = ArMarker::create([
+            'marker_id' => 'MARKER-CPU-001',
+            'marker_type' => 'pattern',
+            'image_path' => 'markers/marker_cpu.png',
+            'status' => 'active',
+        ]);
+
+        $marker2 = ArMarker::create([
+            'marker_id' => 'MARKER-ROUTER-001',
+            'marker_type' => 'pattern',
+            'image_path' => 'markers/marker_router.png',
+            'status' => 'active',
+        ]);
+
+        $marker1->models()->attach($modelCpu->id);
+        $marker2->models()->attach($modelRouter->id);
+
+        // === 2c. AR HOTSPOTS ===
+        ArHotspot::create([
+            'ar_model_id' => $modelCpu->id,
+            'title' => 'ALU (Arithmetic Logic Unit)',
+            'description' => 'Unit yang melakukan operasi matematika dan logika: penjumlahan, pengurangan, AND, OR, NOT.',
+            'latitude' => 0.02,
+            'longitude' => 0.01,
+            'image_path' => 'hotspots/cpu_alu.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelCpu->id,
+            'title' => 'Control Unit',
+            'description' => 'Mengarahkan aliran data dan instruksi antar komponen CPU dan memori.',
+            'latitude' => -0.01,
+            'longitude' => 0.02,
+            'image_path' => 'hotspots/cpu_cu.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelCpu->id,
+            'title' => 'Register',
+            'description' => 'Memori internal berkecepatan tinggi di dalam CPU untuk menyimpan data sementara.',
+            'latitude' => 0.01,
+            'longitude' => -0.02,
+            'image_path' => 'hotspots/cpu_register.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelRouter->id,
+            'title' => 'WAN Port (RJ-45)',
+            'description' => 'Port koneksi ke modem ISP untuk menerima sinyal internet dari provider.',
+            'latitude' => 0.03,
+            'longitude' => 0.0,
+            'image_path' => 'hotspots/router_wan.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelRouter->id,
+            'title' => 'LAN Ports',
+            'description' => 'Port koneksi lokal untuk perangkat kabel seperti PC, printer, dan switch.',
+            'latitude' => -0.02,
+            'longitude' => 0.01,
+            'image_path' => 'hotspots/router_lan.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelRouter->id,
+            'title' => 'Antena Dual-Band',
+            'description' => 'Memitarkan sinyal WiFi pada frekuensi 2.4 GHz dan 5 GHz untuk koneksi nirkabel.',
+            'latitude' => 0.0,
+            'longitude' => 0.03,
+            'image_path' => 'hotspots/router_antena.png',
             'is_active' => true,
         ]);
 

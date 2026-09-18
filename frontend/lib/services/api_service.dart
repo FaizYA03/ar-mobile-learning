@@ -121,6 +121,7 @@ class ApiService {
   static Future<Map<String, dynamic>> adminUpdateUser(int id, Map<String, dynamic> data) =>
       _put('/admin/users/$id', data);
   static Future<Map<String, dynamic>> adminDeleteUser(int id) => _delete('/admin/users/$id');
+  static Future<Map<String, dynamic>> adminGetQuizAttempts() => _get('/admin/quiz-attempts');
 
   // Guru Quizzes
   static Future<Map<String, dynamic>> guruGetQuizzes() => _get('/guru/quizzes');
@@ -160,6 +161,42 @@ class ApiService {
 
   static Future<Map<String, dynamic>> guruDeleteMateri(int id) =>
       _delete('/guru/materi/$id');
+
+  // AR Models (Guru + Admin)
+  static Future<Map<String, dynamic>> arGetModels() => _get('/ar/models');
+  static Future<Map<String, dynamic>> arGetModel(int id) => _get('/ar/models/$id');
+  static Future<Map<String, dynamic>> arCreateModel(Map<String, dynamic> data) =>
+      _post('/ar/models', data);
+  static Future<Map<String, dynamic>> arUpdateModel(int id, Map<String, dynamic> data) =>
+      _put('/ar/models/$id', data);
+  static Future<Map<String, dynamic>> arDeleteModel(int id) => _delete('/ar/models/$id');
+
+  // AR Markers (Guru + Admin)
+  static Future<Map<String, dynamic>> arGetMarkers() => _get('/ar/markers');
+  static Future<Map<String, dynamic>> arGetMarker(int id) => _get('/ar/markers/$id');
+  static Future<Map<String, dynamic>> arCreateMarker(Map<String, dynamic> data) =>
+      _post('/ar/markers', data);
+  static Future<Map<String, dynamic>> arUpdateMarker(int id, Map<String, dynamic> data) =>
+      _put('/ar/markers/$id', data);
+  static Future<Map<String, dynamic>> arDeleteMarker(int id) => _delete('/ar/markers/$id');
+
+  // AR Hotspots (Guru + Admin)
+  static Future<Map<String, dynamic>> arGetHotspots() => _get('/ar/hotspots');
+  static Future<Map<String, dynamic>> arGetHotspot(int id) => _get('/ar/hotspots/$id');
+  static Future<Map<String, dynamic>> arCreateHotspot(Map<String, dynamic> data) =>
+      _post('/ar/hotspots', data);
+  static Future<Map<String, dynamic>> arUpdateHotspot(int id, Map<String, dynamic> data) =>
+      _put('/ar/hotspots/$id', data);
+  static Future<Map<String, dynamic>> arDeleteHotspot(int id) => _delete('/ar/hotspots/$id');
+
+  // AR Mapping (Guru + Admin)
+  static Future<Map<String, dynamic>> arGetMappings() => _get('/ar/mappings');
+  static Future<Map<String, dynamic>> arGetMarkerModels(int markerId) =>
+      _get('/ar/markers/$markerId/models');
+  static Future<Map<String, dynamic>> arAttachModel(int markerId, int modelId) =>
+      _post('/ar/markers/$markerId/attach', {'ar_model_id': modelId});
+  static Future<Map<String, dynamic>> arDetachModel(int markerId, int modelId) =>
+      _delete('/ar/markers/$markerId/detach/$modelId');
 
   // Multipart upload helper
   static Future<Map<String, dynamic>> _postMultipart(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ar_camera_screen.dart';
 
 class ArHubScreen extends StatelessWidget {
   const ArHubScreen({super.key});
@@ -86,6 +87,7 @@ class ArHubScreen extends StatelessWidget {
             description: 'Model arsitektur processor multi-core, socket pin, dan unit pendingin (heatsink).',
             icon: Icons.memory,
             color: const Color(0xFF0A8477),
+            modelUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
           ),
           const SizedBox(height: 14),
 
@@ -96,6 +98,7 @@ class ArHubScreen extends StatelessWidget {
             description: 'Model visualisasi port RJ-45, antena omnidirectional, dan indikator sinyal LED.',
             icon: Icons.router,
             color: const Color(0xFFE67E22),
+            modelUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
           ),
           const SizedBox(height: 24),
 
@@ -122,7 +125,7 @@ class ArHubScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Modul kamera AR & deteksi marker fisik akan diaktifkan pada Fase 5. Untuk hasil optimal, jalankan aplikasi di HP Android fisik dengan Google Play Services for AR.',
+                        'Untuk hasil optimal, jalankan aplikasi di HP Android fisik dengan Google Play Services for AR. Arahkan kamera ke marker gambar untuk memunculkan model 3D.',
                         style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.4),
                       ),
                     ],
@@ -143,50 +146,76 @@ class ArHubScreen extends StatelessWidget {
     required String description,
     required IconData icon,
     required Color color,
+    String? modelUrl,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: color, size: 26),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArCameraScreen(
+              modelName: title,
+              modelUrl: modelUrl,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F7FA),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(category, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF637080))),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
-                  const SizedBox(height: 4),
-                  Text(description, style: const TextStyle(fontSize: 12, color: Color(0xFF637080), height: 1.3)),
-                ],
-              ),
-            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 3)),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F7FA),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(category, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF637080))),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                    const SizedBox(height: 4),
+                    Text(description, style: const TextStyle(fontSize: 12, color: Color(0xFF637080), height: 1.3)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.view_in_ar, size: 14, color: color),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Buka AR',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey[300]),
+            ],
+          ),
         ),
       ),
     );

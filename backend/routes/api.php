@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TpAtpController;
 use App\Http\Controllers\MateriController;
+use App\Http\Controllers\ArController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -30,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users', [AdminController::class, 'storeUser']);
         Route::put('/users/{user}', [AdminController::class, 'updateUser']);
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
+        Route::get('/quiz-attempts', [AdminController::class, 'quizAttempts']);
     });
 
     Route::middleware('role:guru,admin')->group(function () {
@@ -50,5 +52,30 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/guru/materi/{materi}', [MateriController::class, 'update']);
         Route::put('/guru/materi/{materi}', [MateriController::class, 'update']);
         Route::delete('/guru/materi/{materi}', [MateriController::class, 'destroy']);
+
+        // AR Management (Guru + Admin)
+        Route::get('/ar/models', [ArController::class, 'modelIndex']);
+        Route::get('/ar/models/{arModel}', [ArController::class, 'modelShow']);
+        Route::post('/ar/models', [ArController::class, 'modelStore']);
+        Route::put('/ar/models/{arModel}', [ArController::class, 'modelUpdate']);
+        Route::delete('/ar/models/{arModel}', [ArController::class, 'modelDestroy']);
+
+        Route::get('/ar/markers', [ArController::class, 'markerIndex']);
+        Route::get('/ar/markers/{arMarker}', [ArController::class, 'markerShow']);
+        Route::post('/ar/markers', [ArController::class, 'markerStore']);
+        Route::put('/ar/markers/{arMarker}', [ArController::class, 'markerUpdate']);
+        Route::delete('/ar/markers/{arMarker}', [ArController::class, 'markerDestroy']);
+
+        Route::get('/ar/hotspots', [ArController::class, 'hotspotIndex']);
+        Route::get('/ar/hotspots/{arHotspot}', [ArController::class, 'hotspotShow']);
+        Route::post('/ar/hotspots', [ArController::class, 'hotspotStore']);
+        Route::put('/ar/hotspots/{arHotspot}', [ArController::class, 'hotspotUpdate']);
+        Route::delete('/ar/hotspots/{arHotspot}', [ArController::class, 'hotspotDestroy']);
+
+        // AR Mapping
+        Route::get('/ar/mappings', [ArController::class, 'allMappings']);
+        Route::get('/ar/markers/{arMarker}/models', [ArController::class, 'getMarkerModels']);
+        Route::post('/ar/markers/{arMarker}/attach', [ArController::class, 'attachModel']);
+        Route::delete('/ar/markers/{arMarker}/detach/{arModel}', [ArController::class, 'detachModel']);
     });
 });

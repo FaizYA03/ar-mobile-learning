@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\QuizAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -85,6 +86,18 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User berhasil dihapus',
+        ]);
+    }
+
+    public function quizAttempts()
+    {
+        $attempts = QuizAttempt::with(['user:id,name,email', 'quiz:id,title,passing_score'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $attempts,
         ]);
     }
 }

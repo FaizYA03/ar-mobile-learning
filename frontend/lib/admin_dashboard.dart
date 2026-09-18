@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
+import 'screens/admin_tp_atp_screen.dart';
+import 'screens/admin_materi_screen.dart';
+import 'screens/admin_quiz_management_screen.dart';
+import 'screens/admin_hasil_quiz_screen.dart';
+import 'screens/admin_ar_management_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -72,20 +77,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Tambah User'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Tambah User',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama')),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Nama',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
+                TextField(
+                  controller: emailCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: passCtrl, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+                TextField(
+                  controller: passCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  obscureText: true,
+                ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: selectedRole,
-                  decoration: const InputDecoration(labelText: 'Role'),
+                  decoration: InputDecoration(
+                    labelText: 'Role',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                   items: const [
                     DropdownMenuItem(value: 'siswa', child: Text('Siswa')),
                     DropdownMenuItem(value: 'guru', child: Text('Guru')),
@@ -99,8 +129,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0A8477),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               onPressed: () async {
-                if (nameCtrl.text.isEmpty || emailCtrl.text.isEmpty || passCtrl.text.isEmpty) return;
+                if (nameCtrl.text.isEmpty || emailCtrl.text.isEmpty || passCtrl.text.isEmpty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Semua field wajib diisi')),
+                  );
+                  return;
+                }
                 final result = await ApiService.adminCreateUser({
                   'name': nameCtrl.text,
                   'email': emailCtrl.text,
@@ -132,18 +172,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Edit User'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Edit User',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama')),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Nama',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
+                TextField(
+                  controller: emailCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: selectedRole,
-                  decoration: const InputDecoration(labelText: 'Role'),
+                  decoration: InputDecoration(
+                    labelText: 'Role',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                   items: const [
                     DropdownMenuItem(value: 'siswa', child: Text('Siswa')),
                     DropdownMenuItem(value: 'guru', child: Text('Guru')),
@@ -157,6 +215,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0A8477),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               onPressed: () async {
                 final result = await ApiService.adminUpdateUser(user['id'], {
                   'name': nameCtrl.text,
@@ -183,6 +246,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus User'),
         content: Text('Hapus "${user['name']}"?'),
         actions: [
@@ -203,7 +267,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
       body: SafeArea(
         child: IndexedStack(
           index: _currentIndex,
-          children: [_buildHome(), _buildUsersPage(), _buildProfile()],
+          children: [
+            _buildHome(),
+            const AdminTpAtpScreen(),
+            const AdminMateriScreen(),
+            const AdminQuizManagementScreen(),
+            const AdminHasilQuizScreen(),
+            const AdminArManagementScreen(),
+            _buildUsersPage(),
+            _buildProfile(),
+          ],
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -213,11 +286,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFF0A8477),
         unselectedItemColor: const Color(0xFFB0B8C1),
-        selectedFontSize: 11,
-        unselectedFontSize: 11,
+        selectedFontSize: 10,
+        unselectedFontSize: 10,
         elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Beranda'),
+          BottomNavigationBarItem(icon: Icon(Icons.school_outlined), activeIcon: Icon(Icons.school), label: 'TP/ATP'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'Materi'),
+          BottomNavigationBarItem(icon: Icon(Icons.quiz_outlined), activeIcon: Icon(Icons.quiz), label: 'Quiz'),
+          BottomNavigationBarItem(icon: Icon(Icons.assessment_outlined), activeIcon: Icon(Icons.assessment), label: 'Hasil'),
+          BottomNavigationBarItem(icon: Icon(Icons.view_in_ar_outlined), activeIcon: Icon(Icons.view_in_ar), label: 'AR'),
           BottomNavigationBarItem(icon: Icon(Icons.people_outlined), activeIcon: Icon(Icons.people), label: 'Users'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
         ],
@@ -247,6 +325,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const Text('Sistem', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 12),
           _buildStatCard(icon: Icons.quiz_outlined, title: 'Quiz', count: '$_totalQuizzes', color: const Color(0xFFC62828)),
+          const SizedBox(height: 20),
+          const Text('Aksi Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+          const SizedBox(height: 14),
+          _buildQuickAction(icon: Icons.school_outlined, title: 'Kelola TP/ATP', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 1)),
+          const SizedBox(height: 10),
+          _buildQuickAction(icon: Icons.menu_book_outlined, title: 'Kelola Materi', color: const Color(0xFF0A8477), onTap: () => setState(() => _currentIndex = 2)),
+          const SizedBox(height: 10),
+          _buildQuickAction(icon: Icons.quiz_outlined, title: 'Kelola Quiz', color: const Color(0xFFE67E22), onTap: () => setState(() => _currentIndex = 3)),
+          const SizedBox(height: 10),
+          _buildQuickAction(icon: Icons.assessment_outlined, title: 'Lihat Hasil Quiz', color: const Color(0xFFC62828), onTap: () => setState(() => _currentIndex = 4)),
+          const SizedBox(height: 10),
+          _buildQuickAction(icon: Icons.view_in_ar_outlined, title: 'Kelola AR', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 5)),
         ],
       ),
     );
@@ -262,6 +352,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)))),
         Text(count, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: color)),
       ]),
+    );
+  }
+
+  Widget _buildQuickAction({required IconData icon, required String title, required Color color, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity, padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+        child: Row(children: [Icon(icon, color: color, size: 22), const SizedBox(width: 12), Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color))]),
+      ),
     );
   }
 

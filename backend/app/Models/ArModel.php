@@ -33,7 +33,7 @@ class ArModel extends Model
 
     public function markers(): BelongsToMany
     {
-        return $this->belongsToMany(ArMarker::class, 'ar_marker_model', 'ar_model_id', 'ar_marker_id');
+        return $this->belongsToMany(ArMarker::class, 'ar_marker_models', 'ar_model_id', 'ar_marker_id');
     }
 
     public function materi(): HasMany

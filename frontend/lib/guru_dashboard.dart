@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
 import 'screens/guru_tp_atp_screen.dart';
 import 'screens/guru_materi_screen.dart';
+import 'screens/guru_ar_management_screen.dart';
 
 class GuruDashboard extends StatefulWidget {
   const GuruDashboard({super.key});
@@ -187,6 +188,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
             const GuruTpAtpScreen(),
             const GuruMateriScreen(),
             _buildQuizManagement(),
+            const GuruArManagementScreen(),
             _buildProfile(),
           ],
         ),
@@ -206,6 +208,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
           BottomNavigationBarItem(icon: Icon(Icons.school_outlined), activeIcon: Icon(Icons.school), label: 'TP/ATP'),
           BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'Materi'),
           BottomNavigationBarItem(icon: Icon(Icons.quiz_outlined), activeIcon: Icon(Icons.quiz), label: 'Quiz'),
+          BottomNavigationBarItem(icon: Icon(Icons.view_in_ar_outlined), activeIcon: Icon(Icons.view_in_ar), label: 'AR'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
         ],
       ),
@@ -243,6 +246,8 @@ class _GuruDashboardState extends State<GuruDashboard> {
           _buildQuickAction(icon: Icons.menu_book_outlined, title: 'Tambah Materi', color: const Color(0xFF0A8477), onTap: () => setState(() => _currentIndex = 2)),
           const SizedBox(height: 10),
           _buildQuickAction(icon: Icons.school_outlined, title: 'Kelola TP/ATP', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 1)),
+          const SizedBox(height: 10),
+          _buildQuickAction(icon: Icons.view_in_ar_outlined, title: 'Kelola AR', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 4)),
         ],
       ),
     );
