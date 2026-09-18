@@ -238,7 +238,7 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
                   children: [
                     const Text('Aktif', style: TextStyle(fontSize: 14)),
                     const SizedBox(width: 8),
-                    Switch(value: isActive, onChanged: (v) => setDialogState(() => isActive = v), activeColor: const Color(0xFF0A8477)),
+                    Switch(value: isActive, onChanged: (v) => setDialogState(() => isActive = v), activeThumbColor: const Color(0xFF0A8477)),
                   ],
                 ),
               ],
@@ -589,7 +589,7 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<int>(
-                  value: selectedModelId,
+                  initialValue: selectedModelId,
                   decoration: InputDecoration(labelText: '3D Model', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
                   items: _models.map<DropdownMenuItem<int>>((m) => DropdownMenuItem(value: m['id'], child: Text(m['model_name'] ?? ''))).toList(),
                   onChanged: (v) => setDialogState(() => selectedModelId = v),
@@ -605,7 +605,7 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
                   children: [
                     const Text('Aktif', style: TextStyle(fontSize: 14)),
                     const SizedBox(width: 8),
-                    Switch(value: isActive, onChanged: (v) => setDialogState(() => isActive = v), activeColor: const Color(0xFF0A8477)),
+                    Switch(value: isActive, onChanged: (v) => setDialogState(() => isActive = v), activeThumbColor: const Color(0xFF0A8477)),
                   ],
                 ),
               ],
@@ -760,7 +760,7 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
           title: Text('Hubungkan ke ${marker['marker_id']}',
               style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: DropdownButtonFormField<int>(
-            value: selectedModelId,
+            initialValue: selectedModelId,
             decoration: InputDecoration(labelText: 'Pilih 3D Model', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
             items: available.map<DropdownMenuItem<int>>((m) => DropdownMenuItem(value: m['id'], child: Text(m['model_name'] ?? ''))).toList(),
             onChanged: (v) => setDialogState(() => selectedModelId = v),
