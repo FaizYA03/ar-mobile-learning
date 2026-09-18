@@ -99,7 +99,7 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
         _statusMessage = 'Menyiapkan AR session...';
       });
 
-      // Add marker target
+      // Add marker target (pattern tracking)
       await _controller!.addMarkerTarget(
         const ARMarkerTarget(
           id: 'learning_marker',

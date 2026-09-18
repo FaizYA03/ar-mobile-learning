@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../services/api_service.dart';
+import 'ar_camera_screen.dart';
 import 'quiz_list_screen.dart';
 
 class MateriDetailScreen extends StatefulWidget {
@@ -260,50 +262,83 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
   }
 
   void _showArPreviewDialog(Map<String, dynamic> arModel) {
+    final glbPath = arModel['glb_path'] ?? '';
+    String modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb';
+    if (glbPath.isNotEmpty) {
+      if (glbPath.startsWith('http')) {
+        modelUrl = glbPath;
+      } else {
+        modelUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/$glbPath';
+      }
+    }
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.view_in_ar, color: Color(0xFF5B6ABF)),
-            const SizedBox(width: 8),
-            Expanded(child: Text(arModel['model_name'] ?? 'Model 3D', style: const TextStyle(fontSize: 16))),
-          ],
-        ),
-        content: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(arModel['description'] ?? '', style: const TextStyle(fontSize: 13, color: Color(0xFF637080))),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+              child: Row(
                 children: [
-                  const Text('File Aset 3D (.glb):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
-                  Text(arModel['glb_path'] ?? '-', style: const TextStyle(fontSize: 12, color: Color(0xFF0A8477))),
-                  const SizedBox(height: 6),
-                  const Text('Kategori:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
-                  Text(arModel['category'] ?? '-', style: const TextStyle(fontSize: 12, color: Color(0xFF637080))),
+                  const Icon(Icons.view_in_ar, color: Color(0xFF5B6ABF)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(arModel['model_name'] ?? 'Model 3D', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              '💡 Catatan: Kamera AR dan pelacak marker fisik disiapkan pada Fase 5.',
-              style: TextStyle(fontSize: 11, color: Color(0xFF0A8477), fontStyle: FontStyle.italic),
+            SizedBox(
+              height: 300,
+              child: ModelViewer(
+                src: modelUrl,
+                autoRotate: true,
+                cameraControls: true,
+              ),
+            ),
+            if (arModel['description'] != null && (arModel['description'] as String).isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(arModel['description'], style: const TextStyle(fontSize: 12, color: Color(0xFF637080)), maxLines: 2, overflow: TextOverflow.ellipsis),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ArCameraScreen(
+                              arModelId: arModel['id'],
+                              modelName: arModel['model_name'],
+                              modelUrl: modelUrl,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.view_in_ar, size: 16),
+                      label: const Text('Buka AR'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF5B6ABF),
+                        side: const BorderSide(color: Color(0xFF5B6ABF)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-        ],
       ),
     );
   }

@@ -570,12 +570,12 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
                 _buildInfoChip(Icons.help_outline, '$questionsCount soal', const Color(0xFF5B6ABF)),
-                const SizedBox(width: 8),
                 _buildInfoChip(Icons.timer_outlined, '$timeLimit menit', const Color(0xFF0A8477)),
-                const SizedBox(width: 8),
                 _buildInfoChip(Icons.grade_outlined, 'KKM $passingScore', const Color(0xFFE67E22)),
               ],
             ),

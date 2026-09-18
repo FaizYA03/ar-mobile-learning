@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\ArModel;
 use App\Models\ArMarker;
 use App\Models\ArHotspot;
+use App\Models\ArMarker3dMapping;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ArController extends Controller
 {
@@ -41,12 +44,24 @@ class ArController extends Controller
     {
         $validated = $request->validate([
             'model_name' => 'required|string|max:255',
-            'glb_path' => 'required|string|max:500',
-            'thumbnail_path' => 'nullable|string|max:500',
+            'glb_path' => 'required|max:102400',
+            'thumbnail_path' => 'nullable|image|max:5120',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
             'is_active' => 'nullable|boolean',
         ]);
+
+        if ($request->hasFile('glb_path')) {
+            $glbFile = $request->file('glb_path');
+            $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
+            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
+
+        if ($request->hasFile('thumbnail_path')) {
+            $thumbFile = $request->file('thumbnail_path');
+            $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
+            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
 
         $model = ArModel::create($validated);
 
@@ -61,12 +76,30 @@ class ArController extends Controller
     {
         $validated = $request->validate([
             'model_name' => 'sometimes|required|string|max:255',
-            'glb_path' => 'sometimes|required|string|max:500',
-            'thumbnail_path' => 'nullable|string|max:500',
+            'glb_path' => 'sometimes|max:102400',
+            'thumbnail_path' => 'sometimes|image|max:5120',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
             'is_active' => 'nullable|boolean',
         ]);
+
+        if ($request->hasFile('glb_path')) {
+            if ($arModel->glb_path && str_starts_with($arModel->glb_path, 'storage/')) {
+                Storage::disk('public')->delete(str_replace('storage/', '', $arModel->glb_path));
+            }
+            $glbFile = $request->file('glb_path');
+            $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
+            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
+
+        if ($request->hasFile('thumbnail_path')) {
+            if ($arModel->thumbnail_path && str_starts_with($arModel->thumbnail_path, 'storage/')) {
+                Storage::disk('public')->delete(str_replace('storage/', '', $arModel->thumbnail_path));
+            }
+            $thumbFile = $request->file('thumbnail_path');
+            $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
+            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
 
         $arModel->update($validated);
 
@@ -79,6 +112,13 @@ class ArController extends Controller
 
     public function modelDestroy(ArModel $arModel): JsonResponse
     {
+        if ($arModel->glb_path && str_starts_with($arModel->glb_path, 'storage/')) {
+            Storage::disk('public')->delete(str_replace('storage/', '', $arModel->glb_path));
+        }
+        if ($arModel->thumbnail_path && str_starts_with($arModel->thumbnail_path, 'storage/')) {
+            Storage::disk('public')->delete(str_replace('storage/', '', $arModel->thumbnail_path));
+        }
+        $arModel->markers()->detach();
         $arModel->delete();
         return response()->json([
             'success' => true,
@@ -113,9 +153,15 @@ class ArController extends Controller
         $validated = $request->validate([
             'marker_id' => 'required|string|max:100|unique:ar_markers,marker_id',
             'marker_type' => 'required|string|in:pattern,image',
-            'image_path' => 'required|string|max:500',
+            'image_path' => 'required|image|max:10240',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        if ($request->hasFile('image_path')) {
+            $imageFile = $request->file('image_path');
+            $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
+            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
 
         $marker = ArMarker::create($validated);
 
@@ -131,9 +177,18 @@ class ArController extends Controller
         $validated = $request->validate([
             'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,' . $arMarker->id,
             'marker_type' => 'sometimes|required|string|in:pattern,image',
-            'image_path' => 'sometimes|required|string|max:500',
+            'image_path' => 'sometimes|max:10240',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        if ($request->hasFile('image_path')) {
+            if ($arMarker->image_path && str_starts_with($arMarker->image_path, 'storage/')) {
+                Storage::disk('public')->delete(str_replace('storage/', '', $arMarker->image_path));
+            }
+            $imageFile = $request->file('image_path');
+            $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
+            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
 
         $arMarker->update($validated);
 
@@ -146,6 +201,9 @@ class ArController extends Controller
 
     public function markerDestroy(ArMarker $arMarker): JsonResponse
     {
+        if ($arMarker->image_path && str_starts_with($arMarker->image_path, 'storage/')) {
+            Storage::disk('public')->delete(str_replace('storage/', '', $arMarker->image_path));
+        }
         $arMarker->models()->detach();
         $arMarker->delete();
         return response()->json([
@@ -184,9 +242,15 @@ class ArController extends Controller
             'description' => 'nullable|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'image_path' => 'nullable|string|max:500',
+            'image_path' => 'nullable|image|max:5120',
             'is_active' => 'nullable|boolean',
         ]);
+
+        if ($request->hasFile('image_path')) {
+            $imageFile = $request->file('image_path');
+            $filename = 'hotspots/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
+            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
 
         $hotspot = ArHotspot::create($validated);
 
@@ -205,9 +269,18 @@ class ArController extends Controller
             'description' => 'nullable|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'image_path' => 'nullable|string|max:500',
+            'image_path' => 'sometimes|max:5120',
             'is_active' => 'nullable|boolean',
         ]);
+
+        if ($request->hasFile('image_path')) {
+            if ($arHotspot->image_path && str_starts_with($arHotspot->image_path, 'storage/')) {
+                Storage::disk('public')->delete(str_replace('storage/', '', $arHotspot->image_path));
+            }
+            $imageFile = $request->file('image_path');
+            $filename = 'hotspots/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
+            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+        }
 
         $arHotspot->update($validated);
 
@@ -220,6 +293,9 @@ class ArController extends Controller
 
     public function hotspotDestroy(ArHotspot $arHotspot): JsonResponse
     {
+        if ($arHotspot->image_path && str_starts_with($arHotspot->image_path, 'storage/')) {
+            Storage::disk('public')->delete(str_replace('storage/', '', $arHotspot->image_path));
+        }
         $arHotspot->delete();
         return response()->json([
             'success' => true,
@@ -284,13 +360,15 @@ class ArController extends Controller
                         'id' => $marker->id,
                         'marker_id' => $marker->marker_id,
                         'marker_type' => $marker->marker_type,
+                        'image_path' => $marker->image_path,
                         'status' => $marker->status,
-                        'models' => $marker->models->map(function ($model) {
+                        'models' => $marker->models->map(function ($model) use ($marker) {
                             $mapping = $marker->mappings->firstWhere('ar_model_id', $model->id);
                             return [
                                 'id' => $model->id,
                                 'model_name' => $model->model_name,
                                 'glb_path' => $model->glb_path,
+                                'thumbnail_path' => $model->thumbnail_path,
                                 'mapping_method' => $mapping?->mapping_method,
                                 'mapping_status' => $mapping?->mapping_status,
                                 'mapping_notes' => $mapping?->mapping_notes,
@@ -336,6 +414,45 @@ class ArController extends Controller
             'success' => true,
             'message' => 'Mapping marker-model berhasil diperbarui',
             'data' => $arMarker3dMapping,
+        ]);
+    }
+
+    // ========== PUBLIC AR ENDPOINTS (untuk siswa) ==========
+
+    public function publicModels(): JsonResponse
+    {
+        $models = ArModel::where('is_active', true)
+            ->withCount('markers')
+            ->with('markers', function ($q) {
+                $q->wherePivot('id', '!=', null);
+            })
+            ->orderBy('model_name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data AR models berhasil diambil',
+            'data' => $models,
+        ]);
+    }
+
+    public function publicModelShow(ArModel $arModel): JsonResponse
+    {
+        $arModel->load(['hotspots', 'markers']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail AR model berhasil diambil',
+            'data' => $arModel,
+        ]);
+    }
+
+    public function markerByModel(ArModel $arModel): JsonResponse
+    {
+        $markers = $arModel->markers()->where('status', 'active')->get();
+        return response()->json([
+            'success' => true,
+            'message' => 'Marker untuk model berhasil diambil',
+            'data' => $markers,
         ]);
     }
 }

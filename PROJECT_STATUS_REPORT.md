@@ -80,6 +80,12 @@
 - `pubspec.yaml`: tambah dependency `augen: ^1.4.2` + assets
 - **flutter analyze: 0 new issues** (4 pre-existing info-level deprecations only)
 
+### 🔧 Bugfix & UI Polish (18 Sep 2026)
+- **Fix Right Overflowed by X Pixels di Card 3D Model**: Mengganti `Row` chip info dengan `Wrap` + `ConstrainedBox` pada `guru_ar_management_screen.dart` dan `admin_ar_management_screen.dart`.
+- **Fix Right Overflowed by 21 Pixels di Card AR Marker**: Memperbaiki layout `_buildMarkerCard` dari `ListTile` sempit menjadi `Row` + `Expanded` + `Wrap` agar badge tipe, status, dan jumlah model membungkus otomatis di layar HP.
+- **Fix Quiz Management Chips Overflow**: Mengganti `Row` menjadi `Wrap` pada `admin_quiz_management_screen.dart`.
+- **flutter analyze clean**: 0 warnings/errors baru.
+
 ---
 
 ## 1. BACKEND (Laravel 12 + Sanctum)
