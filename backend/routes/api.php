@@ -74,6 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // AR Mapping
         Route::get('/ar/mappings', [ArController::class, 'allMappings']);
+        Route::post('/ar/mappings', [ArController::class, 'arCreateMapping']);
+        Route::put('/ar/mappings/{arMarker3dMapping}', [ArController::class, 'arUpdateMapping']);
         Route::get('/ar/markers/{arMarker}/models', [ArController::class, 'getMarkerModels']);
         Route::post('/ar/markers/{arMarker}/attach', [ArController::class, 'attachModel']);
         Route::delete('/ar/markers/{arMarker}/detach/{arModel}', [ArController::class, 'detachModel']);

@@ -273,15 +273,69 @@ class ArController extends Controller
 
     public function allMappings(): JsonResponse
     {
-        $markers = ArMarker::with('models')->get();
+        $markers = ArMarker::with(['models', 'mappings'])->get();
         $models = ArModel::withCount('markers')->get();
         return response()->json([
             'success' => true,
             'message' => 'Semua mapping marker-model berhasil diambil',
             'data' => [
-                'markers' => $markers,
+                'markers' => $markers->map(function ($marker) {
+                    return [
+                        'id' => $marker->id,
+                        'marker_id' => $marker->marker_id,
+                        'marker_type' => $marker->marker_type,
+                        'status' => $marker->status,
+                        'models' => $marker->models->map(function ($model) {
+                            $mapping = $marker->mappings->firstWhere('ar_model_id', $model->id);
+                            return [
+                                'id' => $model->id,
+                                'model_name' => $model->model_name,
+                                'glb_path' => $model->glb_path,
+                                'mapping_method' => $mapping?->mapping_method,
+                                'mapping_status' => $mapping?->mapping_status,
+                                'mapping_notes' => $mapping?->mapping_notes,
+                            ];
+                        }),
+                    ];
+                }),
                 'models' => $models,
             ],
+        ]);
+    }
+
+    public function arCreateMapping(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ar_marker_id' => 'required|exists:ar_markers,id',
+            'ar_model_id' => 'required|exists:ar_models,id',
+            'mapping_method' => 'required|string|in:image_tracking,marker_id',
+            'mapping_status' => 'required|string|in:pending,mapped,failed',
+            'mapping_notes' => 'nullable|string',
+        ]);
+
+        $mapping = ArMarker3dMapping::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mapping marker-model berhasil dibuat',
+            'data' => $mapping,
+        ], 201);
+    }
+
+    public function arUpdateMapping(Request $request, ArMarker3dMapping $arMarker3dMapping): JsonResponse
+    {
+        $validated = $request->validate([
+            'mapping_method' => 'sometimes|required|string|in:image_tracking,marker_id',
+            'mapping_status' => 'sometimes|required|string|in:pending,mapped,failed',
+            'mapping_notes' => 'nullable|string',
+        ]);
+
+        $arMarker3dMapping->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mapping marker-model berhasil diperbarui',
+            'data' => $arMarker3dMapping,
         ]);
     }
 }

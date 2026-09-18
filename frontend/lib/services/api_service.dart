@@ -6,9 +6,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static String get baseUrl {
     const webUrl = 'http://127.0.0.1:8000/api';
-    const androidUrl = 'http://10.0.2.2:8000/api';
+    const androidEmulatorUrl = 'http://10.0.2.2:8000/api';
+    const physicalDeviceUrl = 'http://10.0.2.2:8000/api';
     try {
-      if (Platform.isAndroid) return androidUrl;
+      if (Platform.isWeb) return webUrl;
+      if (Platform.isAndroid) {
+        // Emulator: 10.0.2.2, Physical device: ganti ke IP LAN laptop
+        // TODO: Replace physicalDeviceUrl dengan IP laptop Anda (contoh: 192.168.1.100)
+        return physicalDeviceUrl;
+      }
     } catch (_) {}
     return webUrl;
   }
@@ -162,13 +168,13 @@ class ApiService {
   static Future<Map<String, dynamic>> guruDeleteMateri(int id) =>
       _delete('/guru/materi/$id');
 
-  // AR Models (Guru + Admin)
+  // AR Models (Guru + Admin) - with multipart upload
   static Future<Map<String, dynamic>> arGetModels() => _get('/ar/models');
   static Future<Map<String, dynamic>> arGetModel(int id) => _get('/ar/models/$id');
-  static Future<Map<String, dynamic>> arCreateModel(Map<String, dynamic> data) =>
-      _post('/ar/models', data);
-  static Future<Map<String, dynamic>> arUpdateModel(int id, Map<String, dynamic> data) =>
-      _put('/ar/models/$id', data);
+  static Future<Map<String, dynamic>> arCreateModel(Map<String, dynamic> data, {String? filePath}) =>
+      _postMultipart('/ar/models', data, filePath: filePath, fileField: 'glb_path');
+  static Future<Map<String, dynamic>> arUpdateModel(int id, Map<String, dynamic> data, {String? filePath}) =>
+      _postMultipart('/ar/models/$id', data, filePath: filePath, fileField: 'glb_path');
   static Future<Map<String, dynamic>> arDeleteModel(int id) => _delete('/ar/models/$id');
 
   // AR Markers (Guru + Admin)
