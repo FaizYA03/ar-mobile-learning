@@ -46,6 +46,7 @@ class ArContentController extends Controller
                         'image_url' => $marker->image_path ? Storage::url($marker->image_path) : null,
                         'image_path' => $marker->image_path,
                         'status' => $marker->status,
+                        'updated_at' => $marker->updated_at?->toIso8601String(),
                     ];
                 }),
                 'hotspots' => $model->hotspots->map(function ($hotspot) {

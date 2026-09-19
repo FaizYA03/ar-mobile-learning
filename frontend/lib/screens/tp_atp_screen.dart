@@ -37,7 +37,8 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
       } else {
         if (mounted) {
           setState(() {
-            _errorMessage = response['message'] ?? 'Gagal memuat data Tujuan Pembelajaran';
+            _errorMessage =
+                response['message'] ?? 'Gagal memuat data Tujuan Pembelajaran';
             _isLoading = false;
           });
         }
@@ -45,7 +46,8 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi backend.';
+          _errorMessage =
+              'Tidak dapat terhubung ke server. Periksa koneksi backend.';
           _isLoading = false;
         });
       }
@@ -67,7 +69,8 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off_outlined, size: 64, color: Color(0xFFC62828)),
+              const Icon(Icons.cloud_off_outlined,
+                  size: 64, color: Color(0xFFC62828)),
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
@@ -82,7 +85,8 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0A8477),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ],
@@ -98,7 +102,10 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
             SizedBox(height: 12),
             Text(
               'Belum ada Tujuan Pembelajaran',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A2E)),
             ),
           ],
         ),
@@ -124,7 +131,10 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
         appBar: AppBar(
           title: const Text(
             'Tujuan Pembelajaran',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E)),
           ),
           automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
@@ -139,12 +149,16 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
       appBar: AppBar(
         title: const Text(
           'Pilih TP / ATP',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E)),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Color(0xFF1A1A2E)),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 20, color: Color(0xFF1A1A2E)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -192,7 +206,8 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0A8477).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -251,7 +266,8 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.menu_book, size: 16, color: Color(0xFF0A8477)),
+                        const Icon(Icons.menu_book,
+                            size: 16, color: Color(0xFF0A8477)),
                         const SizedBox(width: 6),
                         Text(
                           '$materiCount Materi Pembelajaran',
@@ -263,7 +279,8 @@ class _TpAtpScreenState extends State<TpAtpScreen> {
                         ),
                       ],
                     ),
-                    const Icon(Icons.arrow_forward, size: 18, color: Color(0xFFD0D5D8)),
+                    const Icon(Icons.arrow_forward,
+                        size: 18, color: Color(0xFFD0D5D8)),
                   ],
                 ),
               ],

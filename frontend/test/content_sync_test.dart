@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/models/models.dart';
 import 'package:frontend/services/content_sync_service.dart';
 
 void main() {
@@ -137,8 +138,9 @@ void main() {
     test('new model requires download when not in manifest', () {
       final manifest = ContentManifest(contentVersion: 15, items: []);
       final modelId = 1;
-      final existing = manifest.items.where(
-          (i) => i.modelId == modelId && i.assetType == 'model').toList();
+      final existing = manifest.items
+          .where((i) => i.modelId == modelId && i.assetType == 'model')
+          .toList();
       expect(existing.isEmpty, true);
     });
 
@@ -157,9 +159,11 @@ void main() {
         ],
       );
       final modelVersion = 2;
-      final existing = manifest.items.where(
-          (i) => i.modelId == 1 && i.assetType == 'model').toList();
-      final needsDownload = existing.isEmpty || existing.first.version != modelVersion;
+      final existing = manifest.items
+          .where((i) => i.modelId == 1 && i.assetType == 'model')
+          .toList();
+      final needsDownload =
+          existing.isEmpty || existing.first.version != modelVersion;
       expect(needsDownload, false);
     });
 
@@ -178,9 +182,11 @@ void main() {
         ],
       );
       final modelVersion = 2;
-      final existing = manifest.items.where(
-          (i) => i.modelId == 1 && i.assetType == 'model').toList();
-      final needsDownload = existing.isEmpty || existing.first.version != modelVersion;
+      final existing = manifest.items
+          .where((i) => i.modelId == 1 && i.assetType == 'model')
+          .toList();
+      final needsDownload =
+          existing.isEmpty || existing.first.version != modelVersion;
       expect(needsDownload, true);
     });
 
@@ -198,16 +204,76 @@ void main() {
           ),
         ],
       );
-      final cachedItem = manifest.items.where(
-          (i) => i.modelId == 1 && i.assetType == 'model').toList();
+      final cachedItem = manifest.items
+          .where((i) => i.modelId == 1 && i.assetType == 'model')
+          .toList();
       expect(cachedItem.isNotEmpty, true);
     });
 
     test('offline without cache shows error', () {
       final manifest = ContentManifest.empty();
-      final cachedItem = manifest.items.where(
-          (i) => i.modelId == 1 && i.assetType == 'model').toList();
+      final cachedItem = manifest.items
+          .where((i) => i.modelId == 1 && i.assetType == 'model')
+          .toList();
       expect(cachedItem.isEmpty, true);
+    });
+  });
+
+  group('Marker Replacement Detection', () {
+    ArMarkerData markerWith({String? updatedAt}) => ArMarkerData(
+          id: 5,
+          markerId: 'MARKER-CPU-001',
+          markerType: 'image',
+          imageUrl: 'http://example.com/marker.png',
+          imagePath: 'markers/marker.png',
+          status: 'active',
+          updatedAt: updatedAt,
+        );
+
+    ContentManifestItem cachedItem({required int version}) =>
+        ContentManifestItem(
+          modelId: 1,
+          version: version,
+          localPath: '/path/marker_5.png',
+          remoteUrl: 'http://example.com/marker.png',
+          assetType: 'marker_5',
+          downloadedAt: '2026-09-19T10:00:00Z',
+        );
+
+    test('missing marker requires download', () {
+      final needs = ContentSyncService.shouldDownloadMarker(
+        existing: [],
+        marker: markerWith(updatedAt: '2026-09-19T10:00:00+00:00'),
+      );
+      expect(needs, true);
+    });
+
+    test('same updated_at skips re-download', () {
+      final version =
+          DateTime.parse('2026-09-19T10:00:00+00:00').millisecondsSinceEpoch;
+      final needs = ContentSyncService.shouldDownloadMarker(
+        existing: [cachedItem(version: version)],
+        marker: markerWith(updatedAt: '2026-09-19T10:00:00+00:00'),
+      );
+      expect(needs, false);
+    });
+
+    test('newer updated_at detects marker image replacement', () {
+      final old =
+          DateTime.parse('2026-09-19T10:00:00+00:00').millisecondsSinceEpoch;
+      final needs = ContentSyncService.shouldDownloadMarker(
+        existing: [cachedItem(version: old)],
+        marker: markerWith(updatedAt: '2026-09-20T08:30:00+00:00'),
+      );
+      expect(needs, true);
+    });
+
+    test('backend without updated_at only downloads once', () {
+      final needs = ContentSyncService.shouldDownloadMarker(
+        existing: [cachedItem(version: 0)],
+        marker: markerWith(updatedAt: null),
+      );
+      expect(needs, false);
     });
   });
 }

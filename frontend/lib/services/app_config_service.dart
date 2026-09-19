@@ -22,7 +22,8 @@ class AppConfigService {
 
   static bool get isMaintenanceMode => _config?.maintenanceMode ?? false;
   static String? get latestVersion => _config?.latestVersion;
-  static String? get minimumSupportedVersion => _config?.minimumSupportedVersion;
+  static String? get minimumSupportedVersion =>
+      _config?.minimumSupportedVersion;
   static int get contentVersion => _config?.contentVersion ?? 0;
 
   static bool isVersionSupported(String currentVersion) {
@@ -39,7 +40,8 @@ class AppConfigService {
     final partsA = a.split('.').map(int.tryParse).toList();
     final partsB = b.split('.').map(int.tryParse).toList();
 
-    final maxLength = partsA.length > partsB.length ? partsA.length : partsB.length;
+    final maxLength =
+        partsA.length > partsB.length ? partsA.length : partsB.length;
 
     for (var i = 0; i < maxLength; i++) {
       final numA = (i < partsA.length ? partsA[i] : 0) ?? 0;

@@ -12,7 +12,8 @@ class ArContentResolver {
       final response = await ApiClient.getV1('/ar/content');
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'] as List<dynamic>;
-        _cachedContent = data.map((item) => ArContentItem.fromJson(item)).toList();
+        _cachedContent =
+            data.map((item) => ArContentItem.fromJson(item)).toList();
         _lastFetchTime = DateTime.now();
       }
     } catch (_) {}
@@ -74,7 +75,8 @@ class ArContentResolver {
     return null;
   }
 
-  static Future<String?> resolveMarkerImagePath(int modelId, int markerId) async {
+  static Future<String?> resolveMarkerImagePath(
+      int modelId, int markerId) async {
     final cachedPath = await ContentSyncService.getCachedMarkerPath(markerId);
     if (cachedPath != null) {
       final file = File(cachedPath);
@@ -101,7 +103,8 @@ class ArContentResolver {
     return item?.hotspots ?? [];
   }
 
-  static bool get isContentLoaded => _cachedContent != null && _cachedContent!.isNotEmpty;
+  static bool get isContentLoaded =>
+      _cachedContent != null && _cachedContent!.isNotEmpty;
 
   static int get contentCount => _cachedContent?.length ?? 0;
 

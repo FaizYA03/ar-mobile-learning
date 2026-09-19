@@ -71,12 +71,16 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
       final syncResult = await ContentSyncService.sync().timeout(
         const Duration(seconds: 15),
       );
+      await ContentSyncService.applyDownloads(syncResult).timeout(
+        const Duration(seconds: 180),
+      );
       await ArContentResolver.refreshContent().timeout(
         const Duration(seconds: 10),
       );
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('content_last_sync', DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt(
+          'content_last_sync', DateTime.now().millisecondsSinceEpoch);
       if (syncResult.manifest != null) {
         final modelCount = syncResult.manifest!.items
             .where((i) => i.assetType == 'model')

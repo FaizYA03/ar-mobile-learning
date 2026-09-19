@@ -8,7 +8,8 @@ class QuizTakeScreen extends StatefulWidget {
   final int quizId;
   final String quizTitle;
 
-  const QuizTakeScreen({super.key, required this.quizId, required this.quizTitle});
+  const QuizTakeScreen(
+      {super.key, required this.quizId, required this.quizTitle});
 
   @override
   State<QuizTakeScreen> createState() => _QuizTakeScreenState();
@@ -114,7 +115,9 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
               : 'Semua $total soal sudah dijawab. Kumpulkan jawaban sekarang?',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Periksa Lagi')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Periksa Lagi')),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
@@ -137,10 +140,12 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
     _timer?.cancel();
     setState(() => _isSubmitting = true);
 
-    final answers = _selectedOptions.entries.map((e) => {
-      'question_id': e.key,
-      'option_id': e.value,
-    }).toList();
+    final answers = _selectedOptions.entries
+        .map((e) => {
+              'question_id': e.key,
+              'option_id': e.value,
+            })
+        .toList();
 
     try {
       final response = await ApiService.submitQuiz(widget.quizId, answers);
@@ -164,7 +169,9 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
         if (mounted) {
           setState(() => _isSubmitting = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(response['message'] ?? 'Gagal mengumpulkan quiz')),
+            SnackBar(
+                content:
+                    Text(response['message'] ?? 'Gagal mengumpulkan quiz')),
           );
         }
       }
@@ -172,7 +179,8 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Terjadi kesalahan jaringan saat submit.')),
+          const SnackBar(
+              content: Text('Terjadi kesalahan jaringan saat submit.')),
         );
       }
     }
@@ -185,7 +193,10 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
       appBar: AppBar(
         title: Text(
           widget.quizTitle,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+          style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E)),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -196,10 +207,16 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
               context: context,
               builder: (ctx) => AlertDialog(
                 title: const Text('Keluar Quiz?'),
-                content: const Text('Progres jawaban Anda saat ini tidak akan tersimpan.'),
+                content: const Text(
+                    'Progres jawaban Anda saat ini tidak akan tersimpan.'),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Lanjut Mengerjakan')),
-                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar', style: TextStyle(color: Color(0xFFC62828)))),
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Lanjut Mengerjakan')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Keluar',
+                          style: TextStyle(color: Color(0xFFC62828)))),
                 ],
               ),
             );
@@ -211,13 +228,16 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
         ),
       ),
       body: _buildBody(),
-      bottomNavigationBar: _questions.isEmpty || _isLoading || _isSubmitting ? null : _buildBottomBar(),
+      bottomNavigationBar: _questions.isEmpty || _isLoading || _isSubmitting
+          ? null
+          : _buildBottomBar(),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     }
 
     if (_errorMessage != null) {
@@ -227,11 +247,13 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 60, color: Color(0xFFC62828)),
+              const Icon(Icons.error_outline,
+                  size: 60, color: Color(0xFFC62828)),
               const SizedBox(height: 12),
               Text(_errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              ElevatedButton(onPressed: _fetchQuizDetail, child: const Text('Coba Lagi')),
+              ElevatedButton(
+                  onPressed: _fetchQuizDetail, child: const Text('Coba Lagi')),
             ],
           ),
         ),
@@ -245,7 +267,8 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
           children: [
             CircularProgressIndicator(color: Color(0xFF0A8477)),
             SizedBox(height: 16),
-            Text('Mengirim jawaban...', style: TextStyle(color: Color(0xFF637080))),
+            Text('Mengirim jawaban...',
+                style: TextStyle(color: Color(0xFF637080))),
           ],
         ),
       );
@@ -274,13 +297,17 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                 children: [
                   Text(
                     'Soal ${_currentIndex + 1} dari ${_questions.length}',
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
                   ),
                   if (_remainingSeconds > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isTimeLow ? const Color(0xFFFDECEA) : const Color(0xFFE8F5F3),
+                        color: isTimeLow
+                            ? const Color(0xFFFDECEA)
+                            : const Color(0xFFE8F5F3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -289,7 +316,9 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                           Icon(
                             Icons.timer_outlined,
                             size: 14,
-                            color: isTimeLow ? const Color(0xFFC62828) : const Color(0xFF0A8477),
+                            color: isTimeLow
+                                ? const Color(0xFFC62828)
+                                : const Color(0xFF0A8477),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -297,7 +326,9 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: isTimeLow ? const Color(0xFFC62828) : const Color(0xFF0A8477),
+                              color: isTimeLow
+                                  ? const Color(0xFFC62828)
+                                  : const Color(0xFF0A8477),
                             ),
                           ),
                         ],
@@ -305,7 +336,10 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                     ),
                   Text(
                     'Terjawab ${_selectedOptions.length}/${_questions.length}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF0A8477), fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF0A8477),
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -313,13 +347,13 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
               LinearProgressIndicator(
                 value: (_currentIndex + 1) / _questions.length,
                 backgroundColor: const Color(0xFFE9ECEF),
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0A8477)),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(Color(0xFF0A8477)),
                 borderRadius: BorderRadius.circular(4),
               ),
             ],
           ),
         ),
-
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -333,22 +367,30 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 3)),
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3)),
                     ],
                   ),
                   child: Text(
                     questionText,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E), height: 1.4),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
+                        height: 1.4),
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 const Text(
                   'Pilih Jawaban:',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF637080)),
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF637080)),
                 ),
                 const SizedBox(height: 12),
-
                 ...options.asMap().entries.map((entry) {
                   final optIndex = entry.key;
                   final option = entry.value;
@@ -360,14 +402,20 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE8F5F3) : Colors.white,
+                      color:
+                          isSelected ? const Color(0xFFE8F5F3) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF0A8477) : const Color(0xFFE9ECEF),
+                        color: isSelected
+                            ? const Color(0xFF0A8477)
+                            : const Color(0xFFE9ECEF),
                         width: isSelected ? 2 : 1,
                       ),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2)),
                       ],
                     ),
                     child: Material(
@@ -387,7 +435,9 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF0A8477) : const Color(0xFFF5F7FA),
+                                  color: isSelected
+                                      ? const Color(0xFF0A8477)
+                                      : const Color(0xFFF5F7FA),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
@@ -395,7 +445,9 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                                     letter,
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      color: isSelected ? Colors.white : const Color(0xFF637080),
+                                      color: isSelected
+                                          ? Colors.white
+                                          : const Color(0xFF637080),
                                     ),
                                   ),
                                 ),
@@ -406,13 +458,18 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                                   optText,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSelected ? const Color(0xFF075A51) : const Color(0xFF1A1A2E),
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? const Color(0xFF075A51)
+                                        : const Color(0xFF1A1A2E),
                                   ),
                                 ),
                               ),
                               if (isSelected)
-                                const Icon(Icons.check_circle, color: Color(0xFF0A8477), size: 22),
+                                const Icon(Icons.check_circle,
+                                    color: Color(0xFF0A8477), size: 22),
                             ],
                           ),
                         ),
@@ -436,7 +493,10 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -3)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -3)),
         ],
       ),
       child: SafeArea(
@@ -446,8 +506,10 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
               OutlinedButton(
                 onPressed: () => setState(() => _currentIndex--),
                 style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 child: const Text('Sebelumnya'),
               ),
@@ -460,22 +522,31 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0A8477),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               )
             else
               ElevatedButton.icon(
                 onPressed: _isSubmitting ? null : _confirmSubmit,
                 icon: _isSubmitting
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
                     : const Icon(Icons.check, size: 18),
-                label: Text(_isSubmitting ? 'Mengirim...' : 'Selesai & Kumpulkan'),
+                label:
+                    Text(_isSubmitting ? 'Mengirim...' : 'Selesai & Kumpulkan'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0A8477),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
           ],

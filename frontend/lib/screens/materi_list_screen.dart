@@ -29,7 +29,8 @@ class _MateriListScreenState extends State<MateriListScreen> {
     });
 
     try {
-      final response = await ApiService.getMateriList(tpAtpId: widget.tpAtp['id']);
+      final response =
+          await ApiService.getMateriList(tpAtpId: widget.tpAtp['id']);
       if (response['success'] == true && mounted) {
         setState(() {
           _materiList = response['data'] ?? [];
@@ -60,12 +61,16 @@ class _MateriListScreenState extends State<MateriListScreen> {
       appBar: AppBar(
         title: Text(
           widget.tpAtp['kode'] ?? 'Materi',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+          style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E)),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Color(0xFF1A1A2E)),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 20, color: Color(0xFF1A1A2E)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -87,13 +92,18 @@ class _MateriListScreenState extends State<MateriListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 60, color: Color(0xFFC62828)),
+              const Icon(Icons.error_outline,
+                  size: 60, color: Color(0xFFC62828)),
               const SizedBox(height: 14),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF637080))),
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF637080))),
               const SizedBox(height: 14),
               ElevatedButton(
                 onPressed: _fetchMateri,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0A8477), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A8477),
+                    foregroundColor: Colors.white),
                 child: const Text('Coba Lagi'),
               ),
             ],
@@ -125,14 +135,18 @@ class _MateriListScreenState extends State<MateriListScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         widget.tpAtp['elemen'] ?? 'Informatika',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white),
                       ),
                     ),
                   ],
@@ -140,13 +154,18 @@ class _MateriListScreenState extends State<MateriListScreen> {
                 const SizedBox(height: 8),
                 Text(
                   widget.tpAtp['judul'] ?? '',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white),
                 ),
                 if ((widget.tpAtp['deskripsi'] ?? '').isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     widget.tpAtp['deskripsi'],
-                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.85)),
                   ),
                 ],
               ],
@@ -158,7 +177,10 @@ class _MateriListScreenState extends State<MateriListScreen> {
             children: [
               const Text(
                 'Daftar Topik Materi',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E)),
               ),
               Text(
                 '${_materiList.length} Topik',
@@ -171,7 +193,8 @@ class _MateriListScreenState extends State<MateriListScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
               child: Center(
-                child: Text('Belum ada materi untuk TP/ATP ini', style: TextStyle(color: Color(0xFF637080))),
+                child: Text('Belum ada materi untuk TP/ATP ini',
+                    style: TextStyle(color: Color(0xFF637080))),
               ),
             )
           else
@@ -269,24 +292,29 @@ class _MateriListScreenState extends State<MateriListScreen> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(Icons.timer_outlined, size: 14, color: Colors.grey[600]),
+                          Icon(Icons.timer_outlined,
+                              size: 14, color: Colors.grey[600]),
                           const SizedBox(width: 4),
                           Text(
                             '$menit Menit',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
                           ),
                           if (hasAr) ...[
                             const SizedBox(width: 12),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF5B6ABF).withValues(alpha: 0.1),
+                                color: const Color(0xFF5B6ABF)
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.view_in_ar, size: 12, color: Color(0xFF5B6ABF)),
+                                  Icon(Icons.view_in_ar,
+                                      size: 12, color: Color(0xFF5B6ABF)),
                                   SizedBox(width: 4),
                                   Text(
                                     'Objek 3D',
@@ -306,7 +334,8 @@ class _MateriListScreenState extends State<MateriListScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFFD0D5D8)),
+                const Icon(Icons.arrow_forward_ios,
+                    size: 14, color: Color(0xFFD0D5D8)),
               ],
             ),
           ),

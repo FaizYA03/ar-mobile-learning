@@ -55,16 +55,19 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
     final faseCtrl = TextEditingController(text: existing?['fase'] ?? 'E');
     final elemenCtrl = TextEditingController(text: existing?['elemen'] ?? '');
     final judulCtrl = TextEditingController(text: existing?['judul'] ?? '');
-    final deskripsiCtrl = TextEditingController(text: existing?['deskripsi'] ?? '');
+    final deskripsiCtrl =
+        TextEditingController(text: existing?['deskripsi'] ?? '');
     bool isActive = existing?['is_active'] ?? true;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(isEdit ? 'Edit TP/ATP' : 'Tambah TP/ATP',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -74,7 +77,8 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                   decoration: InputDecoration(
                     labelText: 'Kode *',
                     hintText: 'e.g. TP-SK-01',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -83,7 +87,8 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                   decoration: InputDecoration(
                     labelText: 'Fase',
                     hintText: 'e.g. E',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -92,7 +97,8 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                   decoration: InputDecoration(
                     labelText: 'Elemen *',
                     hintText: 'e.g. Sistem Komputer',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -100,7 +106,8 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                   controller: judulCtrl,
                   decoration: InputDecoration(
                     labelText: 'Judul *',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   maxLines: 2,
                 ),
@@ -109,13 +116,15 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                   controller: deskripsiCtrl,
                   decoration: InputDecoration(
                     labelText: 'Deskripsi',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
-                  title: const Text('Status Aktif', style: TextStyle(fontSize: 14)),
+                  title: const Text('Status Aktif',
+                      style: TextStyle(fontSize: 14)),
                   value: isActive,
                   activeTrackColor: const Color(0xFF0A8477),
                   onChanged: (v) => setDialogState(() => isActive = v),
@@ -133,12 +142,16 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A8477),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
-                if (kodeCtrl.text.isEmpty || elemenCtrl.text.isEmpty || judulCtrl.text.isEmpty) {
+                if (kodeCtrl.text.isEmpty ||
+                    elemenCtrl.text.isEmpty ||
+                    judulCtrl.text.isEmpty) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Kode, Elemen, dan Judul wajib diisi')),
+                    const SnackBar(
+                        content: Text('Kode, Elemen, dan Judul wajib diisi')),
                   );
                   return;
                 }
@@ -160,7 +173,10 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                   _fetchData();
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(isEdit ? 'TP/ATP berhasil diperbarui' : 'TP/ATP berhasil ditambahkan')),
+                      SnackBar(
+                          content: Text(isEdit
+                              ? 'TP/ATP berhasil diperbarui'
+                              : 'TP/ATP berhasil ditambahkan')),
                     );
                   }
                 } catch (e) {
@@ -185,12 +201,16 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus TP/ATP?'),
-        content: Text('Yakin ingin menghapus "${item['judul']}"?\nSemua materi terkait juga akan terhapus.'),
+        content: Text(
+            'Yakin ingin menghapus "${item['judul']}"?\nSemua materi terkait juga akan terhapus.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828))),
+            child:
+                const Text('Hapus', style: TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -232,21 +252,29 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Kelola TP/ATP',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A2E))),
                     SizedBox(height: 4),
                     Text('Tujuan Pembelajaran / Alur Tujuan Pembelajaran',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF637080))),
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF637080))),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0A8477).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     '${_tpAtpList.length}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0A8477)),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0A8477)),
                   ),
                 ),
               ],
@@ -261,14 +289,16 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
         backgroundColor: const Color(0xFF0A8477),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Tambah TP/ATP', style: TextStyle(fontWeight: FontWeight.w600)),
+        label: const Text('Tambah TP/ATP',
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     }
     if (_errorMessage != null) {
       return Center(
@@ -277,11 +307,15 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 56, color: Color(0xFFC62828)),
+              const Icon(Icons.error_outline,
+                  size: 56, color: Color(0xFFC62828)),
               const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF637080))),
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF637080))),
               const SizedBox(height: 16),
-              ElevatedButton(onPressed: _fetchData, child: const Text('Coba Lagi')),
+              ElevatedButton(
+                  onPressed: _fetchData, child: const Text('Coba Lagi')),
             ],
           ),
         ),
@@ -294,9 +328,14 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
           children: [
             Icon(Icons.folder_open_outlined, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            const Text('Belum ada TP/ATP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF637080))),
+            const Text('Belum ada TP/ATP',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF637080))),
             const SizedBox(height: 8),
-            const Text('Tap tombol + untuk menambahkan', style: TextStyle(fontSize: 13, color: Color(0xFFB0B8C1))),
+            const Text('Tap tombol + untuk menambahkan',
+                style: TextStyle(fontSize: 13, color: Color(0xFFB0B8C1))),
           ],
         ),
       );
@@ -314,14 +353,20 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
 
   Widget _buildTpAtpCard(Map<String, dynamic> item) {
     final isActive = item['is_active'] == true || item['is_active'] == 1;
-    final materiCount = item['materi_count'] ?? (item['materi'] is List ? (item['materi'] as List).length : 0);
+    final materiCount = item['materi_count'] ??
+        (item['materi'] is List ? (item['materi'] as List).length : 0);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -337,32 +382,41 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0A8477).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         item['kode'] ?? '',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0A8477)),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0A8477)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     if (item['fase'] != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: const Color(0xFF5B6ABF).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           'Fase ${item['fase']}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5B6ABF)),
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF5B6ABF)),
                         ),
                       ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: isActive
                             ? const Color(0xFF27AE60).withValues(alpha: 0.1)
@@ -374,22 +428,28 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: isActive ? const Color(0xFF27AE60) : const Color(0xFFC62828),
+                          color: isActive
+                              ? const Color(0xFF27AE60)
+                              : const Color(0xFFC62828),
                         ),
                       ),
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF0A8477)),
+                      icon: const Icon(Icons.edit_outlined,
+                          size: 20, color: Color(0xFF0A8477)),
                       onPressed: () => _showFormDialog(existing: item),
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFC62828)),
+                      icon: const Icon(Icons.delete_outline,
+                          size: 20, color: Color(0xFFC62828)),
                       onPressed: () => _confirmDelete(item),
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
                     ),
                   ],
                 ),
@@ -397,21 +457,29 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                 // Elemen
                 Text(
                   item['elemen'] ?? '',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF637080)),
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF637080)),
                 ),
                 const SizedBox(height: 4),
                 // Judul
                 Text(
                   item['judul'] ?? '',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E)),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (item['deskripsi'] != null && (item['deskripsi'] as String).isNotEmpty) ...[
+                if (item['deskripsi'] != null &&
+                    (item['deskripsi'] as String).isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     item['deskripsi'],
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF637080)),
+                    style:
+                        const TextStyle(fontSize: 12, color: Color(0xFF637080)),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -420,11 +488,15 @@ class _GuruTpAtpScreenState extends State<GuruTpAtpScreen> {
                 // Footer: materi count
                 Row(
                   children: [
-                    const Icon(Icons.menu_book_outlined, size: 16, color: Color(0xFF0A8477)),
+                    const Icon(Icons.menu_book_outlined,
+                        size: 16, color: Color(0xFF0A8477)),
                     const SizedBox(width: 6),
                     Text(
                       '$materiCount materi',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0A8477)),
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0A8477)),
                     ),
                   ],
                 ),

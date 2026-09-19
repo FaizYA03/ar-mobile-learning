@@ -6,7 +6,8 @@ class AdminQuizManagementScreen extends StatefulWidget {
   const AdminQuizManagementScreen({super.key});
 
   @override
-  State<AdminQuizManagementScreen> createState() => _AdminQuizManagementScreenState();
+  State<AdminQuizManagementScreen> createState() =>
+      _AdminQuizManagementScreenState();
 }
 
 class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
@@ -62,7 +63,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Buat Quiz Baru',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+            style: TextStyle(
+                fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -72,7 +74,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 decoration: InputDecoration(
                   labelText: 'Judul Quiz *',
                   hintText: 'Masukkan judul',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -80,7 +83,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 controller: descCtrl,
                 decoration: InputDecoration(
                   labelText: 'Deskripsi',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 maxLines: 2,
               ),
@@ -89,7 +93,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 controller: timeCtrl,
                 decoration: InputDecoration(
                   labelText: 'Batas Waktu (menit)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -98,7 +103,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 controller: scoreCtrl,
                 decoration: InputDecoration(
                   labelText: 'Passing Score',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -106,12 +112,14 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0A8477),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () async {
               if (titleCtrl.text.isEmpty) {
@@ -152,7 +160,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
   void _showEditQuizDialog(QuizItem quiz) {
     final titleCtrl = TextEditingController(text: quiz.title);
     final descCtrl = TextEditingController(text: quiz.description ?? '');
-    final timeCtrl = TextEditingController(text: (quiz.timeLimit ?? 10).toString());
+    final timeCtrl =
+        TextEditingController(text: (quiz.timeLimit ?? 10).toString());
     final scoreCtrl = TextEditingController(text: quiz.passingScore.toString());
 
     showDialog(
@@ -160,7 +169,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Edit Quiz',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+            style: TextStyle(
+                fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -169,7 +179,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 controller: titleCtrl,
                 decoration: InputDecoration(
                   labelText: 'Judul Quiz *',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -177,7 +188,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 controller: descCtrl,
                 decoration: InputDecoration(
                   labelText: 'Deskripsi',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 maxLines: 2,
               ),
@@ -186,7 +198,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 controller: timeCtrl,
                 decoration: InputDecoration(
                   labelText: 'Batas Waktu (menit)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -195,7 +208,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 controller: scoreCtrl,
                 decoration: InputDecoration(
                   labelText: 'Passing Score',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -203,12 +217,14 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0A8477),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () async {
               if (titleCtrl.text.isEmpty) return;
@@ -254,9 +270,11 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('Tambah Soal - ${quiz.title}',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -265,66 +283,76 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                   controller: questionCtrl,
                   decoration: InputDecoration(
                     labelText: 'Soal *',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 16),
-                ...List.generate(options.length, (i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Opsi ${i + 1} *',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ...List.generate(
+                    options.length,
+                    (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    labelText: 'Opsi ${i + 1} *',
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
+                                  ),
+                                  onChanged: (v) => options[i]['text'] = v,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  setDialogState(() {
+                                    for (var o in options) {
+                                      o['is_correct'] = false;
+                                    }
+                                    options[i]['is_correct'] = true;
+                                  });
+                                },
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: options[i]['is_correct'] == true
+                                          ? const Color(0xFF0A8477)
+                                          : const Color(0xFFB0B8C1),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: options[i]['is_correct'] == true
+                                      ? const Center(
+                                          child: Icon(Icons.circle,
+                                              size: 12,
+                                              color: Color(0xFF0A8477)),
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ],
                           ),
-                          onChanged: (v) => options[i]['text'] = v,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () {
-                          setDialogState(() {
-                            for (var o in options) {
-                              o['is_correct'] = false;
-                            }
-                            options[i]['is_correct'] = true;
-                          });
-                        },
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: options[i]['is_correct'] == true
-                                  ? const Color(0xFF0A8477)
-                                  : const Color(0xFFB0B8C1),
-                              width: 2,
-                            ),
-                          ),
-                          child: options[i]['is_correct'] == true
-                              ? const Center(
-                                  child: Icon(Icons.circle, size: 12, color: Color(0xFF0A8477)),
-                                )
-                              : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+                        )),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A8477),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
                 if (questionCtrl.text.isEmpty) {
@@ -333,14 +361,17 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                   );
                   return;
                 }
-                final correctIndex = options.indexWhere((o) => o['is_correct'] == true);
+                final correctIndex =
+                    options.indexWhere((o) => o['is_correct'] == true);
                 if (correctIndex == -1) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Pilih opsi jawaban yang benar')),
+                    const SnackBar(
+                        content: Text('Pilih opsi jawaban yang benar')),
                   );
                   return;
                 }
-                final hasEmpty = options.any((o) => (o['text'] as String).isEmpty);
+                final hasEmpty =
+                    options.any((o) => (o['text'] as String).isEmpty);
                 if (hasEmpty) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(content: Text('Semua opsi wajib diisi')),
@@ -350,13 +381,17 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 try {
                   await ApiService.guruAddQuestion(quiz.id, {
                     'text': questionCtrl.text,
-                    'options': options.map((o) => {'text': o['text'], 'is_correct': o['is_correct']}).toList(),
+                    'options': options
+                        .map((o) =>
+                            {'text': o['text'], 'is_correct': o['is_correct']})
+                        .toList(),
                   });
                   if (ctx.mounted) Navigator.pop(ctx);
                   _fetchData();
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Soal berhasil ditambahkan')),
+                      const SnackBar(
+                          content: Text('Soal berhasil ditambahkan')),
                     );
                   }
                 } catch (e) {
@@ -381,12 +416,16 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Quiz?'),
-        content: Text('Yakin ingin menghapus "${quiz.title}"?\nSemua soal dan hasil juga akan terhapus.'),
+        content: Text(
+            'Yakin ingin menghapus "${quiz.title}"?\nSemua soal dan hasil juga akan terhapus.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828))),
+            child:
+                const Text('Hapus', style: TextStyle(color: Color(0xFFC62828))),
           ),
         ],
       ),
@@ -427,21 +466,29 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Kelola Quiz',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A2E))),
                     SizedBox(height: 4),
                     Text('Semua quiz di sistem',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF637080))),
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF637080))),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE67E22).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     '${_quizzes.length}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFE67E22)),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFE67E22)),
                   ),
                 ),
               ],
@@ -455,14 +502,16 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
         backgroundColor: const Color(0xFF0A8477),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Buat Quiz', style: TextStyle(fontWeight: FontWeight.w600)),
+        label: const Text('Buat Quiz',
+            style: TextStyle(fontWeight: FontWeight.w600)),
       ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     }
     if (_errorMessage != null) {
       return Center(
@@ -471,11 +520,15 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 56, color: Color(0xFFC62828)),
+              const Icon(Icons.error_outline,
+                  size: 56, color: Color(0xFFC62828)),
               const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF637080))),
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF637080))),
               const SizedBox(height: 16),
-              ElevatedButton(onPressed: _fetchData, child: const Text('Coba Lagi')),
+              ElevatedButton(
+                  onPressed: _fetchData, child: const Text('Coba Lagi')),
             ],
           ),
         ),
@@ -488,9 +541,14 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
           children: [
             Icon(Icons.quiz_outlined, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            const Text('Belum ada quiz', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF637080))),
+            const Text('Belum ada quiz',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF637080))),
             const SizedBox(height: 8),
-            const Text('Tap tombol + untuk membuat quiz baru', style: TextStyle(fontSize: 13, color: Color(0xFFB0B8C1))),
+            const Text('Tap tombol + untuk membuat quiz baru',
+                style: TextStyle(fontSize: 13, color: Color(0xFFB0B8C1))),
           ],
         ),
       );
@@ -528,18 +586,24 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('Soal: ${quiz.title}',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E), fontSize: 16)),
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                  fontSize: 16)),
           content: SizedBox(
             width: double.maxFinite,
             child: loading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)))
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF0A8477)))
                 : questions.isEmpty
                     ? const Center(
                         child: Padding(
                           padding: EdgeInsets.all(20),
-                          child: Text('Belum ada soal', style: TextStyle(color: Color(0xFF637080))),
+                          child: Text('Belum ada soal',
+                              style: TextStyle(color: Color(0xFF637080))),
                         ),
                       )
                     : ListView.separated(
@@ -558,45 +622,73 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 14,
-                                  backgroundColor: const Color(0xFF5B6ABF).withValues(alpha: 0.15),
-                                  child: Text('${i + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF5B6ABF))),
+                                  backgroundColor: const Color(0xFF5B6ABF)
+                                      .withValues(alpha: 0.15),
+                                  child: Text('${i + 1}',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF5B6ABF))),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: Text(q.text, style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E)), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  child: Text(q.text,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF1A1A2E)),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+                                  icon: const Icon(Icons.delete_outline,
+                                      size: 18, color: Color(0xFFC62828)),
                                   onPressed: () async {
                                     final confirm = await showDialog<bool>(
                                       context: ctx,
                                       builder: (dCtx) => AlertDialog(
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12)),
                                         title: const Text('Hapus Soal?'),
-                                        content: Text('Yakin ingin menghapus soal ${i + 1}?'),
+                                        content: Text(
+                                            'Yakin ingin menghapus soal ${i + 1}?'),
                                         actions: [
-                                          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Batal')),
                                           TextButton(
-                                            onPressed: () => Navigator.pop(dCtx, true),
-                                            child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828))),
+                                              onPressed: () =>
+                                                  Navigator.pop(dCtx, false),
+                                              child: const Text('Batal')),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(dCtx, true),
+                                            child: const Text('Hapus',
+                                                style: TextStyle(
+                                                    color: Color(0xFFC62828))),
                                           ),
                                         ],
                                       ),
                                     );
                                     if (confirm == true) {
                                       try {
-                                        await ApiService.guruDeleteQuestion(q.id);
-                                        setDialogState(() => questions.removeAt(i));
+                                        await ApiService.guruDeleteQuestion(
+                                            q.id);
+                                        setDialogState(
+                                            () => questions.removeAt(i));
                                         _fetchData();
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Soal berhasil dihapus')),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Soal berhasil dihapus')),
                                           );
                                         }
                                       } catch (e) {
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Gagal menghapus soal')),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Gagal menghapus soal')),
                                           );
                                         }
                                       }
@@ -610,7 +702,9 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                       ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Tutup')),
           ],
         ),
       ),
@@ -627,7 +721,12 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -643,7 +742,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                     color: const Color(0xFFE67E22).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.quiz, color: Color(0xFFE67E22), size: 20),
+                  child: const Icon(Icons.quiz,
+                      color: Color(0xFFE67E22), size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -652,15 +752,20 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                     children: [
                       Text(
                         quiz.title,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A2E)),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (quiz.description != null && quiz.description!.isNotEmpty) ...[
+                      if (quiz.description != null &&
+                          quiz.description!.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           quiz.description!,
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF637080)),
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF637080)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -669,16 +774,20 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF0A8477)),
+                  icon: const Icon(Icons.edit_outlined,
+                      size: 20, color: Color(0xFF0A8477)),
                   onPressed: () => _showEditQuizDialog(quiz),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFC62828)),
+                  icon: const Icon(Icons.delete_outline,
+                      size: 20, color: Color(0xFFC62828)),
                   onPressed: () => _confirmDeleteQuiz(quiz),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
                 ),
               ],
             ),
@@ -687,9 +796,12 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
               spacing: 8,
               runSpacing: 6,
               children: [
-                _buildInfoChip(Icons.help_outline, '$questionsCount soal', const Color(0xFF5B6ABF)),
-                _buildInfoChip(Icons.timer_outlined, '$timeLimit menit', const Color(0xFF0A8477)),
-                _buildInfoChip(Icons.grade_outlined, 'KKM $passingScore', const Color(0xFFE67E22)),
+                _buildInfoChip(Icons.help_outline, '$questionsCount soal',
+                    const Color(0xFF5B6ABF)),
+                _buildInfoChip(Icons.timer_outlined, '$timeLimit menit',
+                    const Color(0xFF0A8477)),
+                _buildInfoChip(Icons.grade_outlined, 'KKM $passingScore',
+                    const Color(0xFFE67E22)),
               ],
             ),
             const SizedBox(height: 12),
@@ -698,12 +810,15 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _showQuestionsDialog(quiz),
-                    icon: const Icon(Icons.visibility_outlined, size: 18, color: Color(0xFF5B6ABF)),
-                    label: const Text('Lihat Soal', style: TextStyle(color: Color(0xFF5B6ABF))),
+                    icon: const Icon(Icons.visibility_outlined,
+                        size: 18, color: Color(0xFF5B6ABF)),
+                    label: const Text('Lihat Soal',
+                        style: TextStyle(color: Color(0xFF5B6ABF))),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF5B6ABF)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
@@ -711,12 +826,15 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _showAddQuestionDialog(quiz),
-                    icon: const Icon(Icons.add_circle_outline, size: 18, color: Color(0xFF0A8477)),
-                    label: const Text('Tambah Soal', style: TextStyle(color: Color(0xFF0A8477))),
+                    icon: const Icon(Icons.add_circle_outline,
+                        size: 18, color: Color(0xFF0A8477)),
+                    label: const Text('Tambah Soal',
+                        style: TextStyle(color: Color(0xFF0A8477))),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF0A8477)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
@@ -740,7 +858,9 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+          Text(text,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
         ],
       ),
     );

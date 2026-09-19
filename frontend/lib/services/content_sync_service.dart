@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import '../core/debug/ar_debug_log.dart';
 import '../models/models.dart';
 import 'api_client.dart';
 
@@ -82,7 +83,23 @@ class ContentSyncService {
     if (!await cacheDir.exists()) {
       await cacheDir.create(recursive: true);
     }
+    await _cleanupTempFiles(cacheDir);
     return cacheDir;
+  }
+
+  static Future<void> _cleanupTempFiles(Directory cacheDir) async {
+    try {
+      await for (final child in cacheDir.list()) {
+        if (child is Directory) {
+          await for (final file in child.list()) {
+            if (file is File && file.path.endsWith('.tmp')) {
+              await file.delete();
+              ArDebugLog.log('Cleaned leftover temp file: ${file.path}');
+            }
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   static Future<File> _getManifestFile() async {
@@ -181,8 +198,9 @@ class ContentSyncService {
 
     for (final item in arContent) {
       if (item.glbUrl != null && item.glbPath != null) {
-        final existing = manifest.items.where((i) =>
-            i.modelId == item.id && i.assetType == 'model').toList();
+        final existing = manifest.items
+            .where((i) => i.modelId == item.id && i.assetType == 'model')
+            .toList();
 
         if (existing.isEmpty || existing.first.version != item.version) {
           result.assetsToDownload.add(AssetDownloadInfo(
@@ -196,8 +214,9 @@ class ContentSyncService {
       }
 
       if (item.thumbnailUrl != null && item.thumbnailPath != null) {
-        final existing = manifest.items.where((i) =>
-            i.modelId == item.id && i.assetType == 'thumbnail').toList();
+        final existing = manifest.items
+            .where((i) => i.modelId == item.id && i.assetType == 'thumbnail')
+            .toList();
 
         if (existing.isEmpty) {
           result.assetsToDownload.add(AssetDownloadInfo(
@@ -212,14 +231,26 @@ class ContentSyncService {
 
       for (final marker in item.markers) {
         if (marker.imageUrl != null && marker.imagePath != null) {
-          final existing = manifest.items.where((i) =>
-              i.modelId == item.id &&
-              i.assetType == 'marker_${marker.id}').toList();
+          final existing = manifest.items
+              .where((i) =>
+                  i.modelId == item.id && i.assetType == 'marker_${marker.id}')
+              .toList();
 
-          if (existing.isEmpty) {
+          final hasReplacement = shouldDownloadMarker(
+            existing: existing,
+            marker: marker,
+          );
+
+          if (hasReplacement) {
+            final markerVersion = _markerUpdatedAtMillis(marker);
+            ArDebugLog.log(
+              'Marker ${marker.markerId} (id=${marker.id}) '
+              '${existing.isEmpty ? 'not cached' : 'replaced (updated_at change)'} '
+              '-> queue download v$markerVersion',
+            );
             result.assetsToDownload.add(AssetDownloadInfo(
               modelId: item.id,
-              version: marker.id,
+              version: markerVersion,
               url: marker.imageUrl!,
               assetType: 'marker_${marker.id}',
               fileName: 'marker_${marker.id}.png',
@@ -234,7 +265,86 @@ class ContentSyncService {
     result.remoteManifest = manifest;
     result.remoteContentVersion = remoteVersion.contentVersion;
 
+    if (result.assetsToDownload.isNotEmpty) {
+      ArDebugLog.log(
+        'Sync plan: ${result.assetsToDownload.length} assets pending '
+        '(local v$localVersion -> remote v${result.remoteContentVersion})',
+      );
+    }
+
     return result;
+  }
+
+  static bool shouldDownloadMarker({
+    required List<ContentManifestItem> existing,
+    required ArMarkerData marker,
+  }) {
+    final markerVersion = _markerUpdatedAtMillis(marker);
+    return existing.isEmpty || existing.first.version != markerVersion;
+  }
+
+  static int _markerUpdatedAtMillis(ArMarkerData marker) {
+    final raw = marker.updatedAt;
+    if (raw == null || raw.isEmpty) return 0;
+    final parsed = DateTime.tryParse(raw);
+    return parsed != null ? parsed.millisecondsSinceEpoch : 0;
+  }
+
+  static Future<SyncResult> applyDownloads(
+    SyncResult plan, {
+    void Function(int completed, int total, String assetType)? onProgress,
+  }) async {
+    final total = plan.assetsToDownload.length;
+
+    for (var i = 0; i < total; i++) {
+      final asset = plan.assetsToDownload[i];
+      onProgress?.call(i, total, asset.assetType);
+
+      final download = await downloadAsset(asset);
+      if (download.success && download.localPath != null) {
+        await updateManifestAfterDownload(asset, download.localPath!);
+        plan.downloadedAssets++;
+        ArDebugLog.log(
+          'Downloaded ${asset.assetType} -> ${download.localPath}',
+        );
+      } else {
+        ArDebugLog.error(
+          'Download failed for ${asset.assetType}: ${download.error}',
+        );
+      }
+    }
+
+    final manifest = await loadManifest();
+
+    final failed = total - plan.downloadedAssets;
+    if (failed > 0) {
+      ArDebugLog.log(
+        'Sync completed with $failed failure(s); local version kept for retry',
+      );
+      plan.error = '$failed of $total assets failed to download';
+    } else {
+      plan.status = SyncStatus.upToDate;
+      if (total > 0) {
+        final remoteVersion = plan.remoteContentVersion ?? 0;
+        if (remoteVersion != 0) {
+          manifest.contentVersion = remoteVersion;
+          await saveManifest(manifest);
+          ArDebugLog.log(
+            'Sync complete: local content version -> $remoteVersion',
+          );
+        }
+      }
+    }
+
+    plan.manifest = manifest;
+
+    if (total > 0) {
+      ArDebugLog.log(
+        'Sync applied: ${plan.downloadedAssets}/$total assets downloaded',
+      );
+    }
+
+    return plan;
   }
 
   static Future<DownloadResult> downloadAsset(AssetDownloadInfo asset) async {
@@ -276,7 +386,8 @@ class ContentSyncService {
       result.success = false;
       result.error = e.toString();
 
-      final tempFile = File('${cacheDir.path}/${asset.assetType}/${asset.fileName}.tmp');
+      final tempFile =
+          File('${cacheDir.path}/${asset.assetType}/${asset.fileName}.tmp');
       if (await tempFile.exists()) {
         await tempFile.delete();
       }
@@ -291,8 +402,8 @@ class ContentSyncService {
   ) async {
     final manifest = await loadManifest();
 
-    manifest.items.removeWhere((i) =>
-        i.modelId == asset.modelId && i.assetType == asset.assetType);
+    manifest.items.removeWhere(
+        (i) => i.modelId == asset.modelId && i.assetType == asset.assetType);
 
     manifest.items.add(ContentManifestItem(
       modelId: asset.modelId,
@@ -308,8 +419,9 @@ class ContentSyncService {
 
   static Future<String?> getCachedModelPath(int modelId) async {
     final manifest = await loadManifest();
-    final item = manifest.items.where(
-        (i) => i.modelId == modelId && i.assetType == 'model').toList();
+    final item = manifest.items
+        .where((i) => i.modelId == modelId && i.assetType == 'model')
+        .toList();
     if (item.isNotEmpty) {
       final file = File(item.first.localPath);
       if (await file.exists()) return item.first.localPath;
@@ -319,8 +431,8 @@ class ContentSyncService {
 
   static Future<String?> getCachedMarkerPath(int markerId) async {
     final manifest = await loadManifest();
-    final item = manifest.items.where(
-        (i) => i.assetType == 'marker_$markerId').toList();
+    final item =
+        manifest.items.where((i) => i.assetType == 'marker_$markerId').toList();
     if (item.isNotEmpty) {
       final file = File(item.first.localPath);
       if (await file.exists()) return item.first.localPath;

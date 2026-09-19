@@ -9,8 +9,7 @@ class GuruArManagementScreen extends StatefulWidget {
   const GuruArManagementScreen({super.key});
 
   @override
-  State<GuruArManagementScreen> createState() =>
-      _GuruArManagementScreenState();
+  State<GuruArManagementScreen> createState() => _GuruArManagementScreenState();
 }
 
 class _GuruArManagementScreenState extends State<GuruArManagementScreen>

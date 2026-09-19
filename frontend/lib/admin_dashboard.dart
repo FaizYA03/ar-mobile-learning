@@ -34,7 +34,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Future<void> _loadData() async {
     try {
-      final results = await Future.wait([ApiService.getDashboard(), ApiService.adminGetUsers()]);
+      final results = await Future.wait(
+          [ApiService.getDashboard(), ApiService.adminGetUsers()]);
       final dashResult = results[0];
       final usersResult = results[1];
       if (dashResult['success'] == true && mounted) {
@@ -82,8 +83,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: const Text('Logout'),
         content: const Text('Yakin ingin logout?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Logout', style: TextStyle(color: Color(0xFFC62828)))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Logout',
+                  style: TextStyle(color: Color(0xFFC62828)))),
         ],
       ),
     );
@@ -103,9 +109,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Tambah User',
-              style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+              style: TextStyle(
+                  fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -114,7 +122,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   controller: nameCtrl,
                   decoration: InputDecoration(
                     labelText: 'Nama',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -122,7 +131,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   controller: emailCtrl,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -131,7 +141,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   controller: passCtrl,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   obscureText: true,
                 ),
@@ -140,7 +151,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   value: selectedRole,
                   decoration: InputDecoration(
                     labelText: 'Role',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'siswa', child: Text('Siswa')),
@@ -153,15 +165,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A8477),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
-                if (nameCtrl.text.isEmpty || emailCtrl.text.isEmpty || passCtrl.text.isEmpty) {
+                if (nameCtrl.text.isEmpty ||
+                    emailCtrl.text.isEmpty ||
+                    passCtrl.text.isEmpty) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(content: Text('Semua field wajib diisi')),
                   );
@@ -176,7 +193,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text(result['message'] ?? 'User ditambahkan'), backgroundColor: const Color(0xFF0A8477)),
+                    SnackBar(
+                        content: Text(result['message'] ?? 'User ditambahkan'),
+                        backgroundColor: const Color(0xFF0A8477)),
                   );
                 }
                 _loadData();
@@ -198,9 +217,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Edit User',
-              style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+              style: TextStyle(
+                  fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -209,7 +230,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   controller: nameCtrl,
                   decoration: InputDecoration(
                     labelText: 'Nama',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -217,7 +239,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   controller: emailCtrl,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -226,7 +249,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   value: selectedRole,
                   decoration: InputDecoration(
                     labelText: 'Role',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'siswa', child: Text('Siswa')),
@@ -239,12 +263,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A8477),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
                 final result = await ApiService.adminUpdateUser(user['id'], {
@@ -255,7 +282,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text(result['message'] ?? 'User diperbarui'), backgroundColor: const Color(0xFF0A8477)),
+                    SnackBar(
+                        content: Text(result['message'] ?? 'User diperbarui'),
+                        backgroundColor: const Color(0xFF0A8477)),
                   );
                 }
                 _loadData();
@@ -276,8 +305,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: const Text('Hapus User'),
         content: Text('Hapus "${user['name']}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828)))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Hapus',
+                  style: TextStyle(color: Color(0xFFC62828)))),
         ],
       ),
     );
@@ -316,94 +350,234 @@ class _AdminDashboardState extends State<AdminDashboard> {
         unselectedFontSize: 10,
         elevation: 8,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Beranda'),
-          BottomNavigationBarItem(icon: Icon(Icons.school_outlined), activeIcon: Icon(Icons.school), label: 'TP/ATP'),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book_outlined), activeIcon: Icon(Icons.menu_book), label: 'Materi'),
-          BottomNavigationBarItem(icon: Icon(Icons.quiz_outlined), activeIcon: Icon(Icons.quiz), label: 'Quiz'),
-          BottomNavigationBarItem(icon: Icon(Icons.assessment_outlined), activeIcon: Icon(Icons.assessment), label: 'Hasil'),
-          BottomNavigationBarItem(icon: Icon(Icons.view_in_ar_outlined), activeIcon: Icon(Icons.view_in_ar), label: 'AR'),
-          BottomNavigationBarItem(icon: Icon(Icons.people_outlined), activeIcon: Icon(Icons.people), label: 'Users'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Beranda'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.school_outlined),
+              activeIcon: Icon(Icons.school),
+              label: 'TP/ATP'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.menu_book_outlined),
+              activeIcon: Icon(Icons.menu_book),
+              label: 'Materi'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.quiz_outlined),
+              activeIcon: Icon(Icons.quiz),
+              label: 'Quiz'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.assessment_outlined),
+              activeIcon: Icon(Icons.assessment),
+              label: 'Hasil'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.view_in_ar_outlined),
+              activeIcon: Icon(Icons.view_in_ar),
+              label: 'AR'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.people_outlined),
+              activeIcon: Icon(Icons.people),
+              label: 'Users'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profil'),
         ],
       ),
     );
   }
 
   Widget _buildHome() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    if (_isLoading)
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Admin Panel 👋', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+          const Text('Admin Panel 👋',
+              style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E))),
           const SizedBox(height: 4),
-          const Text('Kelola seluruh sistem', style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
+          const Text('Kelola seluruh sistem',
+              style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
           const SizedBox(height: 24),
-          const Text('User Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+          const Text('User Management',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A2E))),
           const SizedBox(height: 12),
-          _buildStatCard(icon: Icons.people_outline, title: 'Total Users', count: '$_totalUsers', color: const Color(0xFF0A8477)),
+          _buildStatCard(
+              icon: Icons.people_outline,
+              title: 'Total Users',
+              count: '$_totalUsers',
+              color: const Color(0xFF0A8477)),
           const SizedBox(height: 10),
-          _buildStatCard(icon: Icons.school_outlined, title: 'Guru', count: '$_totalGuru', color: const Color(0xFF5B6ABF)),
+          _buildStatCard(
+              icon: Icons.school_outlined,
+              title: 'Guru',
+              count: '$_totalGuru',
+              color: const Color(0xFF5B6ABF)),
           const SizedBox(height: 10),
-          _buildStatCard(icon: Icons.person_outline, title: 'Siswa', count: '$_totalSiswa', color: const Color(0xFFE67E22)),
+          _buildStatCard(
+              icon: Icons.person_outline,
+              title: 'Siswa',
+              count: '$_totalSiswa',
+              color: const Color(0xFFE67E22)),
           const SizedBox(height: 24),
-          const Text('Sistem', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+          const Text('Sistem',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A2E))),
           const SizedBox(height: 12),
-          _buildStatCard(icon: Icons.quiz_outlined, title: 'Quiz', count: '$_totalQuizzes', color: const Color(0xFFC62828)),
+          _buildStatCard(
+              icon: Icons.quiz_outlined,
+              title: 'Quiz',
+              count: '$_totalQuizzes',
+              color: const Color(0xFFC62828)),
           const SizedBox(height: 24),
-          const Text('Konten AR', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+          const Text('Konten AR',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A2E))),
           const SizedBox(height: 12),
-          _buildStatCard(icon: Icons.view_in_ar_outlined, title: '3D Models', count: '$_arModelCount', color: const Color(0xFF5B6ABF)),
+          _buildStatCard(
+              icon: Icons.view_in_ar_outlined,
+              title: '3D Models',
+              count: '$_arModelCount',
+              color: const Color(0xFF5B6ABF)),
           const SizedBox(height: 10),
-          _buildStatCard(icon: Icons.qr_code_scanner, title: 'Markers', count: '$_arMarkerCount', color: const Color(0xFFE67E22)),
+          _buildStatCard(
+              icon: Icons.qr_code_scanner,
+              title: 'Markers',
+              count: '$_arMarkerCount',
+              color: const Color(0xFFE67E22)),
           const SizedBox(height: 10),
-          _buildStatCard(icon: Icons.place_outlined, title: 'Hotspots', count: '$_arHotspotCount', color: const Color(0xFF0A8477)),
+          _buildStatCard(
+              icon: Icons.place_outlined,
+              title: 'Hotspots',
+              count: '$_arHotspotCount',
+              color: const Color(0xFF0A8477)),
           const SizedBox(height: 10),
-          _buildStatCard(icon: Icons.numbers, title: 'Content Version', count: '$_contentVersion', color: const Color(0xFF637080)),
+          _buildStatCard(
+              icon: Icons.numbers,
+              title: 'Content Version',
+              count: '$_contentVersion',
+              color: const Color(0xFF637080)),
           const SizedBox(height: 20),
-          const Text('Aksi Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+          const Text('Aksi Cepat',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A2E))),
           const SizedBox(height: 14),
-          _buildQuickAction(icon: Icons.school_outlined, title: 'Kelola TP/ATP', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 1)),
+          _buildQuickAction(
+              icon: Icons.school_outlined,
+              title: 'Kelola TP/ATP',
+              color: const Color(0xFF5B6ABF),
+              onTap: () => setState(() => _currentIndex = 1)),
           const SizedBox(height: 10),
-          _buildQuickAction(icon: Icons.menu_book_outlined, title: 'Kelola Materi', color: const Color(0xFF0A8477), onTap: () => setState(() => _currentIndex = 2)),
+          _buildQuickAction(
+              icon: Icons.menu_book_outlined,
+              title: 'Kelola Materi',
+              color: const Color(0xFF0A8477),
+              onTap: () => setState(() => _currentIndex = 2)),
           const SizedBox(height: 10),
-          _buildQuickAction(icon: Icons.quiz_outlined, title: 'Kelola Quiz', color: const Color(0xFFE67E22), onTap: () => setState(() => _currentIndex = 3)),
+          _buildQuickAction(
+              icon: Icons.quiz_outlined,
+              title: 'Kelola Quiz',
+              color: const Color(0xFFE67E22),
+              onTap: () => setState(() => _currentIndex = 3)),
           const SizedBox(height: 10),
-          _buildQuickAction(icon: Icons.assessment_outlined, title: 'Lihat Hasil Quiz', color: const Color(0xFFC62828), onTap: () => setState(() => _currentIndex = 4)),
+          _buildQuickAction(
+              icon: Icons.assessment_outlined,
+              title: 'Lihat Hasil Quiz',
+              color: const Color(0xFFC62828),
+              onTap: () => setState(() => _currentIndex = 4)),
           const SizedBox(height: 10),
-          _buildQuickAction(icon: Icons.view_in_ar_outlined, title: 'Kelola AR', color: const Color(0xFF5B6ABF), onTap: () => setState(() => _currentIndex = 5)),
+          _buildQuickAction(
+              icon: Icons.view_in_ar_outlined,
+              title: 'Kelola AR',
+              color: const Color(0xFF5B6ABF),
+              onTap: () => setState(() => _currentIndex = 5)),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard({required IconData icon, required String title, required String count, required Color color}) {
+  Widget _buildStatCard(
+      {required IconData icon,
+      required String title,
+      required String count,
+      required Color color}) {
     return Container(
-      width: double.infinity, padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ]),
       child: Row(children: [
-        Container(width: 48, height: 48, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 24)),
+        Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 24)),
         const SizedBox(width: 16),
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)))),
-        Text(count, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: color)),
+        Expanded(
+            child: Text(title,
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A2E)))),
+        Text(count,
+            style: TextStyle(
+                fontSize: 24, fontWeight: FontWeight.w700, color: color)),
       ]),
     );
   }
 
-  Widget _buildQuickAction({required IconData icon, required String title, required Color color, required VoidCallback onTap}) {
+  Widget _buildQuickAction(
+      {required IconData icon,
+      required String title,
+      required Color color,
+      required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: double.infinity, padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-        child: Row(children: [Icon(icon, color: color, size: 22), const SizedBox(width: 12), Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color))]),
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12)),
+        child: Row(children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 12),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600, color: color))
+        ]),
       ),
     );
   }
 
   Widget _buildUsersPage() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    if (_isLoading)
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     return Column(
       children: [
         Padding(
@@ -411,19 +585,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Semua Users', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+              const Text('Semua Users',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E))),
               ElevatedButton.icon(
                 onPressed: _showAddUserDialog,
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Tambah'),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0A8477), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A8477),
+                    foregroundColor: Colors.white),
               ),
             ],
           ),
         ),
         Expanded(
           child: _users.isEmpty
-              ? const Center(child: Text('Belum ada user', style: TextStyle(color: Color(0xFF637080))))
+              ? const Center(
+                  child: Text('Belum ada user',
+                      style: TextStyle(color: Color(0xFF637080))))
               : ListView.builder(
                   padding: const EdgeInsets.all(20),
                   itemCount: _users.length,
@@ -436,33 +618,47 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             : const Color(0xFF0A8477);
                     return Card(
                       margin: const EdgeInsets.only(bottom: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         leading: CircleAvatar(
                           backgroundColor: roleColor.withValues(alpha: 0.1),
                           child: Text(
                             (user['name'] ?? '?')[0].toUpperCase(),
-                            style: TextStyle(color: roleColor, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                                color: roleColor, fontWeight: FontWeight.w700),
                           ),
                         ),
-                        title: Text(user['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(user['name'] ?? '',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(user['email'] ?? ''),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: roleColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                              child: Text(user['role'] ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: roleColor)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                  color: roleColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: Text(user['role'] ?? '',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: roleColor)),
                             ),
                             const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF637080)),
+                              icon: const Icon(Icons.edit_outlined,
+                                  size: 20, color: Color(0xFF637080)),
                               onPressed: () => _showEditUserDialog(user),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFC62828)),
+                              icon: const Icon(Icons.delete_outline,
+                                  size: 20, color: Color(0xFFC62828)),
                               onPressed: () => _deleteUser(user),
                             ),
                           ],
@@ -481,37 +677,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
       padding: const EdgeInsets.all(20),
       child: Column(children: [
         const SizedBox(height: 20),
-        CircleAvatar(radius: 48, backgroundColor: const Color(0xFFC62828).withValues(alpha: 0.1), child: const Icon(Icons.admin_panel_settings, size: 48, color: Color(0xFFC62828))),
+        CircleAvatar(
+            radius: 48,
+            backgroundColor: const Color(0xFFC62828).withValues(alpha: 0.1),
+            child: const Icon(Icons.admin_panel_settings,
+                size: 48, color: Color(0xFFC62828))),
         const SizedBox(height: 16),
-        const Text('Admin', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+        const Text('Admin',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E))),
         const SizedBox(height: 4),
-        const Text('Administrator', style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
+        const Text('Administrator',
+            style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
         const SizedBox(height: 32),
-        _buildProfileOption(icon: Icons.person_outline, title: 'Profil Saya', onTap: () {}),
-        _buildProfileOption(icon: Icons.help_outline, title: 'Bantuan', onTap: () {}),
-        _buildProfileOption(icon: Icons.info_outline, title: 'Tentang', onTap: () {}),
+        _buildProfileOption(
+            icon: Icons.person_outline, title: 'Profil Saya', onTap: () {}),
+        _buildProfileOption(
+            icon: Icons.help_outline, title: 'Bantuan', onTap: () {}),
+        _buildProfileOption(
+            icon: Icons.info_outline, title: 'Tentang', onTap: () {}),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _logout,
             icon: const Icon(Icons.logout, color: Color(0xFFC62828)),
-            label: const Text('Logout', style: TextStyle(color: Color(0xFFC62828))),
-            style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFC62828)), padding: const EdgeInsets.all(14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            label: const Text('Logout',
+                style: TextStyle(color: Color(0xFFC62828))),
+            style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFFC62828)),
+                padding: const EdgeInsets.all(14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12))),
           ),
         ),
       ]),
     );
   }
 
-  Widget _buildProfileOption({required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _buildProfileOption(
+      {required IconData icon,
+      required String title,
+      required VoidCallback onTap}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(icon, color: const Color(0xFF0A8477)),
-        title: Text(title, style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E))),
+        title: Text(title,
+            style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E))),
         trailing: const Icon(Icons.chevron_right, color: Color(0xFFD0D5D8)),
-        onTap: onTap, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), tileColor: Colors.white,
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        tileColor: Colors.white,
       ),
     );
   }

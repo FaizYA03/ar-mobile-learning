@@ -204,8 +204,8 @@ class ApiService {
   static Future<Map<String, dynamic>> arGetMarkers() => _get('/ar/markers');
   static Future<Map<String, dynamic>> arGetMarker(int id) =>
       _get('/ar/markers/$id');
-  static Future<Map<String, dynamic>> arCreateMarker(
-          Map<String, dynamic> data, {String? filePath}) =>
+  static Future<Map<String, dynamic>> arCreateMarker(Map<String, dynamic> data,
+          {String? filePath}) =>
       _postMultipart('/ar/markers', data,
           filePath: filePath, fileField: 'image');
   static Future<Map<String, dynamic>> arUpdateMarker(
@@ -219,8 +219,8 @@ class ApiService {
   static Future<Map<String, dynamic>> arGetHotspots() => _get('/ar/hotspots');
   static Future<Map<String, dynamic>> arGetHotspot(int id) =>
       _get('/ar/hotspots/$id');
-  static Future<Map<String, dynamic>> arCreateHotspot(
-          Map<String, dynamic> data, {String? filePath}) =>
+  static Future<Map<String, dynamic>> arCreateHotspot(Map<String, dynamic> data,
+          {String? filePath}) =>
       _postMultipart('/ar/hotspots', data,
           filePath: filePath, fileField: 'image');
   static Future<Map<String, dynamic>> arUpdateHotspot(
@@ -280,14 +280,12 @@ class ApiService {
 
   // ========== V1 API METHODS ==========
 
-  static Future<Map<String, dynamic>> v1GetAppConfig() =>
-      _getV1('/app/config');
+  static Future<Map<String, dynamic>> v1GetAppConfig() => _getV1('/app/config');
 
   static Future<Map<String, dynamic>> v1GetContentVersion() =>
       _getV1('/content/version');
 
-  static Future<Map<String, dynamic>> v1GetArContent() =>
-      _getV1('/ar/content');
+  static Future<Map<String, dynamic>> v1GetArContent() => _getV1('/ar/content');
 
   static Future<Map<String, dynamic>> _v1Get(String path) async {
     final response = await http.get(
@@ -297,6 +295,5 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> _getV1(String path) =>
-      _v1Get(path);
+  static Future<Map<String, dynamic>> _getV1(String path) => _v1Get(path);
 }

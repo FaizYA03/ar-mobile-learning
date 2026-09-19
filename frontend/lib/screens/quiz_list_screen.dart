@@ -59,7 +59,8 @@ class _QuizListScreenState extends State<QuizListScreen> {
     Widget content;
 
     if (_isLoading) {
-      content = const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+      content = const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     } else if (_errorMessage != null) {
       content = Center(
         child: Padding(
@@ -67,13 +68,18 @@ class _QuizListScreenState extends State<QuizListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 60, color: Color(0xFFC62828)),
+              const Icon(Icons.error_outline,
+                  size: 60, color: Color(0xFFC62828)),
               const SizedBox(height: 14),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF637080))),
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF637080))),
               const SizedBox(height: 14),
               ElevatedButton(
                 onPressed: _fetchQuizzes,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0A8477), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A8477),
+                    foregroundColor: Colors.white),
                 child: const Text('Coba Lagi'),
               ),
             ],
@@ -82,7 +88,8 @@ class _QuizListScreenState extends State<QuizListScreen> {
       );
     } else if (_quizzes.isEmpty) {
       content = const Center(
-        child: Text('Belum ada quiz yang tersedia', style: TextStyle(color: Color(0xFF637080))),
+        child: Text('Belum ada quiz yang tersedia',
+            style: TextStyle(color: Color(0xFF637080))),
       );
     } else {
       content = RefreshIndicator(
@@ -105,7 +112,10 @@ class _QuizListScreenState extends State<QuizListScreen> {
         appBar: AppBar(
           title: const Text(
             'Daftar Quiz',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E)),
           ),
           automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
@@ -120,12 +130,16 @@ class _QuizListScreenState extends State<QuizListScreen> {
       appBar: AppBar(
         title: const Text(
           'Quiz Evaluasi',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E)),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Color(0xFF1A1A2E)),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 20, color: Color(0xFF1A1A2E)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -147,7 +161,10 @@ class _QuizListScreenState extends State<QuizListScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3)),
         ],
       ),
       child: Column(
@@ -162,7 +179,8 @@ class _QuizListScreenState extends State<QuizListScreen> {
                   color: const Color(0xFFE67E22).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.quiz, color: Color(0xFFE67E22), size: 24),
+                child:
+                    const Icon(Icons.quiz, color: Color(0xFFE67E22), size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -171,11 +189,18 @@ class _QuizListScreenState extends State<QuizListScreen> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A2E)),
                     ),
                     if (desc.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(desc, style: const TextStyle(fontSize: 12, color: Color(0xFF637080)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(desc,
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF637080)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
                     ],
                   ],
                 ),
@@ -200,17 +225,20 @@ class _QuizListScreenState extends State<QuizListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => QuizTakeScreen(quizId: quiz.id, quizTitle: title),
+                    builder: (_) =>
+                        QuizTakeScreen(quizId: quiz.id, quizTitle: title),
                   ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A8477),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: const Text('Mulai Kerjakan Quiz', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: const Text('Mulai Kerjakan Quiz',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -230,7 +258,11 @@ class _QuizListScreenState extends State<QuizListScreen> {
         children: [
           Icon(icon, size: 14, color: const Color(0xFF637080)),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF637080))),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF637080))),
         ],
       ),
     );

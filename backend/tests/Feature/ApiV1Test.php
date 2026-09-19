@@ -122,6 +122,7 @@ class ApiV1Test extends TestCase
                                 'marker_type',
                                 'image_path',
                                 'status',
+                                'updated_at',
                             ],
                         ],
                         'hotspots' => [
@@ -188,6 +189,25 @@ class ApiV1Test extends TestCase
             $this->assertIsArray($item['markers']);
             $this->assertIsArray($item['hotspots']);
         }
+    }
+
+    public function test_ar_content_markers_include_updated_at(): void
+    {
+        $user = User::where('role', 'siswa')->first();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/ar/content');
+        $data = $response->json('data');
+
+        $markerSeen = false;
+        foreach ($data as $item) {
+            foreach ($item['markers'] as $marker) {
+                $markerSeen = true;
+                $this->assertArrayHasKey('updated_at', $marker);
+            }
+        }
+
+        $this->assertTrue($markerSeen, 'Expected at least one seeded marker in /ar/content');
     }
 
     // ========== OLD ENDPOINTS STILL WORK ==========

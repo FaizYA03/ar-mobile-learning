@@ -18,12 +18,17 @@ class QuizResultScreen extends StatelessWidget {
     final passed = resultData['passed'] ?? false;
     final wrong = total - correct;
 
-    final primaryColor = passed ? const Color(0xFF0A8477) : const Color(0xFFC62828);
+    final primaryColor =
+        passed ? const Color(0xFF0A8477) : const Color(0xFFC62828);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Hasil Evaluasi Quiz', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+        title: const Text('Hasil Evaluasi Quiz',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E))),
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
@@ -41,7 +46,10 @@ class QuizResultScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 4)),
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
@@ -61,33 +69,50 @@ class QuizResultScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    passed ? 'Selamat, Anda Lulus!' : 'Perlu Belajar Lebih Giat',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: primaryColor),
+                    passed
+                        ? 'Selamat, Anda Lulus!'
+                        : 'Perlu Belajar Lebih Giat',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: primaryColor),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     quizTitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF637080)),
+                    style:
+                        const TextStyle(fontSize: 13, color: Color(0xFF637080)),
                   ),
                   const SizedBox(height: 24),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5F7FA),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
                       children: [
-                        const Text('Skor Akhir Anda', style: TextStyle(fontSize: 12, color: Color(0xFF637080), fontWeight: FontWeight.w500)),
+                        const Text('Skor Akhir Anda',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF637080),
+                                fontWeight: FontWeight.w500)),
                         const SizedBox(height: 4),
                         Text(
                           '$score',
-                          style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: primaryColor),
+                          style: TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.w900,
+                              color: primaryColor),
                         ),
                         Text(
                           passed ? 'Di atas KKM' : 'Di bawah KKM',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: primaryColor),
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor),
                         ),
                       ],
                     ),
@@ -96,11 +121,14 @@ class QuizResultScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatItem('Benar', '$correct', const Color(0xFF0A8477), Icons.check_circle_outline),
+                      _buildStatItem('Benar', '$correct',
+                          const Color(0xFF0A8477), Icons.check_circle_outline),
                       _buildDivider(),
-                      _buildStatItem('Salah', '$wrong', const Color(0xFFC62828), Icons.cancel_outlined),
+                      _buildStatItem('Salah', '$wrong', const Color(0xFFC62828),
+                          Icons.cancel_outlined),
                       _buildDivider(),
-                      _buildStatItem('Total', '$total', const Color(0xFF1A1A2E), Icons.help_outline),
+                      _buildStatItem('Total', '$total', const Color(0xFF1A1A2E),
+                          Icons.help_outline),
                     ],
                   ),
                 ],
@@ -114,14 +142,18 @@ class QuizResultScreen extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pushNamedAndRemoveUntil('/siswa', (route) => false);
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil('/siswa', (route) => false);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0A8477),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Kembali ke Dashboard', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                child: const Text('Kembali ke Dashboard',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -134,13 +166,17 @@ class QuizResultScreen extends StatelessWidget {
     return Container(width: 1, height: 36, color: const Color(0xFFE9ECEF));
   }
 
-  Widget _buildStatItem(String label, String value, Color color, IconData icon) {
+  Widget _buildStatItem(
+      String label, String value, Color color, IconData icon) {
     return Column(
       children: [
         Icon(icon, size: 20, color: color),
         const SizedBox(height: 6),
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color)),
-        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF637080))),
+        Text(value,
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w700, color: color)),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF637080))),
       ],
     );
   }

@@ -48,7 +48,8 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
           _totalAttempts = data.length;
           _passedCount = passed;
           _failedCount = failed;
-          _avgScore = data.isNotEmpty ? (totalScore / data.length).roundToDouble() : 0;
+          _avgScore =
+              data.isNotEmpty ? (totalScore / data.length).roundToDouble() : 0;
           _isLoading = false;
         });
       } else {
@@ -89,21 +90,29 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Hasil Quiz',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A1A2E))),
                         SizedBox(height: 4),
                         Text('Semua hasil pengerjaan siswa',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF637080))),
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFF637080))),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF5B6ABF).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         '$_totalAttempts',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF5B6ABF)),
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF5B6ABF)),
                       ),
                     ),
                   ],
@@ -111,11 +120,14 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildSummaryChip('Lulus', '$_passedCount', const Color(0xFF27AE60)),
+                    _buildSummaryChip(
+                        'Lulus', '$_passedCount', const Color(0xFF27AE60)),
                     const SizedBox(width: 8),
-                    _buildSummaryChip('Tidak Lulus', '$_failedCount', const Color(0xFFC62828)),
+                    _buildSummaryChip('Tidak Lulus', '$_failedCount',
+                        const Color(0xFFC62828)),
                     const SizedBox(width: 8),
-                    _buildSummaryChip('Rata-rata', '${_avgScore.round()}', const Color(0xFFE67E22)),
+                    _buildSummaryChip('Rata-rata', '${_avgScore.round()}',
+                        const Color(0xFFE67E22)),
                   ],
                 ),
               ],
@@ -137,9 +149,13 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
         ),
         child: Column(
           children: [
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color)),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w700, color: color)),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w600, color: color)),
           ],
         ),
       ),
@@ -148,7 +164,8 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+      return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     }
     if (_errorMessage != null) {
       return Center(
@@ -157,11 +174,15 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 56, color: Color(0xFFC62828)),
+              const Icon(Icons.error_outline,
+                  size: 56, color: Color(0xFFC62828)),
               const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF637080))),
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF637080))),
               const SizedBox(height: 16),
-              ElevatedButton(onPressed: _fetchData, child: const Text('Coba Lagi')),
+              ElevatedButton(
+                  onPressed: _fetchData, child: const Text('Coba Lagi')),
             ],
           ),
         ),
@@ -174,9 +195,14 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
           children: [
             Icon(Icons.assignment_outlined, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            const Text('Belum ada hasil quiz', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF637080))),
+            const Text('Belum ada hasil quiz',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF637080))),
             const SizedBox(height: 8),
-            const Text('Hasil pengerjaan siswa akan muncul di sini', style: TextStyle(fontSize: 13, color: Color(0xFFB0B8C1))),
+            const Text('Hasil pengerjaan siswa akan muncul di sini',
+                style: TextStyle(fontSize: 13, color: Color(0xFFB0B8C1))),
           ],
         ),
       );
@@ -203,7 +229,8 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
     if (createdAt != null) {
       try {
         final dt = DateTime.parse(createdAt);
-        dateStr = '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+        dateStr =
+            '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {
         dateStr = createdAt.toString();
       }
@@ -214,7 +241,12 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -224,7 +256,9 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: passed ? const Color(0xFF27AE60).withValues(alpha: 0.1) : const Color(0xFFC62828).withValues(alpha: 0.1),
+                color: passed
+                    ? const Color(0xFF27AE60).withValues(alpha: 0.1)
+                    : const Color(0xFFC62828).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -235,7 +269,9 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: passed ? const Color(0xFF27AE60) : const Color(0xFFC62828),
+                      color: passed
+                          ? const Color(0xFF27AE60)
+                          : const Color(0xFFC62828),
                     ),
                   ),
                   Text(
@@ -243,7 +279,9 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
                     style: TextStyle(
                       fontSize: 8,
                       fontWeight: FontWeight.w700,
-                      color: passed ? const Color(0xFF27AE60) : const Color(0xFFC62828),
+                      color: passed
+                          ? const Color(0xFF27AE60)
+                          : const Color(0xFFC62828),
                     ),
                   ),
                 ],
@@ -256,17 +294,22 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
                 children: [
                   Text(
                     user?['name'] ?? 'Siswa',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A2E)),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     quiz?['title'] ?? 'Quiz',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF637080)),
+                    style:
+                        const TextStyle(fontSize: 12, color: Color(0xFF637080)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     dateStr,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFFB0B8C1)),
+                    style:
+                        const TextStyle(fontSize: 11, color: Color(0xFFB0B8C1)),
                   ),
                 ],
               ),
@@ -284,7 +327,9 @@ class _AdminHasilQuizScreenState extends State<AdminHasilQuizScreen> {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: passed ? const Color(0xFF27AE60) : const Color(0xFFC62828),
+                  color: passed
+                      ? const Color(0xFF27AE60)
+                      : const Color(0xFFC62828),
                 ),
               ),
             ),

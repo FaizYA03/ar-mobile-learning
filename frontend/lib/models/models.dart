@@ -156,6 +156,7 @@ class ArMarkerData {
   final String? imageUrl;
   final String? imagePath;
   final String status;
+  final String? updatedAt;
 
   ArMarkerData({
     required this.id,
@@ -164,6 +165,7 @@ class ArMarkerData {
     this.imageUrl,
     this.imagePath,
     required this.status,
+    this.updatedAt,
   });
 
   factory ArMarkerData.fromJson(Map<String, dynamic> json) {
@@ -174,6 +176,7 @@ class ArMarkerData {
       imageUrl: json['image_url'],
       imagePath: json['image_path'],
       status: json['status'] ?? 'active',
+      updatedAt: json['updated_at'],
     );
   }
 }
@@ -290,8 +293,9 @@ class QuizQuestion {
       text: json['text'] ?? '',
       order: json['order'] ?? 0,
       options: (json['options'] as List<dynamic>?)
-          ?.map((o) => QuizOption.fromJson(o))
-          .toList() ?? [],
+              ?.map((o) => QuizOption.fromJson(o))
+              .toList() ??
+          [],
     );
   }
 }
@@ -346,4 +350,41 @@ class QuizAttemptResult {
       passed: json['passed'] ?? false,
     );
   }
+}
+
+class ArUcoResult {
+  final int markerId;
+  final List<List<double>> corners;
+  final String markerType;
+  final DateTime detectedAt;
+
+  ArUcoResult({
+    required this.markerId,
+    required this.corners,
+    this.markerType = 'aruco',
+    DateTime? detectedAt,
+  }) : detectedAt = detectedAt ?? DateTime.now();
+
+  factory ArUcoResult.fromJson(Map<String, dynamic> json) {
+    return ArUcoResult(
+      markerId: json['marker_id'] ?? 0,
+      corners: List<List<double>>.from(
+        (json['corners'] as List<dynamic>?)
+                ?.map((c) => List<double>.from(c.map((v) => v.toDouble())))
+                .toList() ??
+            [],
+      ),
+      markerType: json['marker_type'] ?? 'aruco',
+      detectedAt: json['detected_at'] != null
+          ? DateTime.parse(json['detected_at'])
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'marker_id': markerId,
+        'corners': corners,
+        'marker_type': markerType,
+        'detected_at': detectedAt.toIso8601String(),
+      };
 }

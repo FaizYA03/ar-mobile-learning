@@ -5,7 +5,8 @@ import '../services/api_service.dart';
 import '../services/ar_service.dart';
 import '../services/ar_content_resolver.dart';
 import '../services/content_sync_service.dart';
-import 'ar_camera_screen.dart';
+import 'ar_diagnostic_screen.dart';
+import 'ar_scanner_screen.dart';
 import 'model_viewer_screen.dart';
 
 class ArHubScreen extends StatefulWidget {
@@ -18,20 +19,22 @@ class ArHubScreen extends StatefulWidget {
 class _ArHubScreenState extends State<ArHubScreen> {
   List<ArContentItem> _models = [];
   bool _isLoading = true;
-  ARMode _arMode = ARMode.nonAR;
+  ArCoreAvailability _availability = ArCoreAvailability.unknown;
   bool _isSyncing = false;
   String _syncStatus = '';
+
+  bool get _isAR => _availability == ArCoreAvailability.supportedInstalled;
 
   @override
   void initState() {
     super.initState();
-    _detectARMode();
+    _detectARSupport();
     _loadModels();
   }
 
-  Future<void> _detectARMode() async {
-    final mode = await ARService.checkARSupport();
-    if (mounted) setState(() => _arMode = mode);
+  Future<void> _detectARSupport() async {
+    final availability = await ARService.checkAvailability();
+    if (mounted) setState(() => _availability = availability);
   }
 
   Future<void> _loadModels() async {
@@ -57,6 +60,16 @@ class _ArHubScreenState extends State<ArHubScreen> {
 
     try {
       final result = await ContentSyncService.sync();
+      await ContentSyncService.applyDownloads(
+        result,
+        onProgress: (completed, total, assetType) {
+          if (mounted) {
+            setState(() {
+              _syncStatus = 'Mengunduh aset $completed/$total ($assetType)...';
+            });
+          }
+        },
+      );
       await ArContentResolver.refreshContent();
 
       final prefs = await SharedPreferences.getInstance();
@@ -76,10 +89,8 @@ class _ArHubScreenState extends State<ArHubScreen> {
             _syncStatus = 'Konten sudah terbaru';
           } else if (result.status == SyncStatus.needsUpdate) {
             _syncStatus = 'Diperbarui: ${result.downloadedAssets} aset';
-          } else if (result.isOffline) {
-            _syncStatus = 'Offline — menggunakan konten tersimpan';
           } else {
-            _syncStatus = 'Sinkronisasi gagal';
+            _syncStatus = result.error ?? 'Sinkronisasi gagal';
           }
         });
       }
@@ -94,22 +105,28 @@ class _ArHubScreenState extends State<ArHubScreen> {
   }
 
   String _resolveModelUrl(ArContentItem model) {
+    final base = ApiService.baseUrl.replaceFirst('/api', '');
     if (model.glbUrl != null && model.glbUrl!.isNotEmpty) {
-      return model.glbUrl!;
+      final url = model.glbUrl!;
+      if (url.startsWith('http')) return url;
+      if (url.startsWith('/')) return '$base$url';
+      return '$base/storage/$url';
     }
     if (model.glbPath != null && model.glbPath!.isNotEmpty) {
-      final base = ApiService.baseUrl.replaceFirst('/api', '');
       return '$base/storage/${model.glbPath}';
     }
     return '';
   }
 
   String _resolveImageUrl(ArContentItem model) {
+    final base = ApiService.baseUrl.replaceFirst('/api', '');
     if (model.thumbnailUrl != null && model.thumbnailUrl!.isNotEmpty) {
-      return model.thumbnailUrl!;
+      final url = model.thumbnailUrl!;
+      if (url.startsWith('http')) return url;
+      if (url.startsWith('/')) return '$base$url';
+      return '$base/storage/$url';
     }
     if (model.thumbnailPath != null && model.thumbnailPath!.isNotEmpty) {
-      final base = ApiService.baseUrl.replaceFirst('/api', '');
       return '$base/storage/${model.thumbnailPath}';
     }
     return '';
@@ -124,28 +141,11 @@ class _ArHubScreenState extends State<ArHubScreen> {
 
     if (!mounted) return;
 
-    if (_arMode == ARMode.arCore) {
-      String? markerImagePath;
-      if (model.markers.isNotEmpty) {
-        final marker = model.markers.first;
-        markerImagePath =
-            await ContentSyncService.getCachedMarkerPath(marker.id);
-        if (markerImagePath == null && marker.imagePath != null) {
-          final base = ApiService.baseUrl.replaceFirst('/api', '');
-          markerImagePath = '$base/storage/${marker.imagePath}';
-        }
-      }
-
+    if (_isAR) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ArCameraScreen(
-            arModelId: model.id,
-            modelName: model.modelName,
-            modelUrl: displayUrl,
-            markerImagePath: markerImagePath,
-            hotspots: model.hotspots,
-          ),
+          builder: (context) => ArScannerScreen(preferredModelId: model.id),
         ),
       );
     } else {
@@ -179,6 +179,19 @@ class _ArHubScreenState extends State<ArHubScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.monitor_heart_outlined,
+                color: Color(0xFF637080)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ArDiagnosticScreen(),
+                ),
+              );
+            },
+            tooltip: 'Diagnostik AR',
+          ),
           if (_isSyncing)
             const Padding(
               padding: EdgeInsets.only(right: 16),
@@ -264,7 +277,7 @@ class _ArHubScreenState extends State<ArHubScreen> {
   }
 
   Widget _buildBanner() {
-    final isAR = _arMode == ARMode.arCore;
+    final isAR = _isAR;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -478,15 +491,13 @@ class _ArHubScreenState extends State<ArHubScreen> {
                         const SizedBox(width: 12),
                       ],
                       Icon(
-                        _arMode == ARMode.arCore
-                            ? Icons.view_in_ar
-                            : Icons.three_g_mobiledata,
+                        _isAR ? Icons.view_in_ar : Icons.three_g_mobiledata,
                         size: 16,
                         color: const Color(0xFF5B6ABF),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _arMode == ARMode.arCore ? 'Buka AR' : 'Lihat 3D',
+                        _isAR ? 'Buka AR' : 'Lihat 3D',
                         style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -510,7 +521,7 @@ class _ArHubScreenState extends State<ArHubScreen> {
   }
 
   Widget _buildTipsCard() {
-    final isAR = _arMode == ARMode.arCore;
+    final isAR = _isAR;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
