@@ -2,46 +2,39 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'secure_storage_service.dart';
 
 class ApiService {
   static String get baseUrl {
     const webUrl = 'http://127.0.0.1:8000/api';
-    // const androidEmulatorUrl = 'http://10.0.2.2:8000/api';
     const physicalDeviceUrl = 'http://10.42.37.181:8000/api';
     try {
       if (kIsWeb) return webUrl;
       if (Platform.isAndroid) {
-        // Emulator: 10.0.2.2, Physical device: ganti ke IP LAN laptop
-        // TODO: Replace physicalDeviceUrl dengan IP laptop Anda (contoh: 192.168.1.100)
         return physicalDeviceUrl;
       }
     } catch (_) {}
     return webUrl;
   }
 
+  static String get v1BaseUrl => '$baseUrl/v1';
+
   static String? _token;
 
   static Future<String?> getToken() async {
     if (_token != null) return _token;
-    final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('authToken');
+    _token = await SecureStorageService.getToken();
     return _token;
   }
 
   static Future<void> setToken(String token) async {
     _token = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('authToken', token);
+    await SecureStorageService.saveToken(token);
   }
 
   static Future<void> clearToken() async {
     _token = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('authToken');
-    await prefs.remove('userRole');
-    await prefs.remove('userName');
-    await prefs.remove('userEmail');
+    await SecureStorageService.clearAll();
   }
 
   static Map<String, String> _headers() {
@@ -284,4 +277,26 @@ class ApiService {
     final responseBody = await streamedResponse.stream.bytesToString();
     return jsonDecode(responseBody);
   }
+
+  // ========== V1 API METHODS ==========
+
+  static Future<Map<String, dynamic>> v1GetAppConfig() =>
+      _getV1('/app/config');
+
+  static Future<Map<String, dynamic>> v1GetContentVersion() =>
+      _getV1('/content/version');
+
+  static Future<Map<String, dynamic>> v1GetArContent() =>
+      _getV1('/ar/content');
+
+  static Future<Map<String, dynamic>> _v1Get(String path) async {
+    final response = await http.get(
+      Uri.parse('$v1BaseUrl$path'),
+      headers: _headers(),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> _getV1(String path) =>
+      _v1Get(path);
 }

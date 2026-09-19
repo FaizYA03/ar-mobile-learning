@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\QuizAttempt;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -38,6 +39,8 @@ class AdminController extends Controller
             'role' => $validated['role'],
         ]);
 
+        ActivityLogger::created('user', $user->id, "User '{$user->name}' ({$user->role}) created");
+
         return response()->json([
             'success' => true,
             'message' => 'User berhasil ditambahkan',
@@ -67,6 +70,8 @@ class AdminController extends Controller
 
         $user->update($validated);
 
+        ActivityLogger::updated('user', $user->id, "User '{$user->name}' updated");
+
         return response()->json([
             'success' => true,
             'message' => 'User berhasil diperbarui',
@@ -81,6 +86,7 @@ class AdminController extends Controller
 
     public function deleteUser(User $user)
     {
+        ActivityLogger::deleted('user', $user->id, "User '{$user->name}' deleted");
         $user->delete();
 
         return response()->json([

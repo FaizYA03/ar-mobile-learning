@@ -2,41 +2,70 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Quiz;
+use App\Http\Requests\QuestionStoreRequest;
+use App\Http\Requests\QuizStoreRequest;
+use App\Http\Requests\QuizSubmitRequest;
+use App\Http\Requests\QuizUpdateRequest;
+use App\Http\Resources\QuizAttemptResource;
+use App\Http\Resources\QuizResource;
 use App\Models\Question;
 use App\Models\QuestionOption;
+use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Services\ActivityLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class QuizController extends Controller
 {
-    public function index()
+    public function index(Request $request): JsonResponse
     {
         $quizzes = Quiz::withCount('questions')->get();
 
         return response()->json([
             'success' => true,
-            'data' => $quizzes,
+            'message' => 'Berhasil mengambil daftar quiz',
+            'data' => QuizResource::collection($quizzes),
         ]);
     }
 
-    public function show(Quiz $quiz)
+    public function show(Quiz $quiz, Request $request): JsonResponse
     {
         $quiz->load('questions.options');
 
         return response()->json([
             'success' => true,
-            'data' => $quiz,
+            'message' => 'Berhasil mengambil detail quiz',
+            'data' => new QuizResource($quiz),
         ]);
     }
 
-    public function submit(Request $request, Quiz $quiz)
+    public function submit(QuizSubmitRequest $request, Quiz $quiz): JsonResponse
     {
-        $validated = $request->validate([
-            'answers' => 'required|array',
-            'answers.*.question_id' => 'required|exists:questions,id',
-            'answers.*.option_id' => 'required|exists:question_options,id',
-        ]);
+        $validated = $request->validated();
+
+        $quizQuestionIds = $quiz->questions()->pluck('questions.id')->toArray();
+
+        foreach ($validated['answers'] as $answer) {
+            if (!in_array($answer['question_id'], $quizQuestionIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Soal #{$answer['question_id']} bukan bagian dari quiz ini.",
+                ], 422);
+            }
+
+            $optionBelongsToQuestion = QuestionOption::where('id', $answer['option_id'])
+                ->where('question_id', $answer['question_id'])
+                ->exists();
+
+            if (!$optionBelongsToQuestion) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Jawaban #{$answer['option_id']} tidak valid untuk soal #{$answer['question_id']}.",
+                ], 422);
+            }
+        }
 
         $correctCount = 0;
         $totalCount = $quiz->questions()->count();
@@ -58,9 +87,11 @@ class QuizController extends Controller
             'passed' => $passed,
         ]);
 
+        ActivityLogger::created('quiz_attempt', $attempt->id, "Quiz '{$quiz->title}' attempted by user #{$request->user()->id} with score {$score}");
+
         return response()->json([
             'success' => true,
-            'message' => 'Quiz selesai',
+            'message' => $passed ? 'Selamat! Kamu lulus quiz ini.' : 'Quiz selesai. Semoga lebih baik next time!',
             'data' => [
                 'attempt_id' => $attempt->id,
                 'score' => $score,
@@ -72,54 +103,47 @@ class QuizController extends Controller
     }
 
     // Guru methods
-    public function guruIndex()
+    public function guruIndex(): JsonResponse
     {
         $quizzes = Quiz::withCount('questions')->orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'success' => true,
-            'data' => $quizzes,
+            'message' => 'Berhasil mengambil daftar quiz guru',
+            'data' => QuizResource::collection($quizzes),
         ]);
     }
 
-    public function guruStore(Request $request)
+    public function guruStore(QuizStoreRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'time_limit' => 'nullable|integer|min:1',
-            'passing_score' => 'nullable|integer|min:0|max:100',
-        ]);
-
+        $validated = $request->validated();
         $quiz = Quiz::create($validated);
+
+        ActivityLogger::created('quiz', $quiz->id, "Quiz '{$quiz->title}' created");
 
         return response()->json([
             'success' => true,
             'message' => 'Quiz berhasil dibuat',
-            'data' => $quiz,
+            'data' => new QuizResource($quiz),
         ], 201);
     }
 
-    public function guruUpdate(Request $request, Quiz $quiz)
+    public function guruUpdate(QuizUpdateRequest $request, Quiz $quiz): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'time_limit' => 'nullable|integer|min:1',
-            'passing_score' => 'nullable|integer|min:0|max:100',
-        ]);
+        $quiz->update($request->validated());
 
-        $quiz->update($validated);
+        ActivityLogger::updated('quiz', $quiz->id, "Quiz '{$quiz->title}' updated");
 
         return response()->json([
             'success' => true,
             'message' => 'Quiz berhasil diperbarui',
-            'data' => $quiz,
+            'data' => new QuizResource($quiz),
         ]);
     }
 
-    public function guruDestroy(Quiz $quiz)
+    public function guruDestroy(Quiz $quiz): JsonResponse
     {
+        ActivityLogger::deleted('quiz', $quiz->id, "Quiz '{$quiz->title}' deleted");
         $quiz->delete();
 
         return response()->json([
@@ -128,14 +152,9 @@ class QuizController extends Controller
         ]);
     }
 
-    public function addQuestion(Request $request, Quiz $quiz)
+    public function addQuestion(QuestionStoreRequest $request, Quiz $quiz): JsonResponse
     {
-        $validated = $request->validate([
-            'text' => 'required|string',
-            'options' => 'required|array|min:2',
-            'options.*.text' => 'required|string',
-            'options.*.is_correct' => 'required|boolean',
-        ]);
+        $validated = $request->validated();
 
         $maxOrder = $quiz->questions()->max('order') ?? 0;
 
@@ -156,6 +175,8 @@ class QuizController extends Controller
 
         $question->load('options');
 
+        ActivityLogger::created('quiz_question', $question->id, "Question added to quiz '{$quiz->title}'");
+
         return response()->json([
             'success' => true,
             'message' => 'Soal berhasil ditambahkan',
@@ -163,9 +184,12 @@ class QuizController extends Controller
         ], 201);
     }
 
-    public function deleteQuestion(Question $question)
+    public function deleteQuestion(Question $question): JsonResponse
     {
+        $quiz = $question->quiz;
         $question->delete();
+
+        ActivityLogger::deleted('quiz_question', $question->id, "Question deleted from quiz '{$quiz->title}'");
 
         return response()->json([
             'success' => true,

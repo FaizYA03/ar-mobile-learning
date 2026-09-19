@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\MateriStoreRequest;
+use App\Http\Requests\MateriUpdateRequest;
+use App\Http\Resources\MateriResource;
 use App\Models\Materi;
+use App\Services\ActivityLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MateriController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $query = Materi::with(['tpAtp:id,kode,judul', 'arModel:id,model_name,thumbnail_path'])
+        $query = Materi::with(['tpAtp:id,kode,fase,elemen,judul', 'arModel:id,model_name,thumbnail_path,glb_path'])
             ->orderBy('order', 'asc');
 
         if ($request->has('tp_atp_id')) {
@@ -26,11 +32,12 @@ class MateriController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $materi,
+            'message' => 'Berhasil mengambil daftar materi',
+            'data' => MateriResource::collection($materi),
         ]);
     }
 
-    public function show(Request $request, Materi $materi)
+    public function show(Request $request, Materi $materi): JsonResponse
     {
         $materi->load([
             'tpAtp',
@@ -39,28 +46,17 @@ class MateriController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $materi,
+            'message' => 'Berhasil mengambil detail materi',
+            'data' => new MateriResource($materi),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(MateriStoreRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'tp_atp_id' => 'required|exists:tp_atp,id',
-            'ar_model_id' => 'nullable|exists:ar_models,id',
-            'judul' => 'required|string|max:255',
-            'ringkasan' => 'nullable|string',
-            'konten' => 'required|string',
-            'estimasi_menit' => 'nullable|integer|min:1',
-            'order' => 'nullable|integer',
-            'is_published' => 'nullable|boolean',
-            'gambar_cover' => 'nullable',
-        ]);
-
+        $validated = $request->validated();
         $validated['slug'] = Str::slug($validated['judul']) . '-' . Str::random(5);
 
         if ($request->hasFile('gambar_cover')) {
-            $request->validate(['gambar_cover' => 'image|max:5120']);
             $path = $request->file('gambar_cover')->store('covers', 'public');
             $validated['gambar_cover'] = $path;
         } elseif (is_string($request->input('gambar_cover'))) {
@@ -75,33 +71,24 @@ class MateriController extends Controller
         $materi = Materi::create($validated);
         $materi->load(['tpAtp', 'arModel']);
 
+        ActivityLogger::created('materi', $materi->id, "Materi '{$materi->judul}' created");
+
         return response()->json([
             'success' => true,
             'message' => 'Materi berhasil dibuat',
-            'data' => $materi,
+            'data' => new MateriResource($materi),
         ], 201);
     }
 
-    public function update(Request $request, Materi $materi)
+    public function update(MateriUpdateRequest $request, Materi $materi): JsonResponse
     {
-        $validated = $request->validate([
-            'tp_atp_id' => 'sometimes|exists:tp_atp,id',
-            'ar_model_id' => 'nullable|exists:ar_models,id',
-            'judul' => 'sometimes|string|max:255',
-            'ringkasan' => 'nullable|string',
-            'konten' => 'sometimes|string',
-            'estimasi_menit' => 'nullable|integer|min:1',
-            'order' => 'nullable|integer',
-            'is_published' => 'nullable|boolean',
-            'gambar_cover' => 'nullable',
-        ]);
+        $validated = $request->validated();
 
         if (isset($validated['judul'])) {
             $validated['slug'] = Str::slug($validated['judul']) . '-' . Str::random(5);
         }
 
         if ($request->hasFile('gambar_cover')) {
-            $request->validate(['gambar_cover' => 'image|max:5120']);
             if ($materi->gambar_cover && Storage::disk('public')->exists($materi->gambar_cover)) {
                 Storage::disk('public')->delete($materi->gambar_cover);
             }
@@ -114,18 +101,22 @@ class MateriController extends Controller
         $materi->update($validated);
         $materi->load(['tpAtp', 'arModel']);
 
+        ActivityLogger::updated('materi', $materi->id, "Materi '{$materi->judul}' updated");
+
         return response()->json([
             'success' => true,
             'message' => 'Materi berhasil diperbarui',
-            'data' => $materi,
+            'data' => new MateriResource($materi),
         ]);
     }
 
-    public function destroy(Materi $materi)
+    public function destroy(Materi $materi): JsonResponse
     {
         if ($materi->gambar_cover && Storage::disk('public')->exists($materi->gambar_cover)) {
             Storage::disk('public')->delete($materi->gambar_cover);
         }
+
+        ActivityLogger::deleted('materi', $materi->id, "Materi '{$materi->judul}' deleted");
 
         $materi->delete();
 

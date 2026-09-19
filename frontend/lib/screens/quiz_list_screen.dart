@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/models.dart';
 import '../services/api_service.dart';
 import 'quiz_take_screen.dart';
 
@@ -13,7 +14,7 @@ class QuizListScreen extends StatefulWidget {
 class _QuizListScreenState extends State<QuizListScreen> {
   bool _isLoading = true;
   String? _errorMessage;
-  List<dynamic> _quizzes = [];
+  List<QuizItem> _quizzes = [];
 
   @override
   void initState() {
@@ -30,8 +31,9 @@ class _QuizListScreenState extends State<QuizListScreen> {
     try {
       final response = await ApiService.getQuizzes();
       if (response['success'] == true && mounted) {
+        final data = response['data'] as List<dynamic>? ?? [];
         setState(() {
-          _quizzes = response['data'] ?? [];
+          _quizzes = data.map((q) => QuizItem.fromJson(q)).toList();
           _isLoading = false;
         });
       } else {
@@ -131,12 +133,12 @@ class _QuizListScreenState extends State<QuizListScreen> {
     );
   }
 
-  Widget _buildQuizCard(Map<String, dynamic> quiz) {
-    final title = quiz['title'] ?? 'Quiz';
-    final desc = quiz['description'] ?? '';
-    final timeLimit = quiz['time_limit'] ?? 10;
-    final passingScore = quiz['passing_score'] ?? 70;
-    final questionsCount = quiz['questions_count'] ?? 0;
+  Widget _buildQuizCard(QuizItem quiz) {
+    final title = quiz.title;
+    final desc = quiz.description ?? '';
+    final timeLimit = quiz.timeLimit ?? 10;
+    final passingScore = quiz.passingScore;
+    final questionsCount = quiz.questionsCount;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -198,7 +200,7 @@ class _QuizListScreenState extends State<QuizListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => QuizTakeScreen(quizId: quiz['id'], quizTitle: title),
+                    builder: (_) => QuizTakeScreen(quizId: quiz.id, quizTitle: title),
                   ),
                 );
               },

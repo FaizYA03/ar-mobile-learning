@@ -1,0 +1,117 @@
+import 'dart:io';
+import '../models/models.dart';
+import '../services/content_sync_service.dart';
+import '../services/api_client.dart';
+
+class ArContentResolver {
+  static List<ArContentItem>? _cachedContent;
+  static DateTime? _lastFetchTime;
+
+  static Future<void> refreshContent() async {
+    try {
+      final response = await ApiClient.getV1('/ar/content');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final data = response.data['data'] as List<dynamic>;
+        _cachedContent = data.map((item) => ArContentItem.fromJson(item)).toList();
+        _lastFetchTime = DateTime.now();
+      }
+    } catch (_) {}
+  }
+
+  static List<ArContentItem> get content => _cachedContent ?? [];
+  static DateTime? get lastFetchTime => _lastFetchTime;
+
+  static ArContentItem? resolveByModelId(int modelId) {
+    if (_cachedContent == null) return null;
+    try {
+      return _cachedContent!.firstWhere((item) => item.id == modelId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static ArContentItem? resolveByMarkerId(String markerId) {
+    if (_cachedContent == null) return null;
+    try {
+      return _cachedContent!.firstWhere(
+        (item) => item.markers.any((m) => m.markerId == markerId),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static ArContentItem? resolveByMarkerCode(String code) {
+    return resolveByMarkerId(code);
+  }
+
+  static Future<String?> resolveLocalModelPath(int modelId) async {
+    final cachedPath = await ContentSyncService.getCachedModelPath(modelId);
+    if (cachedPath != null) {
+      final file = File(cachedPath);
+      if (await file.exists()) return cachedPath;
+    }
+
+    final item = resolveByModelId(modelId);
+    if (item?.glbUrl != null) return item!.glbUrl;
+
+    return null;
+  }
+
+  static Future<String?> resolveModelUrl(int modelId) async {
+    final localPath = await resolveLocalModelPath(modelId);
+    if (localPath != null && !localPath.startsWith('http')) {
+      return localPath;
+    }
+
+    final item = resolveByModelId(modelId);
+    if (item?.glbUrl != null) return item!.glbUrl;
+    if (item?.glbPath != null) {
+      final base = ApiClient.instance.options.baseUrl;
+      return '${base.replaceFirst('/api', '')}/storage/${item!.glbPath}';
+    }
+
+    return null;
+  }
+
+  static Future<String?> resolveMarkerImagePath(int modelId, int markerId) async {
+    final cachedPath = await ContentSyncService.getCachedMarkerPath(markerId);
+    if (cachedPath != null) {
+      final file = File(cachedPath);
+      if (await file.exists()) return cachedPath;
+    }
+
+    final item = resolveByModelId(modelId);
+    if (item != null) {
+      final marker = item.markers.where((m) => m.id == markerId).toList();
+      if (marker.isNotEmpty) {
+        if (marker.first.imageUrl != null) return marker.first.imageUrl;
+        if (marker.first.imagePath != null) {
+          final base = ApiClient.instance.options.baseUrl;
+          return '${base.replaceFirst('/api', '')}/storage/${marker.first.imagePath}';
+        }
+      }
+    }
+
+    return null;
+  }
+
+  static List<ArHotspotData> resolveHotspots(int modelId) {
+    final item = resolveByModelId(modelId);
+    return item?.hotspots ?? [];
+  }
+
+  static bool get isContentLoaded => _cachedContent != null && _cachedContent!.isNotEmpty;
+
+  static int get contentCount => _cachedContent?.length ?? 0;
+
+  static void setContentForTest(List<ArContentItem> items) {
+    _cachedContent = items;
+    _lastFetchTime = DateTime.now();
+  }
+
+  static void resetForTest() {
+    _cachedContent = null;
+    _lastFetchTime = null;
+  }
+}

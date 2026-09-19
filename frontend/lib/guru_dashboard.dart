@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'models/models.dart';
 import 'services/api_service.dart';
+import 'services/secure_storage_service.dart';
 import 'screens/guru_tp_atp_screen.dart';
 import 'screens/guru_materi_screen.dart';
 import 'screens/guru_ar_management_screen.dart';
@@ -18,6 +20,8 @@ class _GuruDashboardState extends State<GuruDashboard> {
   int _totalQuizzes = 0;
   bool _isLoading = true;
   List<dynamic> _quizzes = [];
+  String _lastSyncText = 'Belum pernah sync';
+  int _cachedModelCount = 0;
 
   @override
   void initState() {
@@ -26,8 +30,25 @@ class _GuruDashboardState extends State<GuruDashboard> {
   }
 
   Future<void> _loadData() async {
+    _userName = await SecureStorageService.getUserName() ?? 'Guru';
+
     final prefs = await SharedPreferences.getInstance();
-    _userName = prefs.getString('userName') ?? 'Guru';
+    final lastSyncMs = prefs.getInt('content_last_sync');
+    if (lastSyncMs != null) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(lastSyncMs);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) {
+        _lastSyncText = 'Baru saja';
+      } else if (diff.inHours < 1) {
+        _lastSyncText = '${diff.inMinutes} menit lalu';
+      } else if (diff.inDays < 1) {
+        _lastSyncText = '${diff.inHours} jam lalu';
+      } else {
+        _lastSyncText = '${diff.inDays} hari lalu';
+      }
+    }
+    _cachedModelCount = prefs.getInt('cached_ar_model_count') ?? 0;
+
     try {
       final dashResult = await ApiService.getDashboard();
       final quizResult = await ApiService.guruGetQuizzes();
@@ -106,7 +127,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
     );
   }
 
-  void _showAddQuestionDialog(Quiz quiz) {
+  void _showAddQuestionDialog(QuizItem quiz) {
     final questionCtrl = TextEditingController();
     final List<Map<String, dynamic>> options = [
       {'text': '', 'is_correct': false},
@@ -161,7 +182,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
                 if (questionCtrl.text.isEmpty) return;
                 final correctIndex = options.indexWhere((o) => o['is_correct'] == true);
                 if (correctIndex == -1) return;
-                await ApiService.guruAddQuestion(quiz.id!, {
+                await ApiService.guruAddQuestion(quiz.id, {
                   'text': questionCtrl.text,
                   'options': options.map((o) => {'text': o['text'], 'is_correct': o['is_correct']}).toList(),
                 });
@@ -170,6 +191,117 @@ class _GuruDashboardState extends State<GuruDashboard> {
               },
               child: const Text('Tambah'),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showQuestionsDialog(Map<String, dynamic> quiz) async {
+    List<QuizQuestion> questions = [];
+    bool loading = true;
+
+    try {
+      final response = await ApiService.getQuiz(quiz['id']);
+      if (response['success'] == true) {
+        final data = response['data'];
+        questions = (data['questions'] as List<dynamic>? ?? [])
+            .map((q) => QuizQuestion.fromJson(q))
+            .toList();
+      }
+    } catch (_) {}
+
+    loading = false;
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Soal: ${quiz['title'] ?? ''}',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E), fontSize: 16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: loading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)))
+                : questions.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text('Belum ada soal', style: TextStyle(color: Color(0xFF637080))),
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: questions.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) {
+                          final q = questions[i];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F7FA),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: const Color(0xFF5B6ABF).withValues(alpha: 0.15),
+                                  child: Text('${i + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF5B6ABF))),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(q.text, style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E)), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: ctx,
+                                      builder: (dCtx) => AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        title: const Text('Hapus Soal?'),
+                                        content: Text('Yakin ingin menghapus soal ${i + 1}?'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Batal')),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(dCtx, true),
+                                            child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828))),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      try {
+                                        await ApiService.guruDeleteQuestion(q.id);
+                                        setDialogState(() => questions.removeAt(i));
+                                        _loadData();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Soal berhasil dihapus')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Gagal menghapus soal')),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
           ],
         ),
       ),
@@ -226,6 +358,8 @@ class _GuruDashboardState extends State<GuruDashboard> {
           const SizedBox(height: 4),
           const Text('Kelola pembelajaran Anda', style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
           const SizedBox(height: 24),
+          _buildSyncStatusCard(),
+          const SizedBox(height: 20),
           Container(
             width: double.infinity, padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
@@ -272,6 +406,44 @@ class _GuruDashboardState extends State<GuruDashboard> {
     );
   }
 
+  Widget _buildSyncStatusCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: const Color(0xFF0A8477).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.sync, color: Color(0xFF0A8477), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Sinkronisasi Konten', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+                const SizedBox(height: 2),
+                Text('Terakhir: $_lastSyncText', style: const TextStyle(fontSize: 11, color: Color(0xFF637080))),
+              ],
+            ),
+          ),
+          if (_cachedModelCount > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: const Color(0xFF5B6ABF).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+              child: Text('$_cachedModelCount model', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5B6ABF))),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuizManagement() {
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)));
     return Column(
@@ -302,41 +474,79 @@ class _GuruDashboardState extends State<GuruDashboard> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: Container(
-                          width: 42, height: 42,
-                          decoration: BoxDecoration(color: const Color(0xFFE67E22).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.quiz, color: Color(0xFFE67E22), size: 20),
-                        ),
-                        title: Text(quiz['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${quiz['questions_count'] ?? 0} soal'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF0A8477)),
-                              onPressed: () => _showAddQuestionDialog(Quiz.fromMap(quiz)),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFC62828)),
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Hapus Quiz'),
-                                    content: Text('Hapus "${quiz['title']}"?'),
-                                    actions: [
-                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-                                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828)))),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 42, height: 42,
+                                  decoration: BoxDecoration(color: const Color(0xFFE67E22).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                                  child: const Icon(Icons.quiz, color: Color(0xFFE67E22), size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(quiz['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      Text('${quiz['questions_count'] ?? 0} soal', style: const TextStyle(fontSize: 12, color: Color(0xFF637080))),
                                     ],
                                   ),
-                                );
-                                if (confirm == true) {
-                                  await ApiService.guruDeleteQuiz(quiz['id']);
-                                  _loadData();
-                                }
-                              },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFC62828)),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Hapus Quiz'),
+                                        content: Text('Hapus "${quiz['title']}"?'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828)))),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      await ApiService.guruDeleteQuiz(quiz['id']);
+                                      _loadData();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _showQuestionsDialog(quiz),
+                                    icon: const Icon(Icons.visibility_outlined, size: 16, color: Color(0xFF5B6ABF)),
+                                    label: const Text('Lihat Soal', style: TextStyle(fontSize: 12, color: Color(0xFF5B6ABF))),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Color(0xFF5B6ABF)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _showAddQuestionDialog(QuizItem(id: quiz['id'], title: quiz['title'] ?? '')),
+                                    icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF0A8477)),
+                                    label: const Text('Tambah Soal', style: TextStyle(fontSize: 12, color: Color(0xFF0A8477))),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Color(0xFF0A8477)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -388,11 +598,4 @@ class _GuruDashboardState extends State<GuruDashboard> {
       ),
     );
   }
-}
-
-class Quiz {
-  final int? id;
-  final String? title;
-  Quiz({this.id, this.title});
-  factory Quiz.fromMap(Map<String, dynamic> m) => Quiz(id: m['id'], title: m['title']);
 }

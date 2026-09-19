@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
+import 'services/secure_storage_service.dart';
 import 'screens/tp_atp_screen.dart';
 import 'screens/ar_hub_screen.dart';
 import 'screens/quiz_list_screen.dart';
@@ -17,6 +18,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
   String _userName = 'Siswa';
   int _totalQuizzes = 0;
   bool _isLoading = true;
+  String _lastSyncText = 'Belum pernah sync';
+  int _cachedModelCount = 0;
 
   @override
   void initState() {
@@ -25,8 +28,25 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Future<void> _loadData() async {
+    _userName = await SecureStorageService.getUserName() ?? 'Siswa';
+
     final prefs = await SharedPreferences.getInstance();
-    _userName = prefs.getString('userName') ?? 'Siswa';
+    final lastSyncMs = prefs.getInt('content_last_sync');
+    if (lastSyncMs != null) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(lastSyncMs);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) {
+        _lastSyncText = 'Baru saja';
+      } else if (diff.inHours < 1) {
+        _lastSyncText = '${diff.inMinutes} menit lalu';
+      } else if (diff.inDays < 1) {
+        _lastSyncText = '${diff.inHours} jam lalu';
+      } else {
+        _lastSyncText = '${diff.inDays} hari lalu';
+      }
+    }
+    _cachedModelCount = prefs.getInt('cached_ar_model_count') ?? 0;
+
     try {
       final result = await ApiService.getDashboard();
       if (result['success'] == true && mounted) {
@@ -106,6 +126,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
           const SizedBox(height: 4),
           const Text('Mari lanjutkan belajar', style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
           const SizedBox(height: 24),
+          _buildSyncStatusCard(),
+          const SizedBox(height: 20),
           _buildProgressCard(),
           const SizedBox(height: 20),
           const Text('Pilih Pembelajaran', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
@@ -152,6 +174,44 @@ class _StudentDashboardState extends State<StudentDashboard> {
       const SizedBox(height: 4),
       Text(label, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
     ]);
+  }
+
+  Widget _buildSyncStatusCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: const Color(0xFF0A8477).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.sync, color: Color(0xFF0A8477), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Sinkronisasi Konten', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+                const SizedBox(height: 2),
+                Text('Terakhir: $_lastSyncText', style: const TextStyle(fontSize: 11, color: Color(0xFF637080))),
+              ],
+            ),
+          ),
+          if (_cachedModelCount > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: const Color(0xFF0A8477).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+              child: Text('$_cachedModelCount model', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0A8477))),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildLearningCard({required IconData icon, required String title, required String subtitle, required Color color, VoidCallback? onTap}) {

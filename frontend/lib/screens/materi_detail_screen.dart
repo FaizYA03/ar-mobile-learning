@@ -109,12 +109,34 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
     final konten = _materi!['konten'] ?? '';
     final arModel = _materi!['ar_model'];
     final menit = _materi!['estimasi_menit'] ?? 15;
+    final gambarCover = _materi!['gambar_cover_url'] ?? _materi!['gambar_cover'];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Cover image
+          if (gambarCover != null && gambarCover.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              width: double.infinity,
+              height: 180,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFFE8F5F3),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.network(
+                gambarCover.startsWith('http')
+                    ? gambarCover
+                    : '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$gambarCover',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Icon(Icons.menu_book_outlined, size: 48, color: Color(0xFF0A8477)),
+                ),
+              ),
+            ),
           // TP Badge
           Row(
             children: [
@@ -263,12 +285,12 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
 
   void _showArPreviewDialog(Map<String, dynamic> arModel) {
     final glbPath = arModel['glb_path'] ?? '';
-    String modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb';
+    String modelUrl = '';
     if (glbPath.isNotEmpty) {
       if (glbPath.startsWith('http')) {
         modelUrl = glbPath;
       } else {
-        modelUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/$glbPath';
+        modelUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$glbPath';
       }
     }
 
@@ -295,11 +317,25 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
             ),
             SizedBox(
               height: 300,
-              child: ModelViewer(
-                src: modelUrl,
-                autoRotate: true,
-                cameraControls: true,
-              ),
+              child: modelUrl.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.view_in_ar, size: 48, color: Color(0xFFB0B8C1)),
+                          SizedBox(height: 8),
+                          Text(
+                            'Model 3D belum tersedia',
+                            style: TextStyle(fontSize: 13, color: Color(0xFF637080)),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ModelViewer(
+                      src: modelUrl,
+                      autoRotate: true,
+                      cameraControls: true,
+                    ),
             ),
             if (arModel['description'] != null && (arModel['description'] as String).isNotEmpty)
               Padding(

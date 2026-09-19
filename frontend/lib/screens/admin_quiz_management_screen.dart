@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/models.dart';
 import '../services/api_service.dart';
 
 class AdminQuizManagementScreen extends StatefulWidget {
@@ -11,7 +12,7 @@ class AdminQuizManagementScreen extends StatefulWidget {
 class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
   bool _isLoading = true;
   String? _errorMessage;
-  List<dynamic> _quizzes = [];
+  List<QuizItem> _quizzes = [];
 
   @override
   void initState() {
@@ -27,8 +28,9 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
     try {
       final response = await ApiService.guruGetQuizzes();
       if (response['success'] == true && mounted) {
+        final data = response['data'] as List<dynamic>? ?? [];
         setState(() {
-          _quizzes = response['data'] ?? [];
+          _quizzes = data.map((q) => QuizItem.fromJson(q)).toList();
           _isLoading = false;
         });
       } else {
@@ -147,11 +149,11 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
     );
   }
 
-  void _showEditQuizDialog(Map<String, dynamic> quiz) {
-    final titleCtrl = TextEditingController(text: quiz['title'] ?? '');
-    final descCtrl = TextEditingController(text: quiz['description'] ?? '');
-    final timeCtrl = TextEditingController(text: (quiz['time_limit'] ?? 10).toString());
-    final scoreCtrl = TextEditingController(text: (quiz['passing_score'] ?? 70).toString());
+  void _showEditQuizDialog(QuizItem quiz) {
+    final titleCtrl = TextEditingController(text: quiz.title);
+    final descCtrl = TextEditingController(text: quiz.description ?? '');
+    final timeCtrl = TextEditingController(text: (quiz.timeLimit ?? 10).toString());
+    final scoreCtrl = TextEditingController(text: quiz.passingScore.toString());
 
     showDialog(
       context: context,
@@ -211,7 +213,7 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
             onPressed: () async {
               if (titleCtrl.text.isEmpty) return;
               try {
-                await ApiService.guruUpdateQuiz(quiz['id'], {
+                await ApiService.guruUpdateQuiz(quiz.id, {
                   'title': titleCtrl.text,
                   'description': descCtrl.text,
                   'time_limit': int.tryParse(timeCtrl.text) ?? 10,
@@ -239,7 +241,7 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
     );
   }
 
-  void _showAddQuestionDialog(Map<String, dynamic> quiz) {
+  void _showAddQuestionDialog(QuizItem quiz) {
     final questionCtrl = TextEditingController();
     final List<Map<String, dynamic>> options = [
       {'text': '', 'is_correct': false},
@@ -253,7 +255,7 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Tambah Soal - ${quiz['title']}',
+          title: Text('Tambah Soal - ${quiz.title}',
               style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: SingleChildScrollView(
             child: Column(
@@ -346,7 +348,7 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                   return;
                 }
                 try {
-                  await ApiService.guruAddQuestion(quiz['id'], {
+                  await ApiService.guruAddQuestion(quiz.id, {
                     'text': questionCtrl.text,
                     'options': options.map((o) => {'text': o['text'], 'is_correct': o['is_correct']}).toList(),
                   });
@@ -373,13 +375,13 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
     );
   }
 
-  Future<void> _confirmDeleteQuiz(Map<String, dynamic> quiz) async {
+  Future<void> _confirmDeleteQuiz(QuizItem quiz) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Quiz?'),
-        content: Text('Yakin ingin menghapus "${quiz['title']}"?\nSemua soal dan hasil juga akan terhapus.'),
+        content: Text('Yakin ingin menghapus "${quiz.title}"?\nSemua soal dan hasil juga akan terhapus.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           TextButton(
@@ -391,7 +393,7 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
     );
     if (confirm == true) {
       try {
-        await ApiService.guruDeleteQuiz(quiz['id']);
+        await ApiService.guruDeleteQuiz(quiz.id);
         _fetchData();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -504,10 +506,121 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
     );
   }
 
-  Widget _buildQuizCard(Map<String, dynamic> quiz) {
-    final questionsCount = quiz['questions_count'] ?? 0;
-    final timeLimit = quiz['time_limit'] ?? 10;
-    final passingScore = quiz['passing_score'] ?? 70;
+  Future<void> _showQuestionsDialog(QuizItem quiz) async {
+    List<QuizQuestion> questions = [];
+    bool loading = true;
+
+    try {
+      final response = await ApiService.getQuiz(quiz.id);
+      if (response['success'] == true) {
+        final data = response['data'];
+        questions = (data['questions'] as List<dynamic>? ?? [])
+            .map((q) => QuizQuestion.fromJson(q))
+            .toList();
+      }
+    } catch (_) {}
+
+    loading = false;
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Soal: ${quiz.title}',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E), fontSize: 16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: loading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)))
+                : questions.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text('Belum ada soal', style: TextStyle(color: Color(0xFF637080))),
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: questions.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) {
+                          final q = questions[i];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F7FA),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: const Color(0xFF5B6ABF).withValues(alpha: 0.15),
+                                  child: Text('${i + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF5B6ABF))),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(q.text, style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E)), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFC62828)),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: ctx,
+                                      builder: (dCtx) => AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        title: const Text('Hapus Soal?'),
+                                        content: Text('Yakin ingin menghapus soal ${i + 1}?'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Batal')),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(dCtx, true),
+                                            child: const Text('Hapus', style: TextStyle(color: Color(0xFFC62828))),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      try {
+                                        await ApiService.guruDeleteQuestion(q.id);
+                                        setDialogState(() => questions.removeAt(i));
+                                        _fetchData();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Soal berhasil dihapus')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Gagal menghapus soal')),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuizCard(QuizItem quiz) {
+    final questionsCount = quiz.questionsCount;
+    final timeLimit = quiz.timeLimit ?? 10;
+    final passingScore = quiz.passingScore;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -538,15 +651,15 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        quiz['title'] ?? '',
+                        quiz.title,
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (quiz['description'] != null && (quiz['description'] as String).isNotEmpty) ...[
+                      if (quiz.description != null && quiz.description!.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
-                          quiz['description'],
+                          quiz.description!,
                           style: const TextStyle(fontSize: 12, color: Color(0xFF637080)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -580,18 +693,34 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showAddQuestionDialog(quiz),
-                icon: const Icon(Icons.add_circle_outline, size: 18, color: Color(0xFF0A8477)),
-                label: const Text('Tambah Soal', style: TextStyle(color: Color(0xFF0A8477))),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF0A8477)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showQuestionsDialog(quiz),
+                    icon: const Icon(Icons.visibility_outlined, size: 18, color: Color(0xFF5B6ABF)),
+                    label: const Text('Lihat Soal', style: TextStyle(color: Color(0xFF5B6ABF))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF5B6ABF)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddQuestionDialog(quiz),
+                    icon: const Icon(Icons.add_circle_outline, size: 18, color: Color(0xFF0A8477)),
+                    label: const Text('Tambah Soal', style: TextStyle(color: Color(0xFF0A8477))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF0A8477)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

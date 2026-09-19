@@ -6,6 +6,7 @@ use App\Models\ArModel;
 use App\Models\ArMarker;
 use App\Models\ArHotspot;
 use App\Models\ArMarker3dMapping;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -65,6 +66,8 @@ class ArController extends Controller
 
         $model = ArModel::create($validated);
 
+        ActivityLogger::created('ar_model', $model->id, "AR model '{$model->model_name}' created");
+
         return response()->json([
             'success' => true,
             'message' => 'AR model berhasil dibuat',
@@ -90,6 +93,7 @@ class ArController extends Controller
             $glbFile = $request->file('glb_path');
             $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
             $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $validated['version'] = $arModel->version + 1;
         }
 
         if ($request->hasFile('thumbnail_path')) {
@@ -102,6 +106,10 @@ class ArController extends Controller
         }
 
         $arModel->update($validated);
+
+        ActivityLogger::updated('ar_model', $arModel->id, "AR model '{$arModel->model_name}' updated", [
+            'version' => $arModel->version,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -119,6 +127,9 @@ class ArController extends Controller
             Storage::disk('public')->delete(str_replace('storage/', '', $arModel->thumbnail_path));
         }
         $arModel->markers()->detach();
+
+        ActivityLogger::deleted('ar_model', $arModel->id, "AR model '{$arModel->model_name}' deleted");
+
         $arModel->delete();
         return response()->json([
             'success' => true,
@@ -165,6 +176,8 @@ class ArController extends Controller
 
         $marker = ArMarker::create($validated);
 
+        ActivityLogger::created('ar_marker', $marker->id, "AR marker '{$marker->marker_id}' created");
+
         return response()->json([
             'success' => true,
             'message' => 'AR marker berhasil dibuat',
@@ -192,6 +205,8 @@ class ArController extends Controller
 
         $arMarker->update($validated);
 
+        ActivityLogger::updated('ar_marker', $arMarker->id, "AR marker '{$arMarker->marker_id}' updated");
+
         return response()->json([
             'success' => true,
             'message' => 'AR marker berhasil diperbarui',
@@ -205,6 +220,9 @@ class ArController extends Controller
             Storage::disk('public')->delete(str_replace('storage/', '', $arMarker->image_path));
         }
         $arMarker->models()->detach();
+
+        ActivityLogger::deleted('ar_marker', $arMarker->id, "AR marker '{$arMarker->marker_id}' deleted");
+
         $arMarker->delete();
         return response()->json([
             'success' => true,

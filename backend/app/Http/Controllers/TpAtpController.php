@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TpAtp;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -57,6 +58,8 @@ class TpAtpController extends Controller
 
         $tpAtp = TpAtp::create($validated);
 
+        ActivityLogger::created('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' created");
+
         return response()->json([
             'success' => true,
             'message' => 'TP/ATP berhasil dibuat',
@@ -78,6 +81,8 @@ class TpAtpController extends Controller
 
         $tpAtp->update($validated);
 
+        ActivityLogger::updated('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' updated");
+
         return response()->json([
             'success' => true,
             'message' => 'TP/ATP berhasil diperbarui',
@@ -87,6 +92,7 @@ class TpAtpController extends Controller
 
     public function destroy(TpAtp $tpAtp)
     {
+        ActivityLogger::deleted('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' deleted");
         $tpAtp->delete();
 
         return response()->json([

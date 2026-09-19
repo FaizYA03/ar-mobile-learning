@@ -108,4 +108,64 @@ class MateriTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_create_materi_fails_without_required_fields(): void
+    {
+        $guru = User::where('role', 'guru')->first();
+        Sanctum::actingAs($guru);
+
+        $response = $this->postJson('/api/guru/materi', []);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['tp_atp_id', 'judul', 'konten']);
+    }
+
+    public function test_create_materi_fails_with_invalid_tp_atp(): void
+    {
+        $guru = User::where('role', 'guru')->first();
+        Sanctum::actingAs($guru);
+
+        $response = $this->postJson('/api/guru/materi', [
+            'tp_atp_id' => 99999,
+            'judul' => 'Test',
+            'konten' => 'Content',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['tp_atp_id']);
+    }
+
+    public function test_list_materi_uses_api_resource_format(): void
+    {
+        $user = User::where('role', 'siswa')->first();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/materi');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    '*' => ['id', 'judul', 'slug', 'ringkasan', 'konten', 'estimasi_menit', 'is_published', 'tp_atp', 'ar_model'],
+                ],
+            ]);
+    }
+
+    public function test_materi_detail_includes_gambar_cover_url(): void
+    {
+        $user = User::where('role', 'siswa')->first();
+        $materi = Materi::first();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/materi/' . $materi->id);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'id', 'judul', 'gambar_cover_url',
+                ],
+            ]);
+    }
 }

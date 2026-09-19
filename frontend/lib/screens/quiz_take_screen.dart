@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../models/models.dart';
 import '../services/api_service.dart';
 import 'quiz_result_screen.dart';
 
@@ -16,14 +18,23 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _errorMessage;
-  List<dynamic> _questions = [];
+  QuizItem? _quiz;
+  List<QuizQuestion> _questions = [];
   int _currentIndex = 0;
-  final Map<int, int> _selectedOptions = {}; // question_id -> option_id
+  final Map<int, int> _selectedOptions = {};
+  Timer? _timer;
+  int _remainingSeconds = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchQuizDetail();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchQuizDetail() async {
@@ -35,11 +46,14 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
     try {
       final response = await ApiService.getQuiz(widget.quizId);
       if (response['success'] == true && mounted) {
-        final quizData = response['data'];
+        final data = response['data'];
+        final quiz = QuizItem.fromJson(data);
         setState(() {
-          _questions = quizData['questions'] ?? [];
+          _quiz = quiz;
+          _questions = quiz.questions ?? [];
           _isLoading = false;
         });
+        _startTimer();
       } else {
         if (mounted) {
           setState(() {
@@ -56,6 +70,32 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
         });
       }
     }
+  }
+
+  void _startTimer() {
+    final timeLimit = _quiz?.timeLimit;
+    if (timeLimit == null || timeLimit <= 0) return;
+
+    _remainingSeconds = timeLimit * 60;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _remainingSeconds--;
+      });
+      if (_remainingSeconds <= 0) {
+        timer.cancel();
+        _submitQuiz();
+      }
+    });
+  }
+
+  String _formatTime(int totalSeconds) {
+    final m = totalSeconds ~/ 60;
+    final s = totalSeconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   Future<void> _confirmSubmit() async {
@@ -93,6 +133,8 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
   }
 
   Future<void> _submitQuiz() async {
+    if (_isSubmitting) return;
+    _timer?.cancel();
     setState(() => _isSubmitting = true);
 
     final answers = _selectedOptions.entries.map((e) => {
@@ -103,12 +145,18 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
     try {
       final response = await ApiService.submitQuiz(widget.quizId, answers);
       if (response['success'] == true && mounted) {
+        final result = QuizAttemptResult.fromJson(response['data']);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => QuizResultScreen(
               quizTitle: widget.quizTitle,
-              resultData: response['data'],
+              resultData: {
+                'score': result.score,
+                'correct': result.correct,
+                'total': result.total,
+                'passed': result.passed,
+              },
             ),
           ),
         );
@@ -156,13 +204,14 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
               ),
             );
             if (exit == true && context.mounted) {
+              _timer?.cancel();
               Navigator.pop(context);
             }
           },
         ),
       ),
       body: _buildBody(),
-      bottomNavigationBar: _questions.isEmpty || _isLoading ? null : _buildBottomBar(),
+      bottomNavigationBar: _questions.isEmpty || _isLoading || _isSubmitting ? null : _buildBottomBar(),
     );
   }
 
@@ -189,19 +238,32 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
       );
     }
 
+    if (_isSubmitting) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Color(0xFF0A8477)),
+            SizedBox(height: 16),
+            Text('Mengirim jawaban...', style: TextStyle(color: Color(0xFF637080))),
+          ],
+        ),
+      );
+    }
+
     if (_questions.isEmpty) {
       return const Center(child: Text('Quiz ini belum memiliki pertanyaan.'));
     }
 
     final currentQuestion = _questions[_currentIndex];
-    final questionId = currentQuestion['id'];
-    final questionText = currentQuestion['text'] ?? '';
-    final options = (currentQuestion['options'] as List<dynamic>?) ?? [];
+    final questionId = currentQuestion.id;
+    final questionText = currentQuestion.text;
+    final options = currentQuestion.options;
     final selectedOptionId = _selectedOptions[questionId];
+    final isTimeLow = _remainingSeconds > 0 && _remainingSeconds <= 60;
 
     return Column(
       children: [
-        // Progress header
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           color: Colors.white,
@@ -214,6 +276,33 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                     'Soal ${_currentIndex + 1} dari ${_questions.length}',
                     style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
                   ),
+                  if (_remainingSeconds > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isTimeLow ? const Color(0xFFFDECEA) : const Color(0xFFE8F5F3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 14,
+                            color: isTimeLow ? const Color(0xFFC62828) : const Color(0xFF0A8477),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatTime(_remainingSeconds),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: isTimeLow ? const Color(0xFFC62828) : const Color(0xFF0A8477),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Text(
                     'Terjawab ${_selectedOptions.length}/${_questions.length}',
                     style: const TextStyle(fontSize: 12, color: Color(0xFF0A8477), fontWeight: FontWeight.w600),
@@ -237,7 +326,6 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Pertanyaan Card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -261,14 +349,13 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Options list
                 ...options.asMap().entries.map((entry) {
                   final optIndex = entry.key;
                   final option = entry.value;
-                  final optId = option['id'];
-                  final optText = option['text'] ?? '';
+                  final optId = option.id;
+                  final optText = option.text;
                   final isSelected = selectedOptionId == optId;
-                  final letter = String.fromCharCode(65 + optIndex); // A, B, C, D
+                  final letter = String.fromCharCode(65 + optIndex);
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),

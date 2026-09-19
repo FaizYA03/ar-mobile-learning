@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/ar_service.dart';
+import '../services/ar_content_resolver.dart';
+import '../services/content_sync_service.dart';
 import 'ar_camera_screen.dart';
+import 'model_viewer_screen.dart';
 
 class ArHubScreen extends StatefulWidget {
   const ArHubScreen({super.key});
@@ -10,45 +16,151 @@ class ArHubScreen extends StatefulWidget {
 }
 
 class _ArHubScreenState extends State<ArHubScreen> {
-  List<dynamic> _models = [];
+  List<ArContentItem> _models = [];
   bool _isLoading = true;
+  ARMode _arMode = ARMode.nonAR;
+  bool _isSyncing = false;
+  String _syncStatus = '';
 
   @override
   void initState() {
     super.initState();
+    _detectARMode();
     _loadModels();
   }
 
+  Future<void> _detectARMode() async {
+    final mode = await ARService.checkARSupport();
+    if (mounted) setState(() => _arMode = mode);
+  }
+
   Future<void> _loadModels() async {
+    setState(() => _isLoading = true);
+
+    if (!ArContentResolver.isContentLoaded) {
+      await ArContentResolver.refreshContent();
+    }
+
+    if (mounted) {
+      setState(() {
+        _models = ArContentResolver.content;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _syncContent() async {
+    setState(() {
+      _isSyncing = true;
+      _syncStatus = 'Menyinkronkan konten...';
+    });
+
     try {
-      final response = await ApiService.arGetPublicModels();
-      if (response['success'] == true && mounted) {
+      final result = await ContentSyncService.sync();
+      await ArContentResolver.refreshContent();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(
+          'content_last_sync', DateTime.now().millisecondsSinceEpoch);
+      if (result.manifest != null) {
+        final modelCount =
+            result.manifest!.items.where((i) => i.assetType == 'model').length;
+        await prefs.setInt('cached_ar_model_count', modelCount);
+      }
+
+      if (mounted) {
         setState(() {
-          _models = response['data'] ?? [];
-          _isLoading = false;
+          _models = ArContentResolver.content;
+          _isSyncing = false;
+          if (result.status == SyncStatus.upToDate) {
+            _syncStatus = 'Konten sudah terbaru';
+          } else if (result.status == SyncStatus.needsUpdate) {
+            _syncStatus = 'Diperbarui: ${result.downloadedAssets} aset';
+          } else if (result.isOffline) {
+            _syncStatus = 'Offline — menggunakan konten tersimpan';
+          } else {
+            _syncStatus = 'Sinkronisasi gagal';
+          }
         });
-      } else if (mounted) {
-        setState(() => _isLoading = false);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+          _syncStatus = 'Gagal menyinkronkan';
+        });
+      }
     }
   }
 
-  String _modelUrl(String? glbPath) {
-    if (glbPath == null || glbPath.isEmpty) {
-      return 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb';
+  String _resolveModelUrl(ArContentItem model) {
+    if (model.glbUrl != null && model.glbUrl!.isNotEmpty) {
+      return model.glbUrl!;
     }
-    if (glbPath.startsWith('http')) return glbPath;
-    final base = ApiService.baseUrl.replaceFirst('/api', '');
-    return '$base/$glbPath';
+    if (model.glbPath != null && model.glbPath!.isNotEmpty) {
+      final base = ApiService.baseUrl.replaceFirst('/api', '');
+      return '$base/storage/${model.glbPath}';
+    }
+    return '';
   }
 
-  String _imageUrl(String? imagePath) {
-    if (imagePath == null || imagePath.isEmpty) return '';
-    if (imagePath.startsWith('http')) return imagePath;
-    final base = ApiService.baseUrl.replaceFirst('/api', '');
-    return '$base/$imagePath';
+  String _resolveImageUrl(ArContentItem model) {
+    if (model.thumbnailUrl != null && model.thumbnailUrl!.isNotEmpty) {
+      return model.thumbnailUrl!;
+    }
+    if (model.thumbnailPath != null && model.thumbnailPath!.isNotEmpty) {
+      final base = ApiService.baseUrl.replaceFirst('/api', '');
+      return '$base/storage/${model.thumbnailPath}';
+    }
+    return '';
+  }
+
+  Future<void> _openModel(ArContentItem model) async {
+    final url = _resolveModelUrl(model);
+    if (url.isEmpty) return;
+
+    final localPath = await ContentSyncService.getCachedModelPath(model.id);
+    final displayUrl = localPath ?? url;
+
+    if (!mounted) return;
+
+    if (_arMode == ARMode.arCore) {
+      String? markerImagePath;
+      if (model.markers.isNotEmpty) {
+        final marker = model.markers.first;
+        markerImagePath =
+            await ContentSyncService.getCachedMarkerPath(marker.id);
+        if (markerImagePath == null && marker.imagePath != null) {
+          final base = ApiService.baseUrl.replaceFirst('/api', '');
+          markerImagePath = '$base/storage/${marker.imagePath}';
+        }
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ArCameraScreen(
+            arModelId: model.id,
+            modelName: model.modelName,
+            modelUrl: displayUrl,
+            markerImagePath: markerImagePath,
+            hotspots: model.hotspots,
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ModelViewerScreen(
+            arModelId: model.id,
+            modelName: model.modelName,
+            modelUrl: displayUrl,
+            hotspots: model.hotspots,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -58,24 +170,54 @@ class _ArHubScreenState extends State<ArHubScreen> {
       appBar: AppBar(
         title: const Text(
           'Augmented Reality (AR)',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A1A2E)),
         ),
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (_isSyncing)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.sync, color: Color(0xFF637080)),
+              onPressed: _syncContent,
+              tooltip: 'Sinkronkan konten',
+            ),
+        ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF0A8477)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0A8477)))
           : RefreshIndicator(
-              onRefresh: _loadModels,
+              onRefresh: () async {
+                await _syncContent();
+              },
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
                   _buildBanner(),
+                  if (_syncStatus.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildSyncStatusCard(),
+                  ],
                   const SizedBox(height: 24),
                   const Text(
                     'Katalog Objek 3D Tersedia',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E)),
                   ),
                   const SizedBox(height: 14),
                   if (_models.isEmpty)
@@ -93,19 +235,51 @@ class _ArHubScreenState extends State<ArHubScreen> {
     );
   }
 
+  Widget _buildSyncStatusCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE9ECEF)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _isSyncing ? Icons.sync : Icons.check_circle_outline,
+            size: 16,
+            color:
+                _isSyncing ? const Color(0xFFF9A825) : const Color(0xFF0A8477),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _syncStatus,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF637080)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBanner() {
+    final isAR = _arMode == ARMode.arCore;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF5B6ABF), Color(0xFF4353A4)],
+        gradient: LinearGradient(
+          colors: isAR
+              ? [const Color(0xFF5B6ABF), const Color(0xFF4353A4)]
+              : [const Color(0xFF637080), const Color(0xFF4A5568)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF5B6ABF).withValues(alpha: 0.3),
+            color: (isAR ? const Color(0xFF5B6ABF) : const Color(0xFF637080))
+                .withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -122,25 +296,60 @@ class _ArHubScreenState extends State<ArHubScreen> {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.view_in_ar, color: Colors.white, size: 28),
+                child: Icon(
+                  isAR ? Icons.view_in_ar : Icons.three_g_mobiledata,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('AR Learning Hub', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-                    SizedBox(height: 2),
-                    Text('Visualisasi Objek 3D Nyata', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(
+                      isAR ? 'AR Learning Hub' : '3D Learning Hub',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isAR
+                          ? 'Visualisasi Objek 3D Nyata'
+                          : 'Model 3D Interaktif',
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
                   ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isAR ? 'AR' : '3D',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            'Pindai marker gambar pada modul pembelajaran dengan kamera smartphone Anda untuk memunculkan model 3D interaktif secara realtime.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13, height: 1.4),
+            isAR
+                ? 'Pindai marker gambar pada modul pembelajaran dengan kamera smartphone Anda untuk memunculkan model 3D interaktif secara realtime.'
+                : 'Perangkat Anda mendukung tampilan model 3D interaktif. Geser untuk memutar, cubit untuk zoom.',
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 13,
+                height: 1.4),
           ),
         ],
       ),
@@ -159,57 +368,53 @@ class _ArHubScreenState extends State<ArHubScreen> {
         children: [
           Icon(Icons.view_in_ar, size: 48, color: Color(0xFFB0B8C1)),
           SizedBox(height: 12),
-          Text('Belum ada model 3D tersedia', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF637080))),
+          Text('Belum ada model 3D tersedia',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF637080))),
           SizedBox(height: 4),
-          Text('Admin/guru belum mengupload model 3D', style: TextStyle(fontSize: 12, color: Color(0xFFB0B8C1))),
+          Text('Admin/guru belum mengupload model 3D',
+              style: TextStyle(fontSize: 12, color: Color(0xFFB0B8C1))),
         ],
       ),
     );
   }
 
-  Widget _buildModelCard(BuildContext context, dynamic model) {
-    final markers = model['markers'] as List<dynamic>? ?? [];
-    final hasMarker = markers.isNotEmpty;
-    final modelName = model['model_name'] ?? 'Model 3D';
-    final description = model['description'] ?? '';
-    final category = model['category'] ?? 'Umum';
+  Widget _buildModelCard(BuildContext context, ArContentItem model) {
+    final hasMarker = model.markers.isNotEmpty;
+    final imageUrl = _resolveImageUrl(model);
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ArCameraScreen(
-              arModelId: model['id'],
-              modelName: modelName,
-              modelUrl: _modelUrl(model['glb_path']),
-            ),
-          ),
-        );
-      },
+      onTap: () => _openModel(model),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 3)),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3)),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (model['thumbnail_path'] != null && (model['thumbnail_path'] as String).isNotEmpty)
+            if (imageUrl.isNotEmpty)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.network(
-                  _imageUrl(model['thumbnail_path']),
+                  imageUrl,
                   height: 160,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 160,
                     color: const Color(0xFFF0F2F5),
-                    child: const Icon(Icons.view_in_ar, size: 48, color: Color(0xFFB0B8C1)),
+                    child: const Icon(Icons.view_in_ar,
+                        size: 48, color: Color(0xFFB0B8C1)),
                   ),
                 ),
               )
@@ -218,9 +423,12 @@ class _ArHubScreenState extends State<ArHubScreen> {
                 height: 160,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0F2F5),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
-                child: const Center(child: Icon(Icons.view_in_ar, size: 48, color: Color(0xFFB0B8C1))),
+                child: const Center(
+                    child: Icon(Icons.view_in_ar,
+                        size: 48, color: Color(0xFFB0B8C1))),
               ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -228,38 +436,68 @@ class _ArHubScreenState extends State<ArHubScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5F7FA),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(category, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF637080))),
+                    child: Text(model.category ?? 'Umum',
+                        style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF637080))),
                   ),
                   const SizedBox(height: 8),
-                  Text(modelName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
-                  if (description.isNotEmpty) ...[
+                  Text(model.modelName,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A2E))),
+                  if (model.description != null &&
+                      model.description!.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(description, style: const TextStyle(fontSize: 12, color: Color(0xFF637080), height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(model.description!,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF637080),
+                            height: 1.3),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       if (hasMarker) ...[
-                        Icon(Icons.qr_code_scanner, size: 16, color: const Color(0xFF0A8477)),
+                        Icon(Icons.qr_code_scanner,
+                            size: 16, color: const Color(0xFF0A8477)),
                         const SizedBox(width: 4),
-                        Text('${markers.length} marker', style: const TextStyle(fontSize: 12, color: Color(0xFF0A8477))),
+                        Text('${model.markers.length} marker',
+                            style: const TextStyle(
+                                fontSize: 12, color: Color(0xFF0A8477))),
                         const SizedBox(width: 12),
                       ],
-                      Icon(Icons.view_in_ar, size: 16, color: const Color(0xFF5B6ABF)),
+                      Icon(
+                        _arMode == ARMode.arCore
+                            ? Icons.view_in_ar
+                            : Icons.three_g_mobiledata,
+                        size: 16,
+                        color: const Color(0xFF5B6ABF),
+                      ),
                       const SizedBox(width: 4),
-                      Text('Buka AR', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF5B6ABF))),
+                      Text(
+                        _arMode == ARMode.arCore ? 'Buka AR' : 'Lihat 3D',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF5B6ABF)),
+                      ),
                       const Spacer(),
-                      if (hasMarker)
-                        IconButton(
-                          icon: const Icon(Icons.download, size: 20, color: Color(0xFF637080)),
-                          onPressed: () => _downloadMarker(context, markers.first),
-                          tooltip: 'Download Marker',
-                        ),
+                      Text(
+                        'v${model.version}',
+                        style: const TextStyle(
+                            fontSize: 10, color: Color(0xFFB0B8C1)),
+                      ),
                     ],
                   ),
                 ],
@@ -271,38 +509,8 @@ class _ArHubScreenState extends State<ArHubScreen> {
     );
   }
 
-  void _downloadMarker(BuildContext context, dynamic marker) {
-    final imagePath = marker['image_path'] ?? '';
-    if (imagePath.isEmpty) return;
-
-    final url = _imageUrl(imagePath);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Download Marker', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(url, height: 200, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 64)),
-            ),
-            const SizedBox(height: 12),
-            Text('Marker: ${marker['marker_id'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF637080))),
-            const SizedBox(height: 8),
-            const Text('Simpan gambar ini, cetak, lalu arahkan kamera ke gambar tersebut.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF637080)), textAlign: TextAlign.center),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTipsCard() {
+    final isAR = _arMode == ARMode.arCore;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -313,17 +521,30 @@ class _ArHubScreenState extends State<ArHubScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, color: Color(0xFF0A8477), size: 22),
+          Icon(
+            isAR ? Icons.info_outline : Icons.three_g_mobiledata,
+            color: const Color(0xFF0A8477),
+            size: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Petunjuk Pengujian AR', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                Text(
+                  isAR ? 'Petunjuk Pengujian AR' : 'Mode 3D Interaktif',
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E)),
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'Untuk hasil optimal, jalankan aplikasi di HP Android dengan Google Play Services for AR. Download marker, cetak, lalu arahkan kamera ke marker untuk memunculkan model 3D.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.4),
+                  isAR
+                      ? 'Untuk hasil optimal, jalankan aplikasi di HP Android dengan Google Play Services for AR. Download marker, cetak, lalu arahkan kamera ke marker untuk memunculkan model 3D.'
+                      : 'Perangkat Anda tidak mendukung AR. Anda tetap dapat melihat dan berinteraksi dengan model 3D dalam mode 3D interaktif. Geser untuk memutar, cubit untuk zoom.',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey[700], height: 1.4),
                 ),
               ],
             ),

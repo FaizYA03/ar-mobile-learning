@@ -18,14 +18,30 @@ class ArHotspot extends Model
         'description',
         'latitude',
         'longitude',
+        'position_x',
+        'position_y',
+        'position_z',
+        'rotation_x',
+        'rotation_y',
+        'rotation_z',
+        'scale',
         'image_path',
         'is_active',
+        'sort_order',
     ];
 
     protected $casts = [
         'latitude' => 'float',
         'longitude' => 'float',
+        'position_x' => 'float',
+        'position_y' => 'float',
+        'position_z' => 'float',
+        'rotation_x' => 'float',
+        'rotation_y' => 'float',
+        'rotation_z' => 'float',
+        'scale' => 'float',
         'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function arModel(): BelongsTo

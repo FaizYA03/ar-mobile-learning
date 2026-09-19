@@ -21,6 +21,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _totalQuizzes = 0;
   bool _isLoading = true;
   List<dynamic> _users = [];
+  int _arModelCount = 0;
+  int _arMarkerCount = 0;
+  int _arHotspotCount = 0;
+  int _contentVersion = 0;
 
   @override
   void initState() {
@@ -47,6 +51,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+    _fetchArContentStats();
+  }
+
+  Future<void> _fetchArContentStats() async {
+    try {
+      final versionResult = await ApiService.v1GetContentVersion();
+      if (versionResult['success'] == true && mounted) {
+        final data = versionResult['data'];
+        setState(() {
+          _contentVersion = data['content_version'] ?? 0;
+        });
+      }
+      final arContent = await ApiService.v1GetArContent();
+      if (arContent['success'] == true && mounted) {
+        final data = arContent['data'];
+        setState(() {
+          _arModelCount = (data['models'] as List?)?.length ?? 0;
+          _arMarkerCount = (data['markers'] as List?)?.length ?? 0;
+          _arHotspotCount = (data['hotspots'] as List?)?.length ?? 0;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _logout() async {
@@ -325,6 +351,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const Text('Sistem', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 12),
           _buildStatCard(icon: Icons.quiz_outlined, title: 'Quiz', count: '$_totalQuizzes', color: const Color(0xFFC62828)),
+          const SizedBox(height: 24),
+          const Text('Konten AR', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+          const SizedBox(height: 12),
+          _buildStatCard(icon: Icons.view_in_ar_outlined, title: '3D Models', count: '$_arModelCount', color: const Color(0xFF5B6ABF)),
+          const SizedBox(height: 10),
+          _buildStatCard(icon: Icons.qr_code_scanner, title: 'Markers', count: '$_arMarkerCount', color: const Color(0xFFE67E22)),
+          const SizedBox(height: 10),
+          _buildStatCard(icon: Icons.place_outlined, title: 'Hotspots', count: '$_arHotspotCount', color: const Color(0xFF0A8477)),
+          const SizedBox(height: 10),
+          _buildStatCard(icon: Icons.numbers, title: 'Content Version', count: '$_contentVersion', color: const Color(0xFF637080)),
           const SizedBox(height: 20),
           const Text('Aksi Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 14),

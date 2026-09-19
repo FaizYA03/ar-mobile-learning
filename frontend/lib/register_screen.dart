@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
+import 'services/secure_storage_service.dart';
+import 'services/api_client.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -40,15 +41,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (result['success'] == true) {
         final data = result['data'];
-        await ApiService.setToken(data['token']);
+        final token = data['token'] as String;
+        final role = data['user']['role'] as String;
+        final name = data['user']['name'] as String;
+        final email = data['user']['email'] as String;
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userRole', data['user']['role']);
-        await prefs.setString('userName', data['user']['name']);
-        await prefs.setString('userEmail', data['user']['email']);
+        await ApiService.setToken(token);
+        ApiClient.setToken(token);
+        await SecureStorageService.saveAuthData(
+          token: token,
+          role: role,
+          name: name,
+          email: email,
+        );
 
         if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/${data['user']['role']}');
+        Navigator.of(context).pushReplacementNamed('/$role');
       } else {
         setState(() {
           _errorMessage = result['message'] ?? 'Registrasi gagal';

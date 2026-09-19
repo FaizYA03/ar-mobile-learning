@@ -1,0 +1,349 @@
+class AppUser {
+  final int id;
+  final String name;
+  final String email;
+  final String role;
+  final String? avatar;
+
+  AppUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    this.avatar,
+  });
+
+  factory AppUser.fromJson(Map<String, dynamic> json) {
+    return AppUser(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      role: json['role'] ?? 'siswa',
+      avatar: json['avatar'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'email': email,
+        'role': role,
+        'avatar': avatar,
+      };
+
+  bool get isAdmin => role == 'admin';
+  bool get isGuru => role == 'guru';
+  bool get isSiswa => role == 'siswa';
+}
+
+class LoginResponse {
+  final AppUser user;
+  final String token;
+
+  LoginResponse({required this.user, required this.token});
+
+  factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    return LoginResponse(
+      user: AppUser.fromJson(json['user']),
+      token: json['token'],
+    );
+  }
+}
+
+class AppConfigData {
+  final bool maintenanceMode;
+  final String? latestVersion;
+  final String? minimumSupportedVersion;
+  final String? buildNumber;
+  final String? releaseNotes;
+  final String? downloadUrl;
+  final int contentVersion;
+
+  AppConfigData({
+    required this.maintenanceMode,
+    this.latestVersion,
+    this.minimumSupportedVersion,
+    this.buildNumber,
+    this.releaseNotes,
+    this.downloadUrl,
+    required this.contentVersion,
+  });
+
+  factory AppConfigData.fromJson(Map<String, dynamic> json) {
+    return AppConfigData(
+      maintenanceMode: json['maintenance_mode'] ?? false,
+      latestVersion: json['latest_version'],
+      minimumSupportedVersion: json['minimum_supported_version'],
+      buildNumber: json['build_number'],
+      releaseNotes: json['release_notes'],
+      downloadUrl: json['download_url'],
+      contentVersion: json['content_version'] ?? 0,
+    );
+  }
+}
+
+class ContentVersionData {
+  final int contentVersion;
+  final String updatedAt;
+
+  ContentVersionData({required this.contentVersion, required this.updatedAt});
+
+  factory ContentVersionData.fromJson(Map<String, dynamic> json) {
+    return ContentVersionData(
+      contentVersion: json['content_version'] ?? 0,
+      updatedAt: json['updated_at'] ?? '',
+    );
+  }
+}
+
+class ArContentItem {
+  final int id;
+  final String modelName;
+  final String? description;
+  final String? category;
+  final int version;
+  final bool isActive;
+  final String? glbUrl;
+  final String? glbPath;
+  final String? thumbnailUrl;
+  final String? thumbnailPath;
+  final List<ArMarkerData> markers;
+  final List<ArHotspotData> hotspots;
+
+  ArContentItem({
+    required this.id,
+    required this.modelName,
+    this.description,
+    this.category,
+    required this.version,
+    required this.isActive,
+    this.glbUrl,
+    this.glbPath,
+    this.thumbnailUrl,
+    this.thumbnailPath,
+    required this.markers,
+    required this.hotspots,
+  });
+
+  factory ArContentItem.fromJson(Map<String, dynamic> json) {
+    return ArContentItem(
+      id: json['id'] ?? 0,
+      modelName: json['model_name'] ?? '',
+      description: json['description'],
+      category: json['category'],
+      version: json['version'] ?? 1,
+      isActive: json['is_active'] ?? true,
+      glbUrl: json['glb_url'],
+      glbPath: json['glb_path'],
+      thumbnailUrl: json['thumbnail_url'],
+      thumbnailPath: json['thumbnail_path'],
+      markers: (json['markers'] as List<dynamic>?)
+              ?.map((m) => ArMarkerData.fromJson(m))
+              .toList() ??
+          [],
+      hotspots: (json['hotspots'] as List<dynamic>?)
+              ?.map((h) => ArHotspotData.fromJson(h))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class ArMarkerData {
+  final int id;
+  final String markerId;
+  final String markerType;
+  final String? imageUrl;
+  final String? imagePath;
+  final String status;
+
+  ArMarkerData({
+    required this.id,
+    required this.markerId,
+    required this.markerType,
+    this.imageUrl,
+    this.imagePath,
+    required this.status,
+  });
+
+  factory ArMarkerData.fromJson(Map<String, dynamic> json) {
+    return ArMarkerData(
+      id: json['id'] ?? 0,
+      markerId: json['marker_id'] ?? '',
+      markerType: json['marker_type'] ?? 'image',
+      imageUrl: json['image_url'],
+      imagePath: json['image_path'],
+      status: json['status'] ?? 'active',
+    );
+  }
+}
+
+class ArHotspotData {
+  final int id;
+  final String title;
+  final String? description;
+  final double? latitude;
+  final double? longitude;
+  final double positionX;
+  final double positionY;
+  final double positionZ;
+  final double rotationX;
+  final double rotationY;
+  final double rotationZ;
+  final double hotspotScale;
+  final int sortOrder;
+  final String? imageUrl;
+  final String? imagePath;
+
+  ArHotspotData({
+    required this.id,
+    required this.title,
+    this.description,
+    this.latitude,
+    this.longitude,
+    this.positionX = 0,
+    this.positionY = 0,
+    this.positionZ = 0,
+    this.rotationX = 0,
+    this.rotationY = 0,
+    this.rotationZ = 0,
+    this.hotspotScale = 1.0,
+    this.sortOrder = 0,
+    this.imageUrl,
+    this.imagePath,
+  });
+
+  factory ArHotspotData.fromJson(Map<String, dynamic> json) {
+    return ArHotspotData(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      description: json['description'],
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      positionX: (json['position_x'] as num?)?.toDouble() ?? 0,
+      positionY: (json['position_y'] as num?)?.toDouble() ?? 0,
+      positionZ: (json['position_z'] as num?)?.toDouble() ?? 0,
+      rotationX: (json['rotation_x'] as num?)?.toDouble() ?? 0,
+      rotationY: (json['rotation_y'] as num?)?.toDouble() ?? 0,
+      rotationZ: (json['rotation_z'] as num?)?.toDouble() ?? 0,
+      hotspotScale: (json['scale'] as num?)?.toDouble() ?? 1.0,
+      sortOrder: json['sort_order'] ?? 0,
+      imageUrl: json['image_url'],
+      imagePath: json['image_path'],
+    );
+  }
+}
+
+class QuizItem {
+  final int id;
+  final String title;
+  final String? description;
+  final int? timeLimit;
+  final int passingScore;
+  final int questionsCount;
+  final List<QuizQuestion>? questions;
+
+  QuizItem({
+    required this.id,
+    required this.title,
+    this.description,
+    this.timeLimit,
+    this.passingScore = 70,
+    this.questionsCount = 0,
+    this.questions,
+  });
+
+  factory QuizItem.fromJson(Map<String, dynamic> json) {
+    return QuizItem(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      description: json['description'],
+      timeLimit: json['time_limit'],
+      passingScore: json['passing_score'] ?? 70,
+      questionsCount: json['questions_count'] ?? 0,
+      questions: (json['questions'] as List<dynamic>?)
+          ?.map((q) => QuizQuestion.fromJson(q))
+          .toList(),
+    );
+  }
+}
+
+class QuizQuestion {
+  final int id;
+  final int quizId;
+  final String text;
+  final int order;
+  final List<QuizOption> options;
+
+  QuizQuestion({
+    required this.id,
+    required this.quizId,
+    required this.text,
+    this.order = 0,
+    this.options = const [],
+  });
+
+  factory QuizQuestion.fromJson(Map<String, dynamic> json) {
+    return QuizQuestion(
+      id: json['id'] ?? 0,
+      quizId: json['quiz_id'] ?? 0,
+      text: json['text'] ?? '',
+      order: json['order'] ?? 0,
+      options: (json['options'] as List<dynamic>?)
+          ?.map((o) => QuizOption.fromJson(o))
+          .toList() ?? [],
+    );
+  }
+}
+
+class QuizOption {
+  final int id;
+  final int questionId;
+  final String text;
+  final int order;
+  final bool? isCorrect;
+
+  QuizOption({
+    required this.id,
+    required this.questionId,
+    required this.text,
+    this.order = 0,
+    this.isCorrect,
+  });
+
+  factory QuizOption.fromJson(Map<String, dynamic> json) {
+    return QuizOption(
+      id: json['id'] ?? 0,
+      questionId: json['question_id'] ?? 0,
+      text: json['text'] ?? '',
+      order: json['order'] ?? 0,
+      isCorrect: json['is_correct'],
+    );
+  }
+}
+
+class QuizAttemptResult {
+  final int attemptId;
+  final int score;
+  final int correct;
+  final int total;
+  final bool passed;
+
+  QuizAttemptResult({
+    required this.attemptId,
+    required this.score,
+    required this.correct,
+    required this.total,
+    required this.passed,
+  });
+
+  factory QuizAttemptResult.fromJson(Map<String, dynamic> json) {
+    return QuizAttemptResult(
+      attemptId: json['attempt_id'] ?? 0,
+      score: json['score'] ?? 0,
+      correct: json['correct'] ?? 0,
+      total: json['total'] ?? 0,
+      passed: json['passed'] ?? false,
+    );
+  }
+}

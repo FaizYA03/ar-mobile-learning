@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -59,6 +60,8 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        ActivityLogger::login(user: $user);
+
         return response()->json([
             'success' => true,
             'message' => 'Login berhasil',
@@ -76,6 +79,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        ActivityLogger::logout(user: $request->user());
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([

@@ -1,0 +1,56 @@
+@extends('layouts.admin')
+@section('title', 'Edit Marker')
+@section('page-title', 'Edit Marker')
+
+@section('content')
+<div class="max-w-xl">
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        @if($errors->any())
+            <div class="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+                <ul class="list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('admin.ar.markers.update', $marker) }}" enctype="multipart/form-data" class="space-y-5">
+            @csrf
+            @method('PUT')
+            <div>
+                <label for="marker_id" class="block text-sm font-medium text-gray-700 mb-1">Marker ID</label>
+                <input type="text" name="marker_id" id="marker_id" value="{{ old('marker_id', $marker->marker_id) }}" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
+            <div>
+                <label for="marker_type" class="block text-sm font-medium text-gray-700 mb-1">Tipe Marker</label>
+                <select name="marker_type" id="marker_type" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    <option value="pattern" {{ old('marker_type', $marker->marker_type) === 'pattern' ? 'selected' : '' }}>Pattern</option>
+                    <option value="image" {{ old('marker_type', $marker->marker_type) === 'image' ? 'selected' : '' }}>Image</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Gambar Marker Saat Ini</label>
+                @if($marker->image_path)
+                    <div class="mb-3">
+                        <img src="{{ asset('storage/' . $marker->image_path) }}" alt="Marker" class="h-32 w-auto rounded-lg border border-gray-200 object-cover">
+                    </div>
+                @endif
+                <input type="file" name="image_path" id="image_path" accept="image/*" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                <p class="text-xs text-gray-400 mt-1">Upload baru untuk mengganti gambar marker.</p>
+            </div>
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" id="status" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    <option value="active" {{ old('status', $marker->status) === 'active' ? 'selected' : '' }}>Active</option>
+                    <option value="inactive" {{ old('status', $marker->status) === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-3 pt-2">
+                <a href="{{ route('admin.ar.markers.index') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</a>
+                <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Perbarui</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endsection

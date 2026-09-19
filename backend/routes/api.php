@@ -54,8 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Materi Management
         Route::post('/guru/materi', [MateriController::class, 'store']);
-        Route::post('/guru/materi/{materi}', [MateriController::class, 'update']);
-        Route::put('/guru/materi/{materi}', [MateriController::class, 'update']);
+        Route::match(['POST', 'PUT'], '/guru/materi/{materi}', [MateriController::class, 'update']);
         Route::delete('/guru/materi/{materi}', [MateriController::class, 'destroy']);
 
         // AR Management (Guru + Admin)

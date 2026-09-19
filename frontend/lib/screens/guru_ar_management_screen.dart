@@ -60,7 +60,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
 
   String _storageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
-    return '${ApiService.baseUrl.replaceFirst('/api', '')}/$path';
+    return '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$path';
   }
 
   @override

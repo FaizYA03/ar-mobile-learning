@@ -20,10 +20,12 @@ class ArModel extends Model
         'description',
         'category',
         'is_active',
+        'version',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'version' => 'integer',
     ];
 
     public function hotspots(): HasMany

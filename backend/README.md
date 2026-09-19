@@ -1,59 +1,193 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Backend - AR Mobile Learning
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 12 REST API + Admin CMS untuk sistem AR Mobile Learning.
 
-## About Laravel
+## Requirements
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2+
+- Composer
+- MySQL 8+ atau SQLite
+- Node.js (untuk Vite/Tailwind)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-## Learning Laravel
+### Database
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+**SQLite (development):**
+```bash
+touch database/database.sqlite
+php artisan migrate --seed
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**MySQL (production):**
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=ar_mobile_learning
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## Laravel Sponsors
+```bash
+php artisan migrate --seed
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Run Server
 
-### Premium Partners
+```bash
+php artisan serve
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Admin CMS: `http://localhost/admin/login`
 
-## Contributing
+Default admin: `admin@admin.com` / `password`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Project Structure
 
-## Code of Conduct
+```
+backend/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Admin/          # Admin CMS controllers (Blade)
+│   │   │   ├── Api/V1/         # REST API controllers (Sanctum)
+│   │   │   ├── ArController.php
+│   │   │   ├── AuthController.php
+│   │   │   ├── DashboardController.php
+│   │   │   ├── MateriController.php
+│   │   │   ├── QuizController.php
+│   │   │   └── TpAtpController.php
+│   │   ├── Middleware/
+│   │   │   ├── CorsMiddleware.php
+│   │   │   └── RoleMiddleware.php
+│   │   └── Requests/
+│   │       ├── MateriStoreRequest.php
+│   │       ├── MateriUpdateRequest.php
+│   │       ├── QuestionStoreRequest.php
+│   │       ├── QuizStoreRequest.php
+│   │       ├── QuizSubmitRequest.php
+│   │       └── QuizUpdateRequest.php
+│   ├── Models/
+│   │   ├── ArHotspot.php
+│   │   ├── ArMarker.php
+│   │   ├── ArMarker3dMapping.php
+│   │   ├── ArModel.php
+│   │   ├── AppSetting.php
+│   │   ├── AppVersion.php
+│   │   ├── Materi.php
+│   │   ├── Question.php
+│   │   ├── QuestionOption.php
+│   │   ├── Quiz.php
+│   │   ├── QuizAttempt.php
+│   │   ├── TpAtp.php
+│   │   └── User.php
+│   ├── Http/Resources/       # API Resources (JSON format)
+│   └── Services/
+│       └── ActivityLogger.php
+├── routes/
+│   ├── api.php               # API v1 routes (Sanctum)
+│   ├── api_v1.php            # Public + auth API v1 routes
+│   ├── admin.php             # Admin CMS routes (session)
+│   └── web.php
+├── database/
+│   ├── migrations/
+│   └── seeders/
+├── resources/views/admin/    # Blade templates
+├── storage/app/public/       # Uploaded files
+└── tests/Feature/
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## API Routes
 
-## Security Vulnerabilities
+### Public (no auth)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/register` | Register siswa |
+| POST | `/api/login` | Login (all roles) |
+| GET | `/api/v1/app/config` | App config + version info |
+| GET | `/api/v1/content/version` | Content version number |
 
-## License
+### Authenticated (Sanctum)
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| POST | `/api/logout` | any | Logout |
+| GET | `/api/user` | any | Current user |
+| GET | `/api/dashboard` | any | Dashboard stats |
+| GET | `/api/quizzes` | any | List quizzes |
+| GET | `/api/quizzes/{id}` | any | Quiz detail + questions |
+| POST | `/api/quizzes/{id}/submit` | siswa | Submit quiz answers |
+| GET | `/api/tp-atp` | any | List TP/ATP |
+| GET | `/api/materi` | any | List materi |
+| GET | `/api/materi/{id}` | any | Materi detail |
+| GET | `/api/v1/ar/content` | any | AR content (models+markers) |
+
+### Guru/Admin - Quiz Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/guru/quizzes` | List quizzes |
+| POST | `/api/guru/quizzes` | Create quiz |
+| PUT | `/api/guru/quizzes/{id}` | Update quiz |
+| DELETE | `/api/guru/quizzes/{id}` | Delete quiz |
+| POST | `/api/guru/quizzes/{id}/questions` | Add question |
+| DELETE | `/api/guru/questions/{id}` | Delete question |
+
+### Guru/Admin - TP/ATP & Materi
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/guru/tp-atp` | Create TP/ATP |
+| PUT | `/api/guru/tp-atp/{id}` | Update TP/ATP |
+| DELETE | `/api/guru/tp-atp/{id}` | Delete TP/ATP |
+| POST | `/api/guru/materi` | Create materi |
+| POST/PUT | `/api/guru/materi/{id}` | Update materi |
+| DELETE | `/api/guru/materi/{id}` | Delete materi |
+
+### Guru/Admin - AR Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/ar/models` | List/Create AR models |
+| PUT/DELETE | `/api/ar/models/{id}` | Update/Delete model |
+| GET/POST | `/api/ar/markers` | List/Create markers |
+| PUT/DELETE | `/api/ar/markers/{id}` | Update/Delete marker |
+| GET/POST | `/api/ar/hotspots` | List/Create hotspots |
+| PUT/DELETE | `/api/ar/hotspots/{id}` | Update/Delete hotspot |
+| GET/POST | `/api/ar/mappings` | List/Create mappings |
+| POST | `/api/ar/markers/{id}/attach` | Attach model to marker |
+| DELETE | `/api/ar/markers/{id}/detach/{modelId}` | Detach model |
+
+### Admin - User & System
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/admin/users` | List/Create users |
+| PUT/DELETE | `/api/admin/users/{id}` | Update/Delete user |
+| GET | `/api/admin/quiz-attempts` | All quiz attempts |
+| GET | `/admin/activity-logs` | Activity logs |
+| GET/POST | `/admin/system/settings` | System settings |
+| GET/POST | `/admin/system/versions` | App versions |
+
+## Testing
+
+```bash
+php artisan test              # Run all 71 tests
+php artisan test --filter=Quiz   # Filter by name
+```
+
+## Key Behaviors
+
+- **Auth**: Session guard for Admin CMS (`web`), Sanctum tokens for Flutter API
+- **Roles**: Enforced via `RoleMiddleware` — never trust client-sent role info
+- **Content Version**: Aggregate formula based on active AR model versions, marker count, hotspot count, mapping count
+- **Activity Logging**: Login, CRUD operations logged via `ActivityLogger`
+- **File Uploads**: Stored in `storage/app/public/`, served via symbolic link
