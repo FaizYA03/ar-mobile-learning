@@ -67,23 +67,69 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        $modelRam = ArModel::create([
+            'model_name' => 'RAM DDR5 Module 3D',
+            'glb_path' => 'models/ram_ddr5.glb',
+            'thumbnail_path' => 'thumbnails/ram_thumb.png',
+            'description' => 'Model interaktif 3D modul memori DDR5 dengan komponen IC dan pin connector.',
+            'category' => 'Hardware Komputer',
+            'is_active' => true,
+        ]);
+
+        $modelKeyboard = ArModel::create([
+            'model_name' => 'Mechanical Keyboard 3D',
+            'glb_path' => 'models/keyboard_mechanical.glb',
+            'thumbnail_path' => 'thumbnails/keyboard_thumb.png',
+            'description' => 'Model 3D keyboard mekanikal dengan switch, keycap, dan PCB.',
+            'category' => 'Hardware Komputer',
+            'is_active' => true,
+        ]);
+
         // === 2b. AR MARKERS ===
+        // DICT_4X4_50: ar_uco_id 0 → MARKER-CPU-001
         $marker1 = ArMarker::create([
             'marker_id' => 'MARKER-CPU-001',
+            'ar_uco_id' => 0,
+            'aruco_dictionary' => 'DICT_4X4_50',
             'marker_type' => 'pattern',
             'image_path' => 'markers/marker_cpu.png',
             'status' => 'active',
         ]);
 
+        // DICT_4X4_50: ar_uco_id 1 → MARKER-RAM-001
         $marker2 = ArMarker::create([
+            'marker_id' => 'MARKER-RAM-001',
+            'ar_uco_id' => 1,
+            'aruco_dictionary' => 'DICT_4X4_50',
+            'marker_type' => 'pattern',
+            'image_path' => 'markers/marker_ram.png',
+            'status' => 'active',
+        ]);
+
+        // DICT_4X4_50: ar_uco_id 2 → MARKER-KEYBOARD-001
+        $marker3 = ArMarker::create([
+            'marker_id' => 'MARKER-KEYBOARD-001',
+            'ar_uco_id' => 2,
+            'aruco_dictionary' => 'DICT_4X4_50',
+            'marker_type' => 'pattern',
+            'image_path' => 'markers/marker_keyboard.png',
+            'status' => 'active',
+        ]);
+
+        // DICT_4X4_50: ar_uco_id 3 → MARKER-ROUTER-001
+        $marker4 = ArMarker::create([
             'marker_id' => 'MARKER-ROUTER-001',
+            'ar_uco_id' => 3,
+            'aruco_dictionary' => 'DICT_4X4_50',
             'marker_type' => 'pattern',
             'image_path' => 'markers/marker_router.png',
             'status' => 'active',
         ]);
 
         $marker1->models()->attach($modelCpu->id);
-        $marker2->models()->attach($modelRouter->id);
+        $marker2->models()->attach($modelRam->id);
+        $marker3->models()->attach($modelKeyboard->id);
+        $marker4->models()->attach($modelRouter->id);
 
         // === 2c. AR HOTSPOTS ===
         ArHotspot::create([
@@ -143,6 +189,47 @@ class DatabaseSeeder extends Seeder
             'latitude' => 0.0,
             'longitude' => 0.03,
             'image_path' => 'hotspots/router_antena.png',
+            'is_active' => true,
+        ]);
+
+        // === 2d. AR HOTSPOTS (RAM & Keyboard) ===
+        ArHotspot::create([
+            'ar_model_id' => $modelRam->id,
+            'title' => 'DRAM Chips',
+            'description' => 'Chip memori volatile yang menyimpan data sementara untuk akses cepat oleh CPU.',
+            'latitude' => 0.01,
+            'longitude' => 0.01,
+            'image_path' => 'hotspots/ram_chips.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelRam->id,
+            'title' => 'Pin Connector',
+            'description' => 'Pin emas pada modul RAM yang terhubung ke slot DIMM pada motherboard.',
+            'latitude' => -0.01,
+            'longitude' => -0.01,
+            'image_path' => 'hotspots/ram_pins.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelKeyboard->id,
+            'title' => 'Mechanical Switch',
+            'description' => 'Switch mekanikal pada keyboard yang memberikan umpan balik taktil dan auditory saat ditekan.',
+            'latitude' => 0.02,
+            'longitude' => 0.0,
+            'image_path' => 'hotspots/keyboard_switch.png',
+            'is_active' => true,
+        ]);
+
+        ArHotspot::create([
+            'ar_model_id' => $modelKeyboard->id,
+            'title' => 'Keycap Profile',
+            'description' => 'Profil keycap yang dirancang ergonomis untuk kenyamanan mengetik jangka panjang.',
+            'latitude' => -0.01,
+            'longitude' => 0.02,
+            'image_path' => 'hotspots/keyboard_keycap.png',
             'is_active' => true,
         ]);
 

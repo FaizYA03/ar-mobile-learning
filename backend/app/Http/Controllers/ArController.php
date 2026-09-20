@@ -163,6 +163,8 @@ class ArController extends Controller
     {
         $validated = $request->validate([
             'marker_id' => 'required|string|max:100|unique:ar_markers,marker_id',
+            'ar_uco_id' => 'nullable|integer|unique:ar_markers,ar_uco_id',
+            'aruco_dictionary' => 'nullable|string|max:50',
             'marker_type' => 'required|string|in:pattern,image',
             'image_path' => 'required|image|max:10240',
             'status' => 'nullable|string|in:active,inactive',
@@ -189,6 +191,8 @@ class ArController extends Controller
     {
         $validated = $request->validate([
             'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,' . $arMarker->id,
+            'ar_uco_id' => 'nullable|integer|unique:ar_markers,ar_uco_id,' . $arMarker->id,
+            'aruco_dictionary' => 'nullable|string|max:50',
             'marker_type' => 'sometimes|required|string|in:pattern,image',
             'image_path' => 'sometimes|max:10240',
             'status' => 'nullable|string|in:active,inactive',
@@ -377,6 +381,8 @@ class ArController extends Controller
                     return [
                         'id' => $marker->id,
                         'marker_id' => $marker->marker_id,
+                        'ar_uco_id' => $marker->ar_uco_id,
+                        'aruco_dictionary' => $marker->aruco_dictionary,
                         'marker_type' => $marker->marker_type,
                         'image_path' => $marker->image_path,
                         'status' => $marker->status,

@@ -15,10 +15,11 @@ class ArMarker extends Model
 
     protected $fillable = [
         'marker_id',
+        'ar_uco_id',
+        'aruco_dictionary',
         'marker_type',
         'image_path',
         'status',
-        'ar_uco_id',
     ];
 
     public function models(): BelongsToMany

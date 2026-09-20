@@ -27,7 +27,8 @@ class MarkerGenerator {
 
   Future<void> generateMultipleMarkers({
     required List<int> markerIds,
-    cv.PredefinedDictionaryType markerType = cv.PredefinedDictionaryType.DICT_4X4_50,
+    cv.PredefinedDictionaryType markerType =
+        cv.PredefinedDictionaryType.DICT_4X4_50,
     required String outputDir,
     int pixelSize = 500,
   }) async {

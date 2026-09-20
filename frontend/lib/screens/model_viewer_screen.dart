@@ -24,6 +24,7 @@ class ModelViewerScreen extends StatefulWidget {
 
 class _ModelViewerScreenState extends State<ModelViewerScreen> {
   ArHotspotData? _selectedHotspot;
+  bool _isLoading = true;
 
   @override
   Widget build(BuildContext context) {
@@ -140,34 +141,47 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
                       ],
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: ModelViewer(
-                      src: url,
-                      alt: widget.modelName ?? 'Model 3D',
-                      ar: false,
-                      autoRotate: true,
-                      cameraControls: true,
-                      disableZoom: false,
-                      backgroundColor: const Color(0xFFE8EDF2),
-                      innerModelViewerHtml: _buildHotspotHtml(hotspots),
-                      relatedJs: _buildHotspotJs(hotspots),
-                      javascriptChannels: {
-                        JavascriptChannel(
-                          'HotspotChannel',
-                          onMessageReceived: (message) {
-                            try {
-                              final data = jsonDecode(message.message);
-                              final hotspotId = data['id'] as int;
-                              final hotspot = hotspots.firstWhere(
-                                (h) => h.id == hotspotId,
-                              );
-                              if (mounted) {
-                                setState(() => _selectedHotspot = hotspot);
-                                _showHotspotDetail(hotspot);
-                              }
-                            } catch (_) {}
+                    child: Stack(
+                      children: [
+                        ModelViewer(
+                          src: url,
+                          alt: widget.modelName ?? 'Model 3D',
+                          ar: false,
+                          autoRotate: true,
+                          cameraControls: true,
+                          disableZoom: false,
+                          backgroundColor: const Color(0xFFE8EDF2),
+                          innerModelViewerHtml: _buildHotspotHtml(hotspots),
+                          relatedJs: _buildHotspotJs(hotspots),
+                          onWebViewCreated: (_) {
+                            if (mounted) setState(() => _isLoading = false);
+                          },
+                          javascriptChannels: {
+                            JavascriptChannel(
+                              'HotspotChannel',
+                              onMessageReceived: (message) {
+                                try {
+                                  final data = jsonDecode(message.message);
+                                  final hotspotId = data['id'] as int;
+                                  final hotspot = hotspots.firstWhere(
+                                    (h) => h.id == hotspotId,
+                                  );
+                                  if (mounted) {
+                                    setState(() => _selectedHotspot = hotspot);
+                                    _showHotspotDetail(hotspot);
+                                  }
+                                } catch (_) {}
+                              },
+                            ),
                           },
                         ),
-                      },
+                        if (_isLoading)
+                          const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF0A8477),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -284,8 +298,11 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
 
   String _resolveModelUrl(String? glbPath) {
     if (glbPath == null || glbPath.isEmpty) return '';
-    if (glbPath.startsWith('http')) return glbPath;
-    if (glbPath.startsWith('/')) return glbPath;
+    if (glbPath.startsWith('http://') || glbPath.startsWith('https://')) {
+      return glbPath;
+    }
+    if (glbPath.startsWith('/')) return 'file://$glbPath';
+    if (RegExp(r'^[A-Za-z]:\\').hasMatch(glbPath)) return 'file:///$glbPath';
     final base = ApiService.baseUrl.replaceFirst('/api', '');
     return '$base/storage/$glbPath';
   }

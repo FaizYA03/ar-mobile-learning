@@ -30,7 +30,7 @@ class ArUcoService {
 
     _controller = CameraController(
       backCamera!,
-      ResolutionPreset.medium,
+      ResolutionPreset.low,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.yuv420,
     );
@@ -70,10 +70,10 @@ class ArUcoService {
   void _onCameraFrame(CameraImage image) {
     if (!_isScanning) return;
     _frameCount++;
-    if (_frameCount % 3 != 0) return;
+    if (_frameCount % 5 != 0) return;
 
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 100), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 200), () {
       if (!_isScanning) return;
       _processFrame(image);
     });
@@ -83,7 +83,9 @@ class ArUcoService {
     if (!_nativeLibraryReady) return;
 
     try {
-      if (kDebugMode) print('Frame ${image.width}x${image.height} planes=${image.planes.length}');
+      if (kDebugMode)
+        print(
+            'Frame ${image.width}x${image.height} planes=${image.planes.length}');
 
       final mat = _convertCameraImageToMat(image);
       if (mat == null) return;
@@ -122,6 +124,7 @@ class ArUcoService {
           }
           results.add(ArUcoResult(
             markerId: ids[i],
+            arucoDictionary: 'DICT_4X4_50',
             corners: cornerPoints,
           ));
         }
@@ -148,7 +151,8 @@ class ArUcoService {
       final Uint8List yBytes = plane.bytes;
 
       if (yBytes.length >= width * height) {
-        return cv.Mat.fromList(height, width, cv.MatType.CV_8UC1, yBytes.toList());
+        return cv.Mat.fromList(
+            height, width, cv.MatType.CV_8UC1, yBytes.toList());
       }
 
       final cropped = Uint8List(width * height);
@@ -158,7 +162,8 @@ class ArUcoService {
         final int dstOffset = y * width;
         cropped.setRange(dstOffset, dstOffset + width, yBytes, srcOffset);
       }
-      return cv.Mat.fromList(height, width, cv.MatType.CV_8UC1, cropped.toList());
+      return cv.Mat.fromList(
+          height, width, cv.MatType.CV_8UC1, cropped.toList());
     } catch (e, stack) {
       if (kDebugMode) {
         print('Convert CameraImage to Mat error: $e');

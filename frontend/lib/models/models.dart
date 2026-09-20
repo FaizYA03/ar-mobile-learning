@@ -152,6 +152,8 @@ class ArContentItem {
 class ArMarkerData {
   final int id;
   final String markerId;
+  final int? arUcoId;
+  final String? arucoDictionary;
   final String markerType;
   final String? imageUrl;
   final String? imagePath;
@@ -161,6 +163,8 @@ class ArMarkerData {
   ArMarkerData({
     required this.id,
     required this.markerId,
+    this.arUcoId,
+    this.arucoDictionary,
     required this.markerType,
     this.imageUrl,
     this.imagePath,
@@ -172,6 +176,8 @@ class ArMarkerData {
     return ArMarkerData(
       id: json['id'] ?? 0,
       markerId: json['marker_id'] ?? '',
+      arUcoId: json['ar_uco_id'],
+      arucoDictionary: json['aruco_dictionary'],
       markerType: json['marker_type'] ?? 'image',
       imageUrl: json['image_url'],
       imagePath: json['image_path'],
@@ -354,12 +360,14 @@ class QuizAttemptResult {
 
 class ArUcoResult {
   final int markerId;
+  final String arucoDictionary;
   final List<List<double>> corners;
   final String markerType;
   final DateTime detectedAt;
 
   ArUcoResult({
     required this.markerId,
+    this.arucoDictionary = 'DICT_4X4_50',
     required this.corners,
     this.markerType = 'aruco',
     DateTime? detectedAt,
@@ -368,6 +376,7 @@ class ArUcoResult {
   factory ArUcoResult.fromJson(Map<String, dynamic> json) {
     return ArUcoResult(
       markerId: json['marker_id'] ?? 0,
+      arucoDictionary: json['aruco_dictionary'] ?? 'DICT_4X4_50',
       corners: List<List<double>>.from(
         (json['corners'] as List<dynamic>?)
                 ?.map((c) => List<double>.from(c.map((v) => v.toDouble())))
@@ -383,8 +392,99 @@ class ArUcoResult {
 
   Map<String, dynamic> toJson() => {
         'marker_id': markerId,
+        'aruco_dictionary': arucoDictionary,
         'corners': corners,
         'marker_type': markerType,
         'detected_at': detectedAt.toIso8601String(),
       };
+}
+
+class ArResolveResult {
+  final ArResolveMarker marker;
+  final ArResolveModel model;
+  final List<ArHotspotData> hotspots;
+
+  ArResolveResult({
+    required this.marker,
+    required this.model,
+    required this.hotspots,
+  });
+
+  factory ArResolveResult.fromJson(Map<String, dynamic> json) {
+    return ArResolveResult(
+      marker: ArResolveMarker.fromJson(json['marker'] ?? {}),
+      model: ArResolveModel.fromJson(json['model'] ?? {}),
+      hotspots: (json['hotspots'] as List<dynamic>?)
+              ?.map((h) => ArHotspotData.fromJson(h))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class ArResolveMarker {
+  final int id;
+  final String markerId;
+  final int? arUcoId;
+  final String? arucoDictionary;
+  final String markerType;
+  final String status;
+
+  ArResolveMarker({
+    required this.id,
+    required this.markerId,
+    this.arUcoId,
+    this.arucoDictionary,
+    required this.markerType,
+    required this.status,
+  });
+
+  factory ArResolveMarker.fromJson(Map<String, dynamic> json) {
+    return ArResolveMarker(
+      id: json['id'] ?? 0,
+      markerId: json['marker_id'] ?? '',
+      arUcoId: json['ar_uco_id'],
+      arucoDictionary: json['aruco_dictionary'],
+      markerType: json['marker_type'] ?? 'pattern',
+      status: json['status'] ?? 'active',
+    );
+  }
+}
+
+class ArResolveModel {
+  final int id;
+  final String modelName;
+  final String? description;
+  final String? category;
+  final int version;
+  final String? glbUrl;
+  final String? glbPath;
+  final String? thumbnailUrl;
+  final String? thumbnailPath;
+
+  ArResolveModel({
+    required this.id,
+    required this.modelName,
+    this.description,
+    this.category,
+    required this.version,
+    this.glbUrl,
+    this.glbPath,
+    this.thumbnailUrl,
+    this.thumbnailPath,
+  });
+
+  factory ArResolveModel.fromJson(Map<String, dynamic> json) {
+    return ArResolveModel(
+      id: json['id'] ?? 0,
+      modelName: json['model_name'] ?? '',
+      description: json['description'],
+      category: json['category'],
+      version: json['version'] ?? 1,
+      glbUrl: json['glb_url'],
+      glbPath: json['glb_path'],
+      thumbnailUrl: json['thumbnail_url'],
+      thumbnailPath: json['thumbnail_path'],
+    );
+  }
 }

@@ -1,23 +1,12 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 import 'secure_storage_service.dart';
 
 class ApiService {
-  static String get baseUrl {
-    const webUrl = 'http://127.0.0.1:8000/api';
-    const physicalDeviceUrl = 'http://10.42.37.181:8000/api';
-    try {
-      if (kIsWeb) return webUrl;
-      if (Platform.isAndroid) {
-        return physicalDeviceUrl;
-      }
-    } catch (_) {}
-    return webUrl;
-  }
+  static String get baseUrl => ApiConfig.baseUrl;
 
-  static String get v1BaseUrl => '$baseUrl/v1';
+  static String get v1BaseUrl => ApiConfig.v1BaseUrl;
 
   static String? _token;
 

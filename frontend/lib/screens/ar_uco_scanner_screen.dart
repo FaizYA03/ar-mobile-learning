@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../core/debug/ar_debug_log.dart';
 import '../models/models.dart';
@@ -23,6 +24,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   ArUcoService? _service;
   bool _isInitialized = false;
   bool _isScanning = false;
+  bool _isResolving = false;
   List<ArUcoResult> _detectedMarkers = [];
   String? _manualMarkerId;
   bool _showManualInput = false;
@@ -40,11 +42,13 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     Colors.lime,
   ];
 
+  bool _cameraPermissionDenied = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initService();
+    _checkPermissionAndInit();
   }
 
   @override
@@ -57,10 +61,39 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       _service?.stopScanning();
     } else if (state == AppLifecycleState.resumed && _isScanning) {
       _service?.startScanning();
+    }
+  }
+
+  Future<void> _checkPermissionAndInit() async {
+    final status = await Permission.camera.status;
+    ArDebugLog.log('Camera permission status: ${status.name}');
+
+    if (status.isGranted || status.isLimited) {
+      await _initService();
+      return;
+    }
+
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        setState(() => _cameraPermissionDenied = true);
+      }
+      return;
+    }
+
+    final requested = await Permission.camera.request();
+    ArDebugLog.log('Camera permission after request: ${requested.name}');
+
+    if (requested.isGranted || requested.isLimited) {
+      await _initService();
+    } else {
+      if (mounted) {
+        setState(() => _cameraPermissionDenied = true);
+      }
     }
   }
 
@@ -68,14 +101,23 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     try {
       _service = ArUcoService();
       await _service!.initialize();
+      ArDebugLog.log('Camera initialized, refreshing content...');
+      await ArContentResolver.refreshContent();
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
+        if (ArContentResolver.isContentLoaded) {
+          ArDebugLog.log(
+              'Content loaded: ${ArContentResolver.contentCount} models');
+        } else {
+          ArDebugLog.log('No cached content available, will resolve via API');
+        }
         if (!_service!.nativeLibraryReady) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('OpenCV native library not loaded. ArUco detection unavailable.'),
+              content: Text(
+                  'OpenCV native library not loaded. ArUco detection unavailable.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -127,69 +169,106 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     setState(() {
       _showManualInput = false;
       _manualMarkerId = markerId;
+      _isResolving = true;
     });
 
     ArDebugLog.log('Resolving marker: $markerId');
 
-    // Try to resolve using markerId string first (manual input or direct)
-    // Then fall back to ArUco ID mapping if it's a numeric ID
-    int? arUcoId;
-    try {
-      arUcoId = int.parse(markerId);
-    } catch (_) {
-      arUcoId = null;
-    }
+    final detectedMarker =
+        _detectedMarkers.isNotEmpty ? _detectedMarkers.first : null;
 
-    ArContentItem? item;
-    if (arUcoId != null) {
-      item = await ArContentResolver.resolveByArucoId(arUcoId);
-    }
+    ArResolveResult? resolveResult;
 
-    if (item == null) {
-      // Fall back to string marker ID resolution
-      item = await ArContentResolver.resolveByMarkerId(markerId);
-    }
-
-    if (item == null) {
-      ArDebugLog.error('No content found for marker: $markerId');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Marker/3D asset tidak ditemukan.'),
-          backgroundColor: Colors.red,
-        ),
+    if (detectedMarker != null) {
+      resolveResult = await ArContentResolver.resolveFromApi(
+        arucoDictionary: detectedMarker.arucoDictionary,
+        arucoId: detectedMarker.markerId,
       );
+    }
+
+    if (resolveResult == null) {
+      int? arUcoId;
+      try {
+        arUcoId = int.parse(markerId);
+      } catch (_) {
+        arUcoId = null;
+      }
+
+      if (arUcoId != null) {
+        final cachedItem = ArContentResolver.resolveByArucoId(arUcoId);
+        if (cachedItem != null) {
+          resolveResult = ArResolveResult(
+            marker: ArResolveMarker(
+              id: cachedItem.markers.isNotEmpty
+                  ? cachedItem.markers.first.id
+                  : 0,
+              markerId: cachedItem.markers.isNotEmpty
+                  ? cachedItem.markers.first.markerId
+                  : '',
+              markerType: 'pattern',
+              status: 'active',
+            ),
+            model: ArResolveModel(
+              id: cachedItem.id,
+              modelName: cachedItem.modelName,
+              description: cachedItem.description,
+              category: cachedItem.category,
+              version: cachedItem.version,
+              glbUrl: cachedItem.glbUrl,
+              glbPath: cachedItem.glbPath,
+              thumbnailUrl: cachedItem.thumbnailUrl,
+              thumbnailPath: cachedItem.thumbnailPath,
+            ),
+            hotspots: cachedItem.hotspots,
+          );
+        }
+      }
+    }
+
+    if (resolveResult == null) {
+      final cachedItem = ArContentResolver.resolveByMarkerId(markerId);
+      if (cachedItem != null) {
+        resolveResult = ArResolveResult(
+          marker: ArResolveMarker(
+            id: cachedItem.markers.isNotEmpty ? cachedItem.markers.first.id : 0,
+            markerId: cachedItem.markers.isNotEmpty
+                ? cachedItem.markers.first.markerId
+                : markerId,
+            markerType: 'pattern',
+            status: 'active',
+          ),
+          model: ArResolveModel(
+            id: cachedItem.id,
+            modelName: cachedItem.modelName,
+            description: cachedItem.description,
+            category: cachedItem.category,
+            version: cachedItem.version,
+            glbUrl: cachedItem.glbUrl,
+            glbPath: cachedItem.glbPath,
+            thumbnailUrl: cachedItem.thumbnailUrl,
+            thumbnailPath: cachedItem.thumbnailPath,
+          ),
+          hotspots: cachedItem.hotspots,
+        );
+      }
+    }
+
+    if (resolveResult == null) {
+      ArDebugLog.error('No content found for marker: $markerId');
+      if (mounted) {
+        setState(() => _isResolving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Marker tidak ditemukan. Pastikan marker sudah terdaftar di server.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
-    // Check if model is cached locally
-    final cachedPath = await ContentSyncService.getCachedModelPath(item.id);
-    String displayPath;
-    if (cachedPath != null && await File(cachedPath).exists()) {
-      displayPath = cachedPath;
-    } else {
-      // Try to download if not cached
-      // Note: In full implementation, would trigger download pipeline
-      displayPath = item.glbUrl ?? item.glbPath ?? '';
-    }
-
-    if (!mounted) return;
-
-    // Navigate to 3D viewer
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ModelViewerScreen(
-          arModelId: item.id,
-          modelName: item.modelName,
-          modelUrl: displayPath.isNotEmpty ? displayPath : item.glbUrl,
-          hotspots: item.hotspots,
-        ),
-      ),
-    ).then((_) {
-      // Refresh content after returning from viewer
-      ArContentResolver.refreshContent();
-    });
+    await _downloadAndNavigate(resolveResult);
   }
 
   void _showManualIdInput() {
@@ -202,46 +281,125 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   void _onManualIdSubmit(String markerId) async {
     setState(() {
       _showManualInput = false;
+      _isResolving = true;
     });
 
     if (markerId.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Masukkan marker ID'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        setState(() => _isResolving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Masukkan marker ID'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
     ArDebugLog.log('Manual marker resolution: $markerId');
 
-    final item = await ArContentResolver.resolveByMarkerId(markerId);
-    if (item == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Marker/3D asset tidak ditemukan.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    final resolveResult = await ArContentResolver.resolveFromApi(
+      markerId: markerId,
+    );
+
+    if (resolveResult != null) {
+      await _downloadAndNavigate(resolveResult);
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ModelViewerScreen(
-          arModelId: item.id,
-          modelName: item.modelName,
-          modelUrl: item.glbUrl ?? item.glbPath ?? '',
-          hotspots: item.hotspots,
-        ),
+    final item = ArContentResolver.resolveByMarkerId(markerId);
+    if (item == null) {
+      if (mounted) {
+        setState(() => _isResolving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Marker tidak ditemukan. Periksa ID marker dan coba lagi.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final fallbackResult = ArResolveResult(
+      marker: ArResolveMarker(
+        id: item.markers.isNotEmpty ? item.markers.first.id : 0,
+        markerId:
+            item.markers.isNotEmpty ? item.markers.first.markerId : markerId,
+        markerType: 'pattern',
+        status: 'active',
       ),
-    ).then((_) {
-      ArContentResolver.refreshContent();
-    });
+      model: ArResolveModel(
+        id: item.id,
+        modelName: item.modelName,
+        description: item.description,
+        category: item.category,
+        version: item.version,
+        glbUrl: item.glbUrl,
+        glbPath: item.glbPath,
+        thumbnailUrl: item.thumbnailUrl,
+        thumbnailPath: item.thumbnailPath,
+      ),
+      hotspots: item.hotspots,
+    );
+
+    await _downloadAndNavigate(fallbackResult);
+  }
+
+  Future<void> _downloadAndNavigate(ArResolveResult resolveResult) async {
+    final result = resolveResult;
+
+    final cachedPath =
+        await ContentSyncService.getCachedModelPath(result.model.id);
+    String displayPath;
+    if (cachedPath != null && await File(cachedPath).exists()) {
+      displayPath = cachedPath;
+      ArDebugLog.log('Using cached model: $displayPath');
+    } else if (result.model.glbUrl != null) {
+      ArDebugLog.log('Downloading GLB: ${result.model.glbUrl}');
+      if (mounted) {
+        setState(() => _isResolving = true);
+      }
+      final asset = AssetDownloadInfo(
+        modelId: result.model.id,
+        version: result.model.version,
+        url: result.model.glbUrl!,
+        assetType: 'model',
+        fileName: 'model_${result.model.id}_v${result.model.version}.glb',
+      );
+      final downloadResult = await ContentSyncService.downloadAsset(asset);
+      if (downloadResult.success && downloadResult.localPath != null) {
+        await ContentSyncService.updateManifestAfterDownload(
+            asset, downloadResult.localPath!);
+        displayPath = downloadResult.localPath!;
+        ArDebugLog.log('Downloaded to: $displayPath');
+      } else {
+        ArDebugLog.error('Download failed: ${downloadResult.error}');
+        displayPath = result.model.glbUrl ?? '';
+      }
+    } else {
+      displayPath = result.model.glbPath ?? '';
+    }
+
+    if (mounted) {
+      setState(() => _isResolving = false);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ModelViewerScreen(
+            arModelId: result.model.id,
+            modelName: result.model.modelName,
+            modelUrl:
+                displayPath.isNotEmpty ? displayPath : result.model.glbUrl,
+            hotspots: result.hotspots,
+          ),
+        ),
+      ).then((_) {
+        ArContentResolver.refreshContent();
+      });
+    }
   }
 
   @override
@@ -264,135 +422,167 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
             ),
         ],
       ),
-      body: Stack(
-        children: [
-          if (_isInitialized && _service!.controller != null)
-            CameraPreview(_service!.controller!),
-          if (!_isInitialized)
-            const Center(child: CircularProgressIndicator()),
-          Positioned(
-            top: 80,
-            left: 16,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _isScanning ? 'Scanning...' : 'Ready',
-                    style: TextStyle(
-                      color: _service!.nativeLibraryReady
-                          ? Colors.greenAccent
-                          : Colors.orangeAccent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+      body: _cameraPermissionDenied
+          ? _buildPermissionDeniedUI()
+          : Stack(
+              children: [
+                if (_isInitialized && _service!.controller != null)
+                  CameraPreview(_service!.controller!),
+                if (!_isInitialized)
+                  const Center(child: CircularProgressIndicator()),
+                Positioned(
+                  top: 80,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _isScanning ? 'Scanning...' : 'Ready',
+                          style: TextStyle(
+                            color: _service!.nativeLibraryReady
+                                ? Colors.greenAccent
+                                : Colors.orangeAccent,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          !_service!.nativeLibraryReady
+                              ? 'OpenCV library NOT loaded - detection unavailable'
+                              : _detectedMarkers.isNotEmpty
+                                  ? 'Markers detected: ${_detectedMarkers.length}'
+                                  : 'No markers detected yet',
+                          style: TextStyle(
+                            color: _service!.nativeLibraryReady
+                                ? Colors.white
+                                : Colors.orangeAccent,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    !_service!.nativeLibraryReady
-                        ? 'OpenCV library NOT loaded - detection unavailable'
-                        : _detectedMarkers.isNotEmpty
-                            ? 'Markers detected: ${_detectedMarkers.length}'
-                            : 'No markers detected yet',
-                    style: TextStyle(
-                      color: _service!.nativeLibraryReady
-                          ? Colors.white
-                          : Colors.orangeAccent,
-                      fontSize: 14,
+                ),
+                if (_detectedMarkers.isNotEmpty && _isScanning)
+                  Positioned(
+                    top: MediaQuery.of(context).size.height * 0.15,
+                    left: 0,
+                    right: 0,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: _detectedMarkers.map((marker) {
+                          final colorIndex =
+                              marker.markerId % _markerColors.length;
+                          final color = _markerColors[colorIndex];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: color, width: 2),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Marker #${marker.markerId}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '${marker.corners.length ~/ 2} corners',
+                                  style: TextStyle(
+                                    color: color.withValues(alpha: 0.5),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          if (_detectedMarkers.isNotEmpty && _isScanning)
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.15,
-              left: 0,
-              right: 0,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: _detectedMarkers.map((marker) {
-                    final colorIndex = marker.markerId % _markerColors.length;
-                    final color = _markerColors[colorIndex];
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                if (_isScanning || _isResolving)
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 40),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: color, width: 2),
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'Marker #${marker.markerId}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          if (_isResolving) ...[
+                            const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.greenAccent,
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${marker.corners.length ~/ 2} corners',
-                            style: TextStyle(
-                              color: color.withValues(alpha: 0.5),
-                              fontSize: 12,
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Menghubungi server...',
+                              style: TextStyle(
+                                color: Colors.greenAccent,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
+                          ] else ...[
+                            Text(
+                              'Marker ID: ${_detectedMarkers.isNotEmpty ? _detectedMarkers.first.markerId : 'none detected'}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildResolveButton(),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: _showManualIdInput,
+                              child: const Text(
+                                'Masukkan Marker ID Manual',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                            if (_showManualInput) ...[
+                              const SizedBox(height: 8),
+                              _buildManualInputField(),
+                              const SizedBox(height: 8),
+                              _buildManualSubmitButton(),
+                            ],
+                          ],
                         ],
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-          if (_isScanning)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 40),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Marker ID: ${_detectedMarkers.isNotEmpty ? _detectedMarkers.first.markerId : 'none detected'}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
                     ),
-                    const SizedBox(height: 8),
-                    _buildResolveButton(),
-                    if (_showManualInput) ...[
-                      const SizedBox(height: 8),
-                      _buildManualInputField(),
-                      const SizedBox(height: 8),
-                      _buildManualSubmitButton(),
-                    ],
-                  ],
-                ),
-              ),
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 
@@ -403,10 +593,11 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
 
     final markerId = _detectedMarkers.first.markerId.toString();
     return ElevatedButton(
-      onPressed: () => _resolveMarker(markerId),
+      onPressed: _isResolving ? null : () => _resolveMarker(markerId),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        disabledBackgroundColor: Colors.green.withValues(alpha: 0.5),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       ),
       child: const Text('Resolve ke 3D Model'),
@@ -432,13 +623,76 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
 
   Widget _buildManualSubmitButton() {
     return ElevatedButton(
-      onPressed: () => _onManualIdSubmit(_manualMarkerId ?? ''),
+      onPressed:
+          _isResolving ? null : () => _onManualIdSubmit(_manualMarkerId ?? ''),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       ),
       child: const Text('Cari 3D'),
+    );
+  }
+
+  Widget _buildPermissionDeniedUI() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.camera_alt, size: 64, color: Color(0xFFB0B8C1)),
+            const SizedBox(height: 16),
+            const Text(
+              'Izin Kamera Diperlukan',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Aplikasi membutuhkan akses kamera untuk mendeteksi ArUco marker. '
+              'Aktifkan izin kamera di pengaturan perangkat.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF637080),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final status = await Permission.camera.request();
+                if (status.isGranted || status.isLimited) {
+                  if (mounted) {
+                    setState(() => _cameraPermissionDenied = false);
+                    _initService();
+                  }
+                }
+              },
+              icon: const Icon(Icons.settings),
+              label: const Text('Buka Pengaturan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0A8477),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () async {
+                await openAppSettings();
+              },
+              child: const Text('Buka Settings Sistem'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
+import '../config/api_config.dart';
 import 'secure_storage_service.dart';
 
 class ApiClient {
@@ -14,9 +13,9 @@ class ApiClient {
 
   static Dio _createDio() {
     final dio = Dio(BaseOptions(
-      baseUrl: _getBaseUrl(),
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 30),
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: ApiConfig.connectionTimeout,
+      receiveTimeout: ApiConfig.receiveTimeout,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -41,18 +40,7 @@ class ApiClient {
     return dio;
   }
 
-  static String _getBaseUrl() {
-    const webUrl = 'http://127.0.0.1:8000/api';
-    const physicalDeviceUrl = 'http://10.42.37.181:8000/api';
-    try {
-      if (kIsWeb) return webUrl;
-      if (Platform.isAndroid) return physicalDeviceUrl;
-      if (Platform.isIOS) return physicalDeviceUrl;
-    } catch (_) {}
-    return webUrl;
-  }
-
-  static String get v1BaseUrl => '${_getBaseUrl()}/v1';
+  static String get v1BaseUrl => ApiConfig.v1BaseUrl;
 
   static void setToken(String token) {
     _token = token;
