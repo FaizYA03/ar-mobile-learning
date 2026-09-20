@@ -26,6 +26,16 @@ class MateriResource extends JsonResource
             'is_published' => $this->is_published,
             'tp_atp' => new TpAtpResource($this->whenLoaded('tpAtp')),
             'ar_model' => new ArModelResource($this->whenLoaded('arModel')),
+            'quiz' => $this->whenLoaded('quiz', function () {
+                return [
+                    'id' => $this->quiz->id,
+                    'title' => $this->quiz->title,
+                    'description' => $this->quiz->description,
+                    'time_limit' => $this->quiz->time_limit,
+                    'passing_score' => $this->quiz->passing_score,
+                    'questions_count' => $this->quiz->questions->count(),
+                ];
+            }),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

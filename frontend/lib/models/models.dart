@@ -488,3 +488,146 @@ class ArResolveModel {
     );
   }
 }
+
+class MateriItem {
+  final int id;
+  final int? tpAtpId;
+  final int? arModelId;
+  final int? quizId;
+  final String judul;
+  final String? slug;
+  final String? ringkasan;
+  final String? konten;
+  final String? gambarCover;
+  final String? gambarCoverUrl;
+  final int estimasiMenit;
+  final int order;
+  final bool isPublished;
+  final Map<String, dynamic>? tpAtp;
+  final Map<String, dynamic>? arModel;
+  final MateriQuiz? quiz;
+
+  MateriItem({
+    required this.id,
+    this.tpAtpId,
+    this.arModelId,
+    this.quizId,
+    required this.judul,
+    this.slug,
+    this.ringkasan,
+    this.konten,
+    this.gambarCover,
+    this.gambarCoverUrl,
+    this.estimasiMenit = 15,
+    this.order = 1,
+    this.isPublished = true,
+    this.tpAtp,
+    this.arModel,
+    this.quiz,
+  });
+
+  factory MateriItem.fromJson(Map<String, dynamic> json) {
+    return MateriItem(
+      id: json['id'] ?? 0,
+      tpAtpId: json['tp_atp_id'],
+      arModelId: json['ar_model_id'],
+      quizId: json['quiz_id'],
+      judul: json['judul'] ?? '',
+      slug: json['slug'],
+      ringkasan: json['ringkasan'],
+      konten: json['konten'],
+      gambarCover: json['gambar_cover'],
+      gambarCoverUrl: json['gambar_cover_url'],
+      estimasiMenit: json['estimasi_menit'] ?? 15,
+      order: json['order'] ?? 1,
+      isPublished: json['is_published'] ?? true,
+      tpAtp: json['tp_atp'],
+      arModel: json['ar_model'],
+      quiz: json['quiz'] != null ? MateriQuiz.fromJson(json['quiz']) : null,
+    );
+  }
+}
+
+class MateriQuiz {
+  final int id;
+  final String title;
+  final String? description;
+  final int? timeLimit;
+  final int passingScore;
+  final int questionsCount;
+
+  MateriQuiz({
+    required this.id,
+    required this.title,
+    this.description,
+    this.timeLimit,
+    this.passingScore = 70,
+    this.questionsCount = 0,
+  });
+
+  factory MateriQuiz.fromJson(Map<String, dynamic> json) {
+    return MateriQuiz(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      description: json['description'],
+      timeLimit: json['time_limit'],
+      passingScore: json['passing_score'] ?? 70,
+      questionsCount: json['questions_count'] ?? 0,
+    );
+  }
+}
+
+class QuizAttemptHistory {
+  final int quizId;
+  final String quizTitle;
+  final int totalAttempts;
+  final int? bestScore;
+  final bool passed;
+  final List<QuizAttemptItem> attempts;
+
+  QuizAttemptHistory({
+    required this.quizId,
+    required this.quizTitle,
+    required this.totalAttempts,
+    this.bestScore,
+    required this.passed,
+    required this.attempts,
+  });
+
+  factory QuizAttemptHistory.fromJson(Map<String, dynamic> json) {
+    return QuizAttemptHistory(
+      quizId: json['quiz_id'] ?? 0,
+      quizTitle: json['quiz_title'] ?? '',
+      totalAttempts: json['total_attempts'] ?? 0,
+      bestScore: json['best_score'],
+      passed: json['passed'] ?? false,
+      attempts: (json['attempts'] as List<dynamic>?)
+              ?.map((a) => QuizAttemptItem.fromJson(a))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class QuizAttemptItem {
+  final int id;
+  final int score;
+  final bool passed;
+  final String? createdAt;
+
+  QuizAttemptItem({
+    required this.id,
+    required this.score,
+    required this.passed,
+    this.createdAt,
+  });
+
+  factory QuizAttemptItem.fromJson(Map<String, dynamic> json) {
+    return QuizAttemptItem(
+      id: json['id'] ?? 0,
+      score: json['score'] ?? 0,
+      passed: json['passed'] ?? false,
+      createdAt: json['created_at'],
+    );
+  }
+}

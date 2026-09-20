@@ -196,4 +196,28 @@ class QuizController extends Controller
             'message' => 'Soal berhasil dihapus',
         ]);
     }
+
+    public function attempts(Quiz $quiz, Request $request): JsonResponse
+    {
+        $attempts = QuizAttempt::where('user_id', $request->user()->id)
+            ->where('quiz_id', $quiz->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $bestScore = $attempts->max('score');
+        $passed = $attempts->where('passed', true)->isNotEmpty();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil mengambil riwayat quiz',
+            'data' => [
+                'quiz_id' => $quiz->id,
+                'quiz_title' => $quiz->title,
+                'total_attempts' => $attempts->count(),
+                'best_score' => $bestScore,
+                'passed' => $passed,
+                'attempts' => QuizAttemptResource::collection($attempts),
+            ],
+        ]);
+    }
 }

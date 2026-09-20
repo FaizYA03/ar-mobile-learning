@@ -17,6 +17,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
   int _currentIndex = 0;
   String _userName = 'Siswa';
   int _totalQuizzes = 0;
+  int _totalMateri = 0;
+  int _totalArModels = 0;
+  int _quizzesPassed = 0;
   bool _isLoading = true;
   String _lastSyncText = 'Belum pernah sync';
   int _cachedModelCount = 0;
@@ -50,8 +53,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
     try {
       final result = await ApiService.getDashboard();
       if (result['success'] == true && mounted) {
+        final stats = result['data']['stats'] ?? {};
         setState(() {
-          _totalQuizzes = result['data']['stats']['total_quizzes'] ?? 0;
+          _totalQuizzes = stats['total_quizzes'] ?? 0;
+          _totalMateri = stats['total_materi'] ?? 0;
+          _totalArModels = stats['total_ar_models'] ?? 0;
+          _quizzesPassed = stats['quizzes_passed'] ?? 0;
           _isLoading = false;
         });
       }
@@ -211,9 +218,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildProgressItem('Materi', '0/5'),
-              _buildProgressItem('AR', '0/3'),
-              _buildProgressItem('Quiz', '0/$_totalQuizzes'),
+              _buildProgressItem('Materi', '$_totalMateri'),
+              _buildProgressItem('AR', '$_totalArModels'),
+              _buildProgressItem('Quiz', '$_quizzesPassed/$_totalQuizzes'),
             ],
           ),
         ],

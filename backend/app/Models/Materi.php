@@ -15,6 +15,7 @@ class Materi extends Model
     protected $fillable = [
         'tp_atp_id',
         'ar_model_id',
+        'quiz_id',
         'judul',
         'slug',
         'ringkasan',
@@ -39,5 +40,10 @@ class Materi extends Model
     public function arModel(): BelongsTo
     {
         return $this->belongsTo(ArModel::class, 'ar_model_id');
+    }
+
+    public function quiz(): BelongsTo
+    {
+        return $this->belongsTo(Quiz::class, 'quiz_id');
     }
 }

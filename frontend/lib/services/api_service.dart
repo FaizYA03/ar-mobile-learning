@@ -107,6 +107,8 @@ class ApiService {
   static Future<Map<String, dynamic>> submitQuiz(
           int id, List<Map<String, dynamic>> answers) =>
       _post('/quizzes/$id/submit', {'answers': answers});
+  static Future<Map<String, dynamic>> getQuizAttempts(int quizId) =>
+      _get('/quizzes/$quizId/attempts');
 
   // Admin
   static Future<Map<String, dynamic>> adminGetUsers() => _get('/admin/users');

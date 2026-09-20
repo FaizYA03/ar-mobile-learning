@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ArModel;
+use App\Models\Materi;
 use App\Models\Quiz;
+use App\Models\QuizAttempt;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -52,6 +55,21 @@ class DashboardController extends Controller
 
     private function siswaDashboard($user)
     {
+        $totalMateri = Materi::where('is_published', true)->count();
+        $totalArModels = ArModel::where('is_active', true)->count();
+        $totalQuizzes = Quiz::count();
+
+        $quizAttempts = QuizAttempt::where('user_id', $user->id)->count();
+        $quizzesPassed = QuizAttempt::where('user_id', $user->id)
+            ->where('passed', true)
+            ->distinct('quiz_id')
+            ->count('quiz_id');
+
+        $totalArModelsAvailable = ArModel::where('is_active', true)
+            ->whereHas('markers', function ($q) {
+                $q->where('status', 'active');
+            })->count();
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -60,7 +78,11 @@ class DashboardController extends Controller
                     'role' => $user->role,
                 ],
                 'stats' => [
-                    'total_quizzes' => Quiz::count(),
+                    'total_materi' => $totalMateri,
+                    'total_ar_models' => $totalArModelsAvailable,
+                    'total_quizzes' => $totalQuizzes,
+                    'quiz_attempts' => $quizAttempts,
+                    'quizzes_passed' => $quizzesPassed,
                 ],
             ],
         ]);

@@ -42,6 +42,7 @@ class MateriController extends Controller
         $materi->load([
             'tpAtp',
             'arModel.hotspots',
+            'quiz.questions',
         ]);
 
         return response()->json([

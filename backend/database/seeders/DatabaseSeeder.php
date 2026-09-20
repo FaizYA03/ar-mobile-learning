@@ -266,7 +266,7 @@ class DatabaseSeeder extends Seeder
 
         // === 4. MATERI PEMBELAJARAN ===
         // Materi untuk TP 1
-        Materi::create([
+        $materiCpu = Materi::create([
             'tp_atp_id' => $tp1->id,
             'ar_model_id' => $modelCpu->id,
             'judul' => 'Unit Pemrosesan Sentral (CPU) dan Siklus Instruksi',
@@ -293,7 +293,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Materi untuk TP 2
-        Materi::create([
+        $materiNetwork = Materi::create([
             'tp_atp_id' => $tp2->id,
             'ar_model_id' => $modelRouter->id,
             'judul' => 'Topologi Jaringan dan Perangkat Keras Penghubung',
@@ -307,7 +307,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Materi untuk TP 3
-        Materi::create([
+        $materiAlgo = Materi::create([
             'tp_atp_id' => $tp3->id,
             'ar_model_id' => null,
             'judul' => 'Struktur Data Dasar: Stack (LIFO) dan Queue (FIFO)',
@@ -401,5 +401,9 @@ class DatabaseSeeder extends Seeder
         QuestionOption::create(['question_id' => $q6->id, 'text' => 'Simple Query Language', 'is_correct' => false, 'order' => 2]);
         QuestionOption::create(['question_id' => $q6->id, 'text' => 'Standard Query Logic', 'is_correct' => false, 'order' => 3]);
         QuestionOption::create(['question_id' => $q6->id, 'text' => 'System Query Language', 'is_correct' => false, 'order' => 4]);
+
+        // === 6. LINK QUIZ TO MATERI ===
+        $materiAlgo->update(['quiz_id' => $quiz1->id]);
+        $materiNetwork->update(['quiz_id' => $quiz2->id]);
     }
 }

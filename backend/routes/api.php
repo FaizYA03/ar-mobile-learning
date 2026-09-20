@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/quizzes', [QuizController::class, 'index']);
     Route::get('/quizzes/{quiz}', [QuizController::class, 'show']);
+    Route::get('/quizzes/{quiz}/attempts', [QuizController::class, 'attempts']);
     Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit']);
 
     // TP/ATP & Materi untuk siswa/guru/admin

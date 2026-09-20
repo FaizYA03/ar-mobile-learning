@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import '../models/models.dart';
 import '../services/api_service.dart';
 import 'ar_scanner_screen.dart';
-import 'quiz_list_screen.dart';
+import 'quiz_take_screen.dart';
 
 class MateriDetailScreen extends StatefulWidget {
   final int materiId;
@@ -17,6 +18,7 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   Map<String, dynamic>? _materi;
+  QuizAttemptHistory? _attemptHistory;
 
   @override
   void initState() {
@@ -37,6 +39,10 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
           _materi = response['data'];
           _isLoading = false;
         });
+        final quiz = _materi!['quiz'];
+        if (quiz != null) {
+          _fetchQuizAttempts(quiz['id']);
+        }
       } else {
         if (mounted) {
           setState(() {
@@ -53,6 +59,17 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
         });
       }
     }
+  }
+
+  Future<void> _fetchQuizAttempts(int quizId) async {
+    try {
+      final response = await ApiService.getQuizAttempts(quizId);
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _attemptHistory = QuizAttemptHistory.fromJson(response['data']);
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -233,6 +250,10 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
             ),
             child: _renderFormattedContent(konten),
           ),
+          const SizedBox(height: 20),
+
+          // Quiz Section (if linked)
+          if (_materi!['quiz'] != null) _buildQuizSection(_materi!['quiz']),
           const SizedBox(height: 30),
         ],
       ),
@@ -427,6 +448,173 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
     );
   }
 
+  Widget _buildQuizSection(Map<String, dynamic> quiz) {
+    final quizTitle = quiz['title'] ?? 'Quiz';
+    final quizDesc = quiz['description'] ?? '';
+    final timeLimit = quiz['time_limit'];
+    final questionsCount = quiz['questions_count'] ?? 0;
+    final passingScore = quiz['passing_score'] ?? 70;
+
+    final bestScore = _attemptHistory?.bestScore;
+    final hasPassed = _attemptHistory?.passed ?? false;
+    final totalAttempts = _attemptHistory?.totalAttempts ?? 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: hasPassed
+              ? [const Color(0xFF2E7D32), const Color(0xFF388E3C)]
+              : [const Color(0xFFE67E22), const Color(0xFFD35400)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: (hasPassed
+                      ? const Color(0xFF2E7D32)
+                      : const Color(0xFFE67E22))
+                  .withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.quiz, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Uji Pemahaman',
+                        style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    Text(quizTitle,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (quizDesc.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(quizDesc,
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 12, height: 1.3)),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildQuizBadge(Icons.timer_outlined, '$timeLimit menit'),
+              const SizedBox(width: 8),
+              _buildQuizBadge(Icons.help_outline, '$questionsCount soal'),
+              const SizedBox(width: 8),
+              _buildQuizBadge(Icons.check_circle_outline, 'KKM $passingScore'),
+            ],
+          ),
+          if (totalAttempts > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    hasPassed ? Icons.emoji_events : Icons.info_outline,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      hasPassed
+                          ? 'Lulus! Skor terbaik: $bestScore (dikerjakan $totalAttempts kali)'
+                          : bestScore != null
+                              ? 'Skor terbaik: $bestScore (dikerjakan $totalAttempts kali)'
+                              : 'Belum mengerjakan',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => QuizTakeScreen(
+                      quizId: quiz['id'],
+                      quizTitle: quizTitle,
+                    ),
+                  ),
+                ).then((_) => _fetchQuizAttempts(quiz['id']));
+              },
+              icon: Icon(
+                hasPassed ? Icons.refresh : Icons.play_arrow,
+                size: 20,
+              ),
+              label: Text(hasPassed ? 'Ulangi Quiz' : 'Mulai Kerjakan Quiz'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: hasPassed
+                    ? const Color(0xFF2E7D32)
+                    : const Color(0xFFD35400),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuizBadge(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 4),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
   Widget _renderFormattedContent(String content) {
     final lines = content.split('\n');
     final widgets = <Widget>[];
@@ -519,6 +707,9 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
   }
 
   Widget _buildBottomActions() {
+    final quiz = _materi?['quiz'];
+    final hasPassed = _attemptHistory?.passed ?? false;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -536,16 +727,33 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
           height: 48,
           child: ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const QuizListScreen(isTab: false)),
-              );
+              if (quiz != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => QuizTakeScreen(
+                      quizId: quiz['id'],
+                      quizTitle: quiz['title'] ?? 'Quiz',
+                    ),
+                  ),
+                ).then((_) => _fetchQuizAttempts(quiz['id']));
+              }
             },
-            icon: const Icon(Icons.quiz_outlined, size: 20),
-            label: const Text('Uji Pemahaman (Kerjakan Quiz)'),
+            icon: Icon(
+              hasPassed ? Icons.refresh : Icons.quiz_outlined,
+              size: 20,
+            ),
+            label: Text(
+              quiz != null
+                  ? hasPassed
+                      ? 'Ulangi Quiz'
+                      : 'Kerjakan Quiz'
+                  : 'Quiz Belum Tersedia',
+            ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0A8477),
+              backgroundColor: quiz != null
+                  ? const Color(0xFF0A8477)
+                  : const Color(0xFFB0B8C1),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
