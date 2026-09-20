@@ -7,6 +7,7 @@ import '../services/ar_content_resolver.dart';
 import '../services/content_sync_service.dart';
 import 'ar_diagnostic_screen.dart';
 import 'ar_scanner_screen.dart';
+import 'ar_uco_scanner_screen.dart';
 import 'model_viewer_screen.dart';
 
 class ArHubScreen extends StatefulWidget {
@@ -220,6 +221,8 @@ class _ArHubScreenState extends State<ArHubScreen> {
                 padding: const EdgeInsets.all(20),
                 children: [
                   _buildBanner(),
+                  const SizedBox(height: 12),
+                  _buildArUcoCard(),
                   if (_syncStatus.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     _buildSyncStatusCard(),
@@ -365,6 +368,70 @@ class _ArHubScreenState extends State<ArHubScreen> {
                 height: 1.4),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildArUcoCard() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ArUcoScannerScreen(),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A8477),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0A8477).withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.qr_code_scanner,
+                  color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'OpenCV ArUco Scanner',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Deteci marker ArUco dengan OpenCV',
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios,
+                color: Colors.white.withValues(alpha: 0.6), size: 16),
+          ],
+        ),
       ),
     );
   }

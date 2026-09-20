@@ -18,6 +18,7 @@ class ArMarker extends Model
         'marker_type',
         'image_path',
         'status',
+        'ar_uco_id',
     ];
 
     public function models(): BelongsToMany

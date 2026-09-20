@@ -64,3 +64,7 @@ Future<void> generateTestMarkers() async {
 
   if (kDebugMode) print('Generated 10 test markers in $outputDir');
 }
+
+Future<void> main() async {
+  await generateTestMarkers();
+}

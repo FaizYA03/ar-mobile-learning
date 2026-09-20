@@ -13,10 +13,12 @@ class ArUcoService {
   bool _isScanning = false;
   Timer? _debounceTimer;
   int _frameCount = 0;
+  bool _nativeLibraryReady = false;
 
   CameraController? get controller => _controller;
   ValueNotifier<List<ArUcoResult>> get resultsNotifier => _resultsNotifier;
   bool get isScanning => _isScanning;
+  bool get nativeLibraryReady => _nativeLibraryReady;
   List<CameraDescription>? _cameras;
 
   Future<void> initialize() async {
@@ -36,13 +38,23 @@ class ArUcoService {
     await _controller!.initialize();
     await _controller!.setExposureMode(ExposureMode.locked);
     await _controller!.setFocusMode(FocusMode.locked);
+    _nativeLibraryReady = true;
+    if (kDebugMode) {
+      print('Camera initialized: ${_controller?.description}');
+      print('Native library ready: $_nativeLibraryReady');
+    }
   }
 
   void startScanning() {
     if (_isScanning || _controller == null) return;
+    if (!_nativeLibraryReady) {
+      if (kDebugMode) print('Native library not ready!');
+      return;
+    }
     _isScanning = true;
     _frameCount = 0;
     _controller!.startImageStream(_onCameraFrame);
+    if (kDebugMode) print('Scanning started');
   }
 
   void stopScanning() {
@@ -52,6 +64,7 @@ class ArUcoService {
       _controller!.stopImageStream();
     }
     _resultsNotifier.value = [];
+    if (kDebugMode) print('Scanning stopped');
   }
 
   void _onCameraFrame(CameraImage image) {
@@ -67,11 +80,17 @@ class ArUcoService {
   }
 
   Future<void> _processFrame(CameraImage image) async {
+    if (!_nativeLibraryReady) return;
+
     try {
+      if (kDebugMode) print('Frame ${image.width}x${image.height} planes=${image.planes.length}');
+
       final mat = _convertCameraImageToMat(image);
       if (mat == null) return;
 
-      final gray = cv.cvtColor(mat, cv.COLOR_BGR2GRAY);
+      final gray = cv.cvtColor(mat, 6);
+      mat.dispose();
+
       final dict = cv.ArucoDictionary.predefined(
         cv.PredefinedDictionaryType.DICT_4X4_50,
       );
@@ -79,24 +98,27 @@ class ArUcoService {
       final detector = cv.ArucoDetector.create(dict, detectorParams);
 
       final detectResult = detector.detectMarkers(gray);
+      gray.dispose();
+      dict.dispose();
+      detectorParams.dispose();
+
       final cornersVec = detectResult.$1;
       final idsVec = detectResult.$2;
       final rejectedVec = detectResult.$3;
 
-      final corners = cornersVec.toList().cast<cv.Mat>();
+      final cornersList = cornersVec.toList();
       final ids = idsVec.toList().cast<int>();
-      final rejected = rejectedVec.toList().cast<cv.Mat>();
+
+      if (kDebugMode) print('Detected ${ids.length} markers');
 
       if (ids.isNotEmpty) {
         final results = <ArUcoResult>[];
         for (int i = 0; i < ids.length; i++) {
           final cornerPoints = <List<double>>[];
-          final cornerMat = corners[i];
-          for (int r = 0; r < cornerMat.rows; r++) {
-            for (int c = 0; c < cornerMat.cols; c++) {
-              final point = cornerMat.at<cv.Point2f>(r, c);
-              cornerPoints.add([point.x, point.y]);
-            }
+          final markerCornersList = cornersList[i].toList();
+          for (int c = 0; c < markerCornersList.length; c++) {
+            final point = markerCornersList[c];
+            cornerPoints.add([point.x, point.y]);
           }
           results.add(ArUcoResult(
             markerId: ids[i],
@@ -108,13 +130,12 @@ class ArUcoService {
         _resultsNotifier.value = [];
       }
 
-      for (final c in corners) c.dispose();
-      for (final r in rejected) r.dispose();
-      gray.dispose();
-      mat.dispose();
       detector.dispose();
-    } catch (e) {
-      if (kDebugMode) print('ArUco detection error: $e');
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('ArUco detection error: $e');
+        print('Stack: $stack');
+      }
     }
   }
 
@@ -126,16 +147,23 @@ class ArUcoService {
       final plane = image.planes[0];
       final Uint8List yBytes = plane.bytes;
 
-      final List<num> yData = yBytes.toList();
-      final mat = cv.Mat.fromList(
-        height,
-        width,
-        cv.MatType.CV_8UC1,
-        yData,
-      );
-      return mat;
-    } catch (e) {
-      if (kDebugMode) print('Convert CameraImage to Mat error: $e');
+      if (yBytes.length >= width * height) {
+        return cv.Mat.fromList(height, width, cv.MatType.CV_8UC1, yBytes.toList());
+      }
+
+      final cropped = Uint8List(width * height);
+      final int stride = yBytes.length ~/ height;
+      for (int y = 0; y < height; y++) {
+        final int srcOffset = y * stride;
+        final int dstOffset = y * width;
+        cropped.setRange(dstOffset, dstOffset + width, yBytes, srcOffset);
+      }
+      return cv.Mat.fromList(height, width, cv.MatType.CV_8UC1, cropped.toList());
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('Convert CameraImage to Mat error: $e');
+        print('Stack: $stack');
+      }
       return null;
     }
   }

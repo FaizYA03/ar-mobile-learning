@@ -1,8 +1,15 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 
-import '../services/ar_uco_service.dart';
+import '../core/debug/ar_debug_log.dart';
 import '../models/models.dart';
+import '../screens/model_viewer_screen.dart';
+import '../services/ar_uco_service.dart';
+import '../services/ar_content_resolver.dart';
+import '../services/content_sync_service.dart';
 
 class ArUcoScannerScreen extends StatefulWidget {
   const ArUcoScannerScreen({super.key});
@@ -17,6 +24,8 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   bool _isInitialized = false;
   bool _isScanning = false;
   List<ArUcoResult> _detectedMarkers = [];
+  String? _manualMarkerId;
+  bool _showManualInput = false;
 
   static const List<Color> _markerColors = [
     Colors.red,
@@ -63,6 +72,14 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         setState(() {
           _isInitialized = true;
         });
+        if (!_service!.nativeLibraryReady) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('OpenCV native library not loaded. ArUco detection unavailable.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -100,6 +117,131 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         _detectedMarkers = _service!.resultsNotifier.value;
       });
     }
+  }
+
+  Future<void> _resolveMarker(String markerId) async {
+    if (_showManualInput && _manualMarkerId?.isNotEmpty != true) {
+      return;
+    }
+
+    setState(() {
+      _showManualInput = false;
+      _manualMarkerId = markerId;
+    });
+
+    ArDebugLog.log('Resolving marker: $markerId');
+
+    // Try to resolve using markerId string first (manual input or direct)
+    // Then fall back to ArUco ID mapping if it's a numeric ID
+    int? arUcoId;
+    try {
+      arUcoId = int.parse(markerId);
+    } catch (_) {
+      arUcoId = null;
+    }
+
+    ArContentItem? item;
+    if (arUcoId != null) {
+      item = await ArContentResolver.resolveByArucoId(arUcoId);
+    }
+
+    if (item == null) {
+      // Fall back to string marker ID resolution
+      item = await ArContentResolver.resolveByMarkerId(markerId);
+    }
+
+    if (item == null) {
+      ArDebugLog.error('No content found for marker: $markerId');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Marker/3D asset tidak ditemukan.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check if model is cached locally
+    final cachedPath = await ContentSyncService.getCachedModelPath(item.id);
+    String displayPath;
+    if (cachedPath != null && await File(cachedPath).exists()) {
+      displayPath = cachedPath;
+    } else {
+      // Try to download if not cached
+      // Note: In full implementation, would trigger download pipeline
+      displayPath = item.glbUrl ?? item.glbPath ?? '';
+    }
+
+    if (!mounted) return;
+
+    // Navigate to 3D viewer
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModelViewerScreen(
+          arModelId: item.id,
+          modelName: item.modelName,
+          modelUrl: displayPath.isNotEmpty ? displayPath : item.glbUrl,
+          hotspots: item.hotspots,
+        ),
+      ),
+    ).then((_) {
+      // Refresh content after returning from viewer
+      ArContentResolver.refreshContent();
+    });
+  }
+
+  void _showManualIdInput() {
+    setState(() {
+      _showManualInput = true;
+      _manualMarkerId = null;
+    });
+  }
+
+  void _onManualIdSubmit(String markerId) async {
+    setState(() {
+      _showManualInput = false;
+    });
+
+    if (markerId.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Masukkan marker ID'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ArDebugLog.log('Manual marker resolution: $markerId');
+
+    final item = await ArContentResolver.resolveByMarkerId(markerId);
+    if (item == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Marker/3D asset tidak ditemukan.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModelViewerScreen(
+          arModelId: item.id,
+          modelName: item.modelName,
+          modelUrl: item.glbUrl ?? item.glbPath ?? '',
+          hotspots: item.hotspots,
+        ),
+      ),
+    ).then((_) {
+      ArContentResolver.refreshContent();
+    });
   }
 
   @override
@@ -144,16 +286,27 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                 children: [
                   Text(
                     _isScanning ? 'Scanning...' : 'Ready',
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
+                    style: TextStyle(
+                      color: _service!.nativeLibraryReady
+                          ? Colors.greenAccent
+                          : Colors.orangeAccent,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Markers detected: ${_detectedMarkers.length}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    !_service!.nativeLibraryReady
+                        ? 'OpenCV library NOT loaded - detection unavailable'
+                        : _detectedMarkers.isNotEmpty
+                            ? 'Markers detected: ${_detectedMarkers.length}'
+                            : 'No markers detected yet',
+                    style: TextStyle(
+                      color: _service!.nativeLibraryReady
+                          ? Colors.white
+                          : Colors.orangeAccent,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -215,17 +368,77 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
-                  child: Text(
-                    'Point camera at ArUco marker\n(TYPE 4x4 50)',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Marker ID: ${_detectedMarkers.isNotEmpty ? _detectedMarkers.first.markerId : 'none detected'}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildResolveButton(),
+                    if (_showManualInput) ...[
+                      const SizedBox(height: 8),
+                      _buildManualInputField(),
+                      const SizedBox(height: 8),
+                      _buildManualSubmitButton(),
+                    ],
+                  ],
                 ),
               ),
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildResolveButton() {
+    if (_detectedMarkers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final markerId = _detectedMarkers.first.markerId.toString();
+    return ElevatedButton(
+      onPressed: () => _resolveMarker(markerId),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
+      child: const Text('Resolve ke 3D Model'),
+    );
+  }
+
+  Widget _buildManualInputField() {
+    return TextField(
+      onChanged: (value) {
+        setState(() {
+          _manualMarkerId = value;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Masukkan Marker ID',
+        hintText: 'Contoh: CPU-001 atau numeric',
+        border: OutlineInputBorder(),
+      ),
+      controller: TextEditingController(text: _manualMarkerId),
+      enabled: true,
+    );
+  }
+
+  Widget _buildManualSubmitButton() {
+    return ElevatedButton(
+      onPressed: () => _onManualIdSubmit(_manualMarkerId ?? ''),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
+      child: const Text('Cari 3D'),
     );
   }
 }

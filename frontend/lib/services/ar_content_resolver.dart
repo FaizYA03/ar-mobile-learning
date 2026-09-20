@@ -42,8 +42,38 @@ class ArContentResolver {
     }
   }
 
-  static ArContentItem? resolveByMarkerCode(String code) {
-    return resolveByMarkerId(code);
+  static ArContentItem? resolveByArucoId(int arUcoId) {
+    if (_cachedContent == null) return null;
+    try {
+      // Map ArUco dictionary ID (0-49) to marker_id string
+      // The mapping is: arUcoId -> marker_id like 'MARKER-XXXXX'
+      // Based on backend seeding: MARKER-CPU-001, MARKER-ROUTER-001
+      // We'll use a simple mapping: ID 0 -> MARKER-CPU-001, ID 1 -> MARKER-ROUTER-001, etc.
+      // In production, this should be configured per marker in the backend
+      if (arUcoId >= 0 && arUcoId <= 49) {
+        // Simple mapping: use marker_id format from backend
+        // This assumes admins configure marker IDs to match ArUco positions
+        final String? markerId = _mapArucoIdToMarkerId(arUcoId);
+        if (markerId != null) {
+          return _cachedContent!.firstWhere(
+            (item) => item.markers.any((m) => m.markerId == markerId),
+          );
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String? _mapArucoIdToMarkerId(int arUcoId) {
+    // Default mapping based on common backend marker IDs
+    // Admins should configure this per their marker setup
+    final Map<int, String> defaultMapping = {
+      0: 'MARKER-CPU-001',
+      1: 'MARKER-ROUTER-001',
+    };
+    return defaultMapping[arUcoId];
   }
 
   static Future<String?> resolveLocalModelPath(int modelId) async {
