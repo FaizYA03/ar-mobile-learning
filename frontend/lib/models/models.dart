@@ -52,6 +52,7 @@ class LoginResponse {
 
 class AppConfigData {
   final bool maintenanceMode;
+  final bool arcoreEnabled;
   final String? latestVersion;
   final String? minimumSupportedVersion;
   final String? buildNumber;
@@ -61,6 +62,7 @@ class AppConfigData {
 
   AppConfigData({
     required this.maintenanceMode,
+    this.arcoreEnabled = true,
     this.latestVersion,
     this.minimumSupportedVersion,
     this.buildNumber,
@@ -72,6 +74,7 @@ class AppConfigData {
   factory AppConfigData.fromJson(Map<String, dynamic> json) {
     return AppConfigData(
       maintenanceMode: json['maintenance_mode'] ?? false,
+      arcoreEnabled: json['arcore_enabled'] ?? true,
       latestVersion: json['latest_version'],
       minimumSupportedVersion: json['minimum_supported_version'],
       buildNumber: json['build_number'],

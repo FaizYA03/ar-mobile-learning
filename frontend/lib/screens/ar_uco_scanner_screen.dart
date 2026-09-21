@@ -114,10 +114,12 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
           ArDebugLog.log('No cached content available, will resolve via API');
         }
         if (!_service!.nativeLibraryReady) {
+          final errorMsg = _service!.nativeLibraryError;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                  'OpenCV native library not loaded. ArUco detection unavailable.'),
+                  'OpenCV native library not loaded. ArUco detection unavailable.'
+                  '${errorMsg != null ? '\n$errorMsg' : ''}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -130,6 +132,21 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         );
       }
     }
+  }
+
+  Future<void> _reinitService() async {
+    _service?.resultsNotifier.removeListener(_onResultsChanged);
+    await _service?.dispose();
+    if (mounted) {
+      setState(() {
+        _service = null;
+        _isInitialized = false;
+        _isScanning = false;
+        _detectedMarkers = [];
+        _cameraPermissionDenied = false;
+      });
+    }
+    await _checkPermissionAndInit();
   }
 
   void _toggleScanning() {
@@ -426,7 +443,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
           ? _buildPermissionDeniedUI()
           : Stack(
               children: [
-                if (_isInitialized && _service!.controller != null)
+                if (_isInitialized && (_service?.controller != null))
                   CameraPreview(_service!.controller!),
                 if (!_isInitialized)
                   const Center(child: CircularProgressIndicator()),
@@ -447,7 +464,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                         Text(
                           _isScanning ? 'Scanning...' : 'Ready',
                           style: TextStyle(
-                            color: _service!.nativeLibraryReady
+                            color: (_service?.nativeLibraryReady ?? false)
                                 ? Colors.greenAccent
                                 : Colors.orangeAccent,
                             fontSize: 16,
@@ -456,18 +473,34 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          !_service!.nativeLibraryReady
+                          !(_service?.nativeLibraryReady ?? false)
                               ? 'OpenCV library NOT loaded - detection unavailable'
                               : _detectedMarkers.isNotEmpty
                                   ? 'Markers detected: ${_detectedMarkers.length}'
                                   : 'No markers detected yet',
                           style: TextStyle(
-                            color: _service!.nativeLibraryReady
+                            color: (_service?.nativeLibraryReady ?? false)
                                 ? Colors.white
                                 : Colors.orangeAccent,
                             fontSize: 14,
                           ),
                         ),
+                        if (!(_service?.nativeLibraryReady ?? false) &&
+                            _isInitialized) ...[
+                          const SizedBox(height: 8),
+                          FilledButton.icon(
+                            onPressed: _reinitService,
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('Coba Lagi'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              minimumSize: const Size(0, 36),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

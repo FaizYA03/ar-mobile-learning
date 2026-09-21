@@ -18,6 +18,8 @@ class _GuruDashboardState extends State<GuruDashboard> {
   int _currentIndex = 0;
   String _userName = 'Guru';
   int _totalQuizzes = 0;
+  int _totalMateri = 0;
+  int _totalAr = 0;
   bool _isLoading = true;
   List<dynamic> _quizzes = [];
   String _lastSyncText = 'Belum pernah sync';
@@ -55,6 +57,8 @@ class _GuruDashboardState extends State<GuruDashboard> {
       if (mounted) {
         setState(() {
           _totalQuizzes = dashResult['data']['stats']['total_quizzes'] ?? 0;
+          _totalMateri = dashResult['data']['stats']['total_materi'] ?? 0;
+          _totalAr = dashResult['data']['stats']['total_ar_models'] ?? 0;
           _quizzes = quizResult['data'] ?? [];
           _isLoading = false;
         });
@@ -206,19 +210,50 @@ class _GuruDashboardState extends State<GuruDashboard> {
                 child: const Text('Batal')),
             ElevatedButton(
               onPressed: () async {
-                if (questionCtrl.text.isEmpty) return;
+                if (questionCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Soal wajib diisi')),
+                  );
+                  return;
+                }
+                if (options.any((o) => (o['text'] as String).trim().isEmpty)) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Semua opsi wajib diisi')),
+                  );
+                  return;
+                }
                 final correctIndex =
                     options.indexWhere((o) => o['is_correct'] == true);
-                if (correctIndex == -1) return;
-                await ApiService.guruAddQuestion(quiz.id, {
-                  'text': questionCtrl.text,
-                  'options': options
-                      .map((o) =>
-                          {'text': o['text'], 'is_correct': o['is_correct']})
-                      .toList(),
-                });
-                if (ctx.mounted) Navigator.pop(ctx);
-                _loadData();
+                if (correctIndex == -1) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                        content: Text('Pilih opsi jawaban yang benar')),
+                  );
+                  return;
+                }
+                try {
+                  await ApiService.guruAddQuestion(quiz.id, {
+                    'text': questionCtrl.text.trim(),
+                    'options': options
+                        .map((o) =>
+                            {'text': o['text'], 'is_correct': o['is_correct']})
+                        .toList(),
+                  });
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _loadData();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Soal berhasil ditambahkan')),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Gagal menambah soal: $e')),
+                    );
+                  }
+                }
               },
               child: const Text('Tambah'),
             ),
@@ -469,8 +504,9 @@ class _GuruDashboardState extends State<GuruDashboard> {
               children: [
                 _buildSummaryItem(
                     '$_totalQuizzes', 'Quiz', const Color(0xFFE67E22)),
-                _buildSummaryItem('0', 'Materi', const Color(0xFF0A8477)),
-                _buildSummaryItem('0', 'AR', const Color(0xFF5B6ABF)),
+                _buildSummaryItem(
+                    '$_totalMateri', 'Materi', const Color(0xFF0A8477)),
+                _buildSummaryItem('$_totalAr', 'AR', const Color(0xFF5B6ABF)),
               ],
             ),
           ),

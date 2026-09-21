@@ -55,13 +55,13 @@ class ArController extends Controller
         if ($request->hasFile('glb_path')) {
             $glbFile = $request->file('glb_path');
             $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
-            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? $filename : '';
         }
 
         if ($request->hasFile('thumbnail_path')) {
             $thumbFile = $request->file('thumbnail_path');
             $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
-            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? $filename : '';
         }
 
         $model = ArModel::create($validated);
@@ -87,22 +87,28 @@ class ArController extends Controller
         ]);
 
         if ($request->hasFile('glb_path')) {
-            if ($arModel->glb_path && str_starts_with($arModel->glb_path, 'storage/')) {
-                Storage::disk('public')->delete(str_replace('storage/', '', $arModel->glb_path));
+            if ($arModel->glb_path) {
+                $oldPath = str_replace('storage/', '', $arModel->glb_path);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
             }
             $glbFile = $request->file('glb_path');
             $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
-            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? $filename : '';
             $validated['version'] = $arModel->version + 1;
         }
 
         if ($request->hasFile('thumbnail_path')) {
-            if ($arModel->thumbnail_path && str_starts_with($arModel->thumbnail_path, 'storage/')) {
-                Storage::disk('public')->delete(str_replace('storage/', '', $arModel->thumbnail_path));
+            if ($arModel->thumbnail_path) {
+                $oldPath = str_replace('storage/', '', $arModel->thumbnail_path);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
             }
             $thumbFile = $request->file('thumbnail_path');
             $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
-            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? $filename : '';
         }
 
         $arModel->update($validated);
@@ -120,11 +126,17 @@ class ArController extends Controller
 
     public function modelDestroy(ArModel $arModel): JsonResponse
     {
-        if ($arModel->glb_path && str_starts_with($arModel->glb_path, 'storage/')) {
-            Storage::disk('public')->delete(str_replace('storage/', '', $arModel->glb_path));
+        if ($arModel->glb_path) {
+            $path = str_replace('storage/', '', $arModel->glb_path);
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
-        if ($arModel->thumbnail_path && str_starts_with($arModel->thumbnail_path, 'storage/')) {
-            Storage::disk('public')->delete(str_replace('storage/', '', $arModel->thumbnail_path));
+        if ($arModel->thumbnail_path) {
+            $path = str_replace('storage/', '', $arModel->thumbnail_path);
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
         $arModel->markers()->detach();
 
@@ -173,7 +185,7 @@ class ArController extends Controller
         if ($request->hasFile('image_path')) {
             $imageFile = $request->file('image_path');
             $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
         }
 
         $marker = ArMarker::create($validated);
@@ -199,12 +211,15 @@ class ArController extends Controller
         ]);
 
         if ($request->hasFile('image_path')) {
-            if ($arMarker->image_path && str_starts_with($arMarker->image_path, 'storage/')) {
-                Storage::disk('public')->delete(str_replace('storage/', '', $arMarker->image_path));
+            if ($arMarker->image_path) {
+                $oldPath = str_replace('storage/', '', $arMarker->image_path);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
             }
             $imageFile = $request->file('image_path');
             $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
         }
 
         $arMarker->update($validated);
@@ -220,8 +235,11 @@ class ArController extends Controller
 
     public function markerDestroy(ArMarker $arMarker): JsonResponse
     {
-        if ($arMarker->image_path && str_starts_with($arMarker->image_path, 'storage/')) {
-            Storage::disk('public')->delete(str_replace('storage/', '', $arMarker->image_path));
+        if ($arMarker->image_path) {
+            $path = str_replace('storage/', '', $arMarker->image_path);
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
         $arMarker->models()->detach();
 

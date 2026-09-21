@@ -278,6 +278,8 @@ class ApiService {
 
   static Future<Map<String, dynamic>> v1GetArContent() => _getV1('/ar/content');
 
+  static Future<Map<String, dynamic>> v1GetMarkers() => _getV1('/ar/markers');
+
   static Future<Map<String, dynamic>> _v1Get(String path) async {
     final response = await http.get(
       Uri.parse('$v1BaseUrl$path'),

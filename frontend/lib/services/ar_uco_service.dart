@@ -14,11 +14,13 @@ class ArUcoService {
   Timer? _debounceTimer;
   int _frameCount = 0;
   bool _nativeLibraryReady = false;
+  String? _nativeLibraryError;
 
   CameraController? get controller => _controller;
   ValueNotifier<List<ArUcoResult>> get resultsNotifier => _resultsNotifier;
   bool get isScanning => _isScanning;
   bool get nativeLibraryReady => _nativeLibraryReady;
+  String? get nativeLibraryError => _nativeLibraryError;
   List<CameraDescription>? _cameras;
 
   Future<void> initialize() async {
@@ -38,10 +40,39 @@ class ArUcoService {
     await _controller!.initialize();
     await _controller!.setExposureMode(ExposureMode.locked);
     await _controller!.setFocusMode(FocusMode.locked);
-    _nativeLibraryReady = true;
+    _nativeLibraryReady = await _probeNativeLibrary();
     if (kDebugMode) {
       print('Camera initialized: ${_controller?.description}');
       print('Native library ready: $_nativeLibraryReady');
+      if (_nativeLibraryError != null) {
+        print('Native library error: $_nativeLibraryError');
+      }
+    }
+  }
+
+  Future<bool> _probeNativeLibrary() async {
+    _nativeLibraryError = null;
+    try {
+      final probe =
+          cv.Mat.fromList(16, 16, cv.MatType.CV_8UC1, List<int>.filled(256, 0));
+      probe.dispose();
+
+      final dict = cv.ArucoDictionary.predefined(
+        cv.PredefinedDictionaryType.DICT_4X4_50,
+      );
+      final detectorParams = cv.ArucoDetectorParameters.empty();
+      final detector = cv.ArucoDetector.create(dict, detectorParams);
+      detector.dispose();
+      detectorParams.dispose();
+      dict.dispose();
+      return true;
+    } catch (e, stack) {
+      _nativeLibraryError = '$e';
+      if (kDebugMode) {
+        print('OpenCV native library probe failed: $e');
+        print('Stack: $stack');
+      }
+      return false;
     }
   }
 
@@ -106,7 +137,6 @@ class ArUcoService {
 
       final cornersVec = detectResult.$1;
       final idsVec = detectResult.$2;
-      final rejectedVec = detectResult.$3;
 
       final cornersList = cornersVec.toList();
       final ids = idsVec.toList().cast<int>();

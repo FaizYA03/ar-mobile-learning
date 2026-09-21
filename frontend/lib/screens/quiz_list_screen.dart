@@ -208,12 +208,12 @@ class _QuizListScreenState extends State<QuizListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
             children: [
               _buildBadge(Icons.timer_outlined, '$timeLimit Menit'),
-              const SizedBox(width: 10),
               _buildBadge(Icons.format_list_numbered, '$questionsCount Soal'),
-              const SizedBox(width: 10),
               _buildBadge(Icons.verified_outlined, 'KKM: $passingScore'),
             ],
           ),

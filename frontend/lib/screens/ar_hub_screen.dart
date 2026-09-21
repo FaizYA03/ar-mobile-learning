@@ -19,12 +19,15 @@ class ArHubScreen extends StatefulWidget {
 
 class _ArHubScreenState extends State<ArHubScreen> {
   List<ArContentItem> _models = [];
+  List<Map<String, dynamic>> _markers = [];
   bool _isLoading = true;
   ArCoreAvailability _availability = ArCoreAvailability.unknown;
   bool _isSyncing = false;
   String _syncStatus = '';
+  bool _arcoreEnabled = true;
 
-  bool get _isAR => _availability == ArCoreAvailability.supportedInstalled;
+  bool get _isAR =>
+      _arcoreEnabled && _availability == ArCoreAvailability.supportedInstalled;
 
   @override
   void initState() {
@@ -35,7 +38,18 @@ class _ArHubScreenState extends State<ArHubScreen> {
 
   Future<void> _detectARSupport() async {
     final availability = await ARService.checkAvailability();
-    if (mounted) setState(() => _availability = availability);
+    bool arcoreEnabled = true;
+    try {
+      final config = await ApiService.v1GetAppConfig();
+      if (config['success'] == true && config['data'] != null) {
+        arcoreEnabled = config['data']['arcore_enabled'] ?? true;
+      }
+    } catch (_) {}
+    if (mounted)
+      setState(() {
+        _availability = availability;
+        _arcoreEnabled = arcoreEnabled;
+      });
   }
 
   Future<void> _loadModels() async {
@@ -48,9 +62,30 @@ class _ArHubScreenState extends State<ArHubScreen> {
     if (mounted) {
       setState(() {
         _models = ArContentResolver.content;
-        _isLoading = false;
       });
     }
+
+    try {
+      final response = await ApiService.v1GetArContent();
+      if (response['success'] == true && mounted) {
+        final data = response['data'] as List<dynamic>? ?? [];
+        setState(() {
+          _models = data.map((m) => ArContentItem.fromJson(m)).toList();
+        });
+      }
+    } catch (_) {}
+
+    try {
+      final response = await ApiService.v1GetMarkers();
+      if (response['success'] == true && mounted) {
+        final data = response['data'] as List<dynamic>? ?? [];
+        setState(() {
+          _markers = List<Map<String, dynamic>>.from(data);
+        });
+      }
+    } catch (_) {}
+
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _syncContent() async {
@@ -244,6 +279,30 @@ class _ArHubScreenState extends State<ArHubScreen> {
                           child: _buildModelCard(context, model),
                         )),
                   const SizedBox(height: 24),
+                  if (_markers.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.qr_code_2,
+                            color: Color(0xFF0A8477), size: 20),
+                        const SizedBox(width: 8),
+                        const Text('Marker AR',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A1A2E))),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('Download dan cetak marker, lalu arahkan kamera',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    const SizedBox(height: 12),
+                    ..._markers.map((m) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _buildMarkerCard(m),
+                        )),
+                    const SizedBox(height: 24),
+                  ],
                   _buildTipsCard(),
                 ],
               ),
@@ -581,6 +640,128 @@ class _ArHubScreenState extends State<ArHubScreen> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMarkerCard(Map<String, dynamic> marker) {
+    final markerId = marker['marker_id'] ?? '';
+    final arUcoId = marker['ar_uco_id'];
+    final modelName = marker['model_name'] ?? 'Model 3D';
+    final imageUrl = marker['image_url'] ?? '';
+    final imagePath = marker['image_path'] ?? '';
+    final base = ApiService.baseUrl.replaceFirst('/api', '');
+    final fullImageUrl = imageUrl.isNotEmpty
+        ? (imageUrl.startsWith('http') ? imageUrl : '$base$imageUrl')
+        : (imagePath.isNotEmpty ? '$base/storage/$imagePath' : '');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE9ECEF)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A8477).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: fullImageUrl.isNotEmpty
+                ? Image.network(
+                    fullImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.qr_code_2,
+                        color: Color(0xFF0A8477), size: 28),
+                  )
+                : const Icon(Icons.qr_code_2,
+                    color: Color(0xFF0A8477), size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(markerId,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E))),
+                const SizedBox(height: 2),
+                Text('AR Uco ID: $arUcoId  |  $modelName',
+                    style: const TextStyle(
+                        fontSize: 11, color: Color(0xFF637080))),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.open_in_new,
+                color: Color(0xFF0A8477), size: 20),
+            onPressed: () {
+              if (fullImageUrl.isNotEmpty) {
+                _showMarkerPreview(fullImageUrl, markerId);
+              }
+            },
+            tooltip: 'Lihat Marker',
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMarkerPreview(String imageUrl, String markerId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+              child: Row(
+                children: [
+                  const Icon(Icons.qr_code_2, color: Color(0xFF0A8477)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Text(markerId,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700))),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Image.network(
+                imageUrl,
+                height: 250,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox(
+                  height: 250,
+                  child: Center(child: Text('Gagal memuat gambar marker')),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Screenshot atau download gambar ini, lalu cetak untuk digunakan sebagai marker AR.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF637080)),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 12),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\ArModel;
 use App\Models\ArMarker;
 use App\Models\ArHotspot;
+use App\Models\AppSetting;
 use App\Models\Materi;
 use App\Models\Question;
 use App\Models\QuestionOption;
@@ -48,10 +49,15 @@ class DatabaseSeeder extends Seeder
             'role' => 'siswa',
         ]);
 
-        // === 2. AR MODELS (Mock sample untuk 3D viewing) ===
+        // === 1b. APP SETTINGS ===
+        AppSetting::create(['key' => 'arcore_enabled', 'value' => 'true', 'type' => 'boolean', 'description' => 'Enable/disable ARCore on client devices']);
+
+        // === 2. AR MODELS (Demo sample untuk 3D viewing) ===
+        // wireless_router.glb is the only GLB on disk; all active models point to it for demo.
+        // Real GLB files should be uploaded per-model via admin CMS.
         $modelCpu = ArModel::create([
             'model_name' => 'Microprocessor CPU 3D',
-            'glb_path' => 'models/cpu_processor.glb',
+            'glb_path' => 'models/wireless_router.glb',
             'thumbnail_path' => 'thumbnails/cpu_thumb.png',
             'description' => 'Model interaktif 3D prosesor komputer dengan arsitektur multi-core dan pin socket.',
             'category' => 'Hardware Komputer',
@@ -69,8 +75,8 @@ class DatabaseSeeder extends Seeder
 
         $modelRam = ArModel::create([
             'model_name' => 'RAM DDR5 Module 3D',
-            'glb_path' => 'models/ram_ddr5.glb',
-            'thumbnail_path' => 'thumbnails/ram_thumb.png',
+            'glb_path' => 'models/wireless_router.glb',
+            'thumbnail_path' => null,
             'description' => 'Model interaktif 3D modul memori DDR5 dengan komponen IC dan pin connector.',
             'category' => 'Hardware Komputer',
             'is_active' => true,
@@ -78,8 +84,8 @@ class DatabaseSeeder extends Seeder
 
         $modelKeyboard = ArModel::create([
             'model_name' => 'Mechanical Keyboard 3D',
-            'glb_path' => 'models/keyboard_mechanical.glb',
-            'thumbnail_path' => 'thumbnails/keyboard_thumb.png',
+            'glb_path' => 'models/wireless_router.glb',
+            'thumbnail_path' => null,
             'description' => 'Model 3D keyboard mekanikal dengan switch, keycap, dan PCB.',
             'category' => 'Hardware Komputer',
             'is_active' => true,
@@ -273,7 +279,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'unit-pemrosesan-sentral-cpu-dan-siklus-instruksi',
             'ringkasan' => 'Pelajari komponen inti CPU: ALU, Control Unit, dan Register beserta siklus Fetch-Decode-Execute.',
             'konten' => "## Pengenalan CPU\n\nCentral Processing Unit (CPU) sering disebut sebagai 'otak' dari komputer. CPU bertugas memproses instruksi-instruksi yang diberikan oleh perangkat lunak dan mengkoordinasikan kerja seluruh komponen sistem.\n\n### Komponen Utama CPU\n1. **Arithmetic Logic Unit (ALU):** Melakukan seluruh operasi matematika (+, -, *, /) dan logika (AND, OR, NOT).\n2. **Control Unit (CU):** Mengarahkan lalu lintas data dan instruksi antar komponen komputer.\n3. **Register:** Memori internal berkecepatan tinggi yang menyimpan data sementara selama pemrosesan.\n\n### Siklus Fetch-Decode-Execute\nSetiap instruksi komputer dieksekusi melalui 3 langkah berulang:\n- **Fetch:** Mengambil instruksi dari memori utama (RAM).\n- **Decode:** Menerjemahkan maksud kode instruksi oleh Control Unit.\n- **Execute:** Menjalankan operasi komputasi melalui ALU.",
-            'gambar_cover' => 'covers/materi_cpu.jpg',
+            'gambar_cover' => null,
             'estimasi_menit' => 20,
             'order' => 1,
             'is_published' => true,
@@ -286,7 +292,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'hierarki-memori-komputer',
             'ringkasan' => 'Memahami perbandingan kecepatan, kapasitas, dan biaya berbagai tingkat memori dalam sistem komputer.',
             'konten' => "## Hierarki Memori\n\nSistem memori komputer dirancang bertingkat berdasarkan kecepatan akses, kapasitas, dan biaya produksi per byte.\n\n### Tingkatan Memori:\n1. **Register:** Tercepat, berada di dalam CPU, kapasitas sangat kecil.\n2. **Cache Memory (L1, L2, L3):** Memori jembatan ultra cepat antara CPU dan RAM.\n3. **Main Memory (RAM):** Memori volatil tempat program yang sedang berjalan dimuat.\n4. **Secondary Storage (SSD/NVMe/HDD):** Memori non-volatil untuk menyimpan data permanen.",
-            'gambar_cover' => 'covers/materi_memory.jpg',
+            'gambar_cover' => null,
             'estimasi_menit' => 15,
             'order' => 2,
             'is_published' => true,
@@ -300,7 +306,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'topologi-jaringan-dan-perangkat-keras',
             'ringkasan' => 'Pelajari perbedaan topologi Star, Mesh, Ring, serta peran Switch dan Router dalam transmisi paket data.',
             'konten' => "## Topologi Jaringan\n\nTopologi jaringan adalah susunan fisik atau logis dari node/komputer yang saling terhubung dalam sebuah jaringan.\n\n### Jenis Topologi Populer:\n- **Topologi Star:** Semua node terhubung ke satu konsentrator pusat (Switch/Hub). Mudah dikelola dan jika satu kabel putus tidak mematikan seluruh jaringan.\n- **Topologi Mesh:** Setiap perangkat memiliki koneksi redundan ke beberapa perangkat lain. Sangat toleran terhadap kegagalan (fault tolerance tinggi).\n\n### Perangkat Penghubung:\n- **Switch:** Bekerja pada Data Link Layer (Layer 2) menggunakan MAC Address untuk mengarahkan frame data.\n- **Router:** Bekerja pada Network Layer (Layer 3) menggunakan IP Address untuk merutekan paket antar segmen jaringan yang berbeda.",
-            'gambar_cover' => 'covers/materi_network.jpg',
+            'gambar_cover' => null,
             'estimasi_menit' => 25,
             'order' => 1,
             'is_published' => true,
@@ -314,7 +320,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'struktur-data-stack-dan-queue',
             'ringkasan' => 'Konsep tumpukan dan antrean beserta implementasi operasi push, pop, enqueue, dan dequeue.',
             'konten' => "## Stack vs Queue\n\nDalam komputasi, cara data disimpan menentukan efisiensi akses dan manipulasi data tersebut.\n\n### 1. Stack (Tumpukan)\nMenganut prinsip **LIFO (Last In, First Out)** — elemen yang terakhir masuk adalah yang pertama keluar.\n- Operasi: `push()` (menambah), `pop()` (mengambil), `peek()` (melihat puncak).\n- Contoh nyata: Riwayat tombol Back pada browser, fitur Undo (Ctrl+Z).\n\n### 2. Queue (Antrean)\nMenganut prinsip **FIFO (First In, First Out)** — elemen yang pertama kali masuk adalah yang pertama keluar.\n- Operasi: `enqueue()` (masuk antrean), `dequeue()` (keluar antrean).\n- Contoh nyata: Antrean cetak printer (print spooler), pemrosesan antrean pesan/job.",
-            'gambar_cover' => 'covers/materi_stack_queue.jpg',
+            'gambar_cover' => null,
             'estimasi_menit' => 20,
             'order' => 1,
             'is_published' => true,

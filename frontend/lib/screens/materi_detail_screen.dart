@@ -39,7 +39,7 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
           _materi = response['data'];
           _isLoading = false;
         });
-        final quiz = _materi!['quiz'];
+        final quiz = _materi?['quiz'];
         if (quiz != null) {
           _fetchQuizAttempts(quiz['id']);
         }
@@ -129,14 +129,14 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
       );
     }
 
-    final judul = _materi!['judul'] ?? '';
-    final tpAtp = _materi!['tp_atp'] ?? {};
-    final ringkasan = _materi!['ringkasan'] ?? '';
-    final konten = _materi!['konten'] ?? '';
-    final arModel = _materi!['ar_model'];
-    final menit = _materi!['estimasi_menit'] ?? 15;
-    final gambarCover =
-        _materi!['gambar_cover_url'] ?? _materi!['gambar_cover'];
+    final materi = _materi!;
+    final judul = materi['judul'] ?? '';
+    final tpAtp = materi['tp_atp'] ?? {};
+    final ringkasan = materi['ringkasan'] ?? '';
+    final konten = materi['konten'] ?? '';
+    final arModel = materi['ar_model'];
+    final menit = materi['estimasi_menit'] ?? 15;
+    final gambarCover = materi['gambar_cover_url'] ?? materi['gambar_cover'];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -253,7 +253,7 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
           const SizedBox(height: 20),
 
           // Quiz Section (if linked)
-          if (_materi!['quiz'] != null) _buildQuizSection(_materi!['quiz']),
+          if (materi['quiz'] != null) _buildQuizSection(materi['quiz']),
           const SizedBox(height: 30),
         ],
       ),
@@ -518,12 +518,12 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
                     color: Colors.white, fontSize: 12, height: 1.3)),
           ],
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _buildQuizBadge(Icons.timer_outlined, '$timeLimit menit'),
-              const SizedBox(width: 8),
               _buildQuizBadge(Icons.help_outline, '$questionsCount soal'),
-              const SizedBox(width: 8),
               _buildQuizBadge(Icons.check_circle_outline, 'KKM $passingScore'),
             ],
           ),

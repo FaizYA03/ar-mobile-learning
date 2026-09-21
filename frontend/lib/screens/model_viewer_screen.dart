@@ -301,9 +301,15 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
     if (glbPath.startsWith('http://') || glbPath.startsWith('https://')) {
       return glbPath;
     }
-    if (glbPath.startsWith('/')) return 'file://$glbPath';
     if (RegExp(r'^[A-Za-z]:\\').hasMatch(glbPath)) return 'file:///$glbPath';
+    if (glbPath.startsWith('file:///')) return glbPath;
     final base = ApiService.baseUrl.replaceFirst('/api', '');
+    if (glbPath.startsWith('/storage/')) {
+      return '$base$glbPath';
+    }
+    if (glbPath.startsWith('storage/')) {
+      return '$base/$glbPath';
+    }
     return '$base/storage/$glbPath';
   }
 

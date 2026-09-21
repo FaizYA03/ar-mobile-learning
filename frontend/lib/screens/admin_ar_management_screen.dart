@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../services/api_service.dart';
+import 'model_viewer_screen.dart';
 
 class AdminArManagementScreen extends StatefulWidget {
   const AdminArManagementScreen({super.key});
@@ -60,7 +60,9 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
 
   String _storageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
-    return '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$path';
+    final normalized =
+        path.startsWith('storage/') ? path.substring('storage/'.length) : path;
+    return '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$normalized';
   }
 
   @override
@@ -257,47 +259,13 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
   }
 
   void _show3DPreview(dynamic model) {
-    final glbUrl = _storageUrl(model['glb_path']);
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(model['model_name'] ?? 'Preview 3D',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 16)),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 400,
-              width: double.maxFinite,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                child: ModelViewer(
-                  src: glbUrl,
-                  autoRotate: true,
-                  cameraControls: true,
-                ),
-              ),
-            ),
-          ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ModelViewerScreen(
+          arModelId: model['id'],
+          modelName: model['model_name'] ?? 'Preview 3D',
+          modelUrl: model['glb_path'],
         ),
       ),
     );
@@ -1247,6 +1215,7 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
                   fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: DropdownButtonFormField<int>(
             initialValue: selectedModelId,
+            isExpanded: true,
             decoration: InputDecoration(
                 labelText: 'Pilih 3D Model',
                 border: OutlineInputBorder(

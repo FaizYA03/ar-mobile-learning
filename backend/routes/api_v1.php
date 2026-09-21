@@ -9,3 +9,4 @@ Route::get('/content/version', [AppConfigController::class, 'contentVersion']);
 Route::get('/ar/content', [ArContentController::class, 'index']);
 Route::get('/ar/resolve', [ArContentController::class, 'resolve']);
 Route::get('/ar/resolve/marker', [ArContentController::class, 'resolveByMarkerId']);
+Route::get('/ar/markers', [ArContentController::class, 'markers']);

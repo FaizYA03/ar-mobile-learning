@@ -36,9 +36,9 @@ class ArContentController extends Controller
                 'category' => $model->category,
                 'version' => $model->version,
                 'is_active' => $model->is_active,
-                'glb_url' => $model->glb_path ? Storage::url($model->glb_path) : null,
+                'glb_url' => $model->glb_path ? url(Storage::url($model->glb_path)) : null,
                 'glb_path' => $model->glb_path,
-                'thumbnail_url' => $model->thumbnail_path ? Storage::url($model->thumbnail_path) : null,
+                'thumbnail_url' => $model->thumbnail_path ? url(Storage::url($model->thumbnail_path)) : null,
                 'thumbnail_path' => $model->thumbnail_path,
                 'markers' => $model->markers->map(function ($marker) {
                     return [
@@ -47,7 +47,7 @@ class ArContentController extends Controller
                         'ar_uco_id' => $marker->ar_uco_id,
                         'aruco_dictionary' => $marker->aruco_dictionary,
                         'marker_type' => $marker->marker_type,
-                        'image_url' => $marker->image_path ? Storage::url($marker->image_path) : null,
+                        'image_url' => $marker->image_path ? url(Storage::url($marker->image_path)) : null,
                         'image_path' => $marker->image_path,
                         'status' => $marker->status,
                         'updated_at' => $marker->updated_at?->toIso8601String(),
@@ -68,7 +68,7 @@ class ArContentController extends Controller
                         'rotation_z' => $hotspot->rotation_z ?? 0,
                         'scale' => $hotspot->scale ?? 1.0,
                         'sort_order' => $hotspot->sort_order ?? 0,
-                        'image_url' => $hotspot->image_path ? Storage::url($hotspot->image_path) : null,
+                        'image_url' => $hotspot->image_path ? url(Storage::url($hotspot->image_path)) : null,
                         'image_path' => $hotspot->image_path,
                     ];
                 }),
@@ -139,9 +139,9 @@ class ArContentController extends Controller
                     'description' => $model->description,
                     'category' => $model->category,
                     'version' => $model->version,
-                    'glb_url' => $model->glb_path ? Storage::url($model->glb_path) : null,
+                    'glb_url' => $model->glb_path ? url(Storage::url($model->glb_path)) : null,
                     'glb_path' => $model->glb_path,
-                    'thumbnail_url' => $model->thumbnail_path ? Storage::url($model->thumbnail_path) : null,
+                    'thumbnail_url' => $model->thumbnail_path ? url(Storage::url($model->thumbnail_path)) : null,
                     'thumbnail_path' => $model->thumbnail_path,
                 ],
                 'hotspots' => $model->hotspots->where('is_active', true)->map(function ($hotspot) {
@@ -156,7 +156,6 @@ class ArContentController extends Controller
                         'rotation_y' => $hotspot->rotation_y ?? 0,
                         'rotation_z' => $hotspot->rotation_z ?? 0,
                         'scale' => $hotspot->scale ?? 1.0,
-                        'sort_order' => $hotspot->sort_order ?? 0,
                     ];
                 })->values(),
             ],
@@ -218,9 +217,9 @@ class ArContentController extends Controller
                     'description' => $model->description,
                     'category' => $model->category,
                     'version' => $model->version,
-                    'glb_url' => $model->glb_path ? Storage::url($model->glb_path) : null,
+                    'glb_url' => $model->glb_path ? url(Storage::url($model->glb_path)) : null,
                     'glb_path' => $model->glb_path,
-                    'thumbnail_url' => $model->thumbnail_path ? Storage::url($model->thumbnail_path) : null,
+                    'thumbnail_url' => $model->thumbnail_path ? url(Storage::url($model->thumbnail_path)) : null,
                     'thumbnail_path' => $model->thumbnail_path,
                 ],
                 'hotspots' => $model->hotspots->where('is_active', true)->map(function ($hotspot) {
@@ -239,6 +238,34 @@ class ArContentController extends Controller
                     ];
                 })->values(),
             ],
+        ]);
+    }
+
+    public function markers(): JsonResponse
+    {
+        $markers = ArMarker::where('status', 'active')
+            ->with(['models' => function ($q) {
+                $q->where('is_active', true);
+            }])
+            ->orderBy('ar_uco_id')
+            ->get()
+            ->map(function ($marker) {
+                return [
+                    'id' => $marker->id,
+                    'marker_id' => $marker->marker_id,
+                    'ar_uco_id' => $marker->ar_uco_id,
+                    'aruco_dictionary' => $marker->aruco_dictionary,
+                    'marker_type' => $marker->marker_type,
+                    'image_url' => $marker->image_path ? url(Storage::url($marker->image_path)) : null,
+                    'image_path' => $marker->image_path,
+                    'model_name' => $marker->models->first()?->model_name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar marker berhasil diambil',
+            'data' => $markers,
         ]);
     }
 }

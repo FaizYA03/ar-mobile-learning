@@ -48,6 +48,8 @@ class DashboardController extends Controller
             'data' => [
                 'stats' => [
                     'total_quizzes' => Quiz::count(),
+                    'total_materi' => Materi::count(),
+                    'total_ar_models' => ArModel::count(),
                 ],
             ],
         ]);

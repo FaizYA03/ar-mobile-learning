@@ -16,6 +16,7 @@ class AppConfigController extends Controller
     public function config(): JsonResponse
     {
         $maintenanceMode = AppSetting::getValue('maintenance_mode', false);
+        $arcoreEnabled = AppSetting::getValue('arcore_enabled', true);
         $latestVersion = AppVersion::getLatest('android');
 
         return response()->json([
@@ -23,6 +24,7 @@ class AppConfigController extends Controller
             'message' => 'Konfigurasi aplikasi berhasil diambil',
             'data' => [
                 'maintenance_mode' => (bool) $maintenanceMode,
+                'arcore_enabled' => (bool) $arcoreEnabled,
                 'latest_version' => $latestVersion?->version ?? null,
                 'minimum_supported_version' => $latestVersion?->minimum_supported_version ?? null,
                 'build_number' => $latestVersion?->build_number ?? null,

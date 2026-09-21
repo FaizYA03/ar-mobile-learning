@@ -1,7 +1,7 @@
 # AR MOBILE LEARNING — PROJECT STATUS REPORT
 
-> **Tanggal:** 18 September 2026
-> **Versi:** 0.4.0-alpha
+> **Tanggal:** 21 September 2026
+> **Versi:** 0.5.0-alpha
 > **Stack:** Flutter (Frontend) + Laravel 12 (Backend) + SQLite (dev) / MySQL (prod)
 
 ---
@@ -13,7 +13,7 @@
 | Backend API | Partial | ~55% |
 | Frontend UI | Partial | ~60% |
 | Database Schema | Partial | ~70% |
-| AR System | Partial | ~40% (UI + AR camera done, marker mapping backend pending) |
+| AR System | Partial | ~60% (UI + AR camera + ArUco scanner + marker/model mapping done) |
 | Integrasi FE↔BE | Partial | ~50% |
 | Build System | Verified | ✅ APK + Web builds pass |
 
@@ -79,6 +79,24 @@
 - Assets: `assets/markers/default_marker.png`
 - `pubspec.yaml`: tambah dependency `augen: ^1.4.2` + assets
 - **flutter analyze: 0 new issues** (4 pre-existing info-level deprecations only)
+
+### 🔧 Bugfix Batch 1 — Hasil Pengetesan Manual Android (21 Sep 2026)
+
+5 bug dari pengujian di perangkat Android telah diperbaiki:
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| 1 | Scanner ArUco menampilkan "OpenCV library NOT loaded" | `ArUcoService.initialize()` set `_nativeLibraryReady = true` tanpa probe nyata (badge jingga berasal dari APK lama; `libdartcv.so` sebenarnya sudah terbundle di APK arm64-v8a) | Probe nyata native library (alokasi `cv.Mat` + buat `cv.ArucoDetector`) di `initialize()`; status UI akurat + tombol retry "Coba Lagi" di `ar_uco_scanner_screen.dart` |
+| 2 | Preview 3D blank (guru/admin) | WebView `model_viewer_plus` dirender di dalam `AlertDialog` (flaky di Android); path `glb_path` dari API kadang berawalan `storage/` | Preview dibuka full-screen via `ModelViewerScreen` (sama seperti alur siswa); `_storageUrl()` menormalkan prefix `storage/` agar tidak dobel `/storage/storage/` (guru & admin) |
+| 3 | "Tambah Soal" tidak tersimpan tanpa feedback | Handler submit dialog guru punya 2 `return` diam-diam dan tanpa try/catch → error API tidak terlihat | Validasi (soal wajib, semua opsi wajib, pilih jawaban benar) + try/catch + SnackBar sukses/gagal di `guru_dashboard.dart` |
+| 4 | Dashboard guru menampilkan "0 Materi" / "0 AR" | `guru_dashboard.dart` hardcode `'0'`; backend `guruDashboard()` hanya mengembalikan `total_quizzes` | Backend kini mengembalikan `total_materi` & `total_ar_models` (`DashboardController`); frontend menampilkan nilai API |
+| 5 | Dropdown "Hubungkan ke marker" meluber (overflow) | `DropdownButtonFormField<int>` di `AlertDialog` tanpa `isExpanded: true` | Tambah `isExpanded: true` di dialog attach guru & admin |
+
+**Verifikasi:**
+- `flutter analyze` → ✅ 0 error/warning baru (hanya info-level lint pre-existing)
+- `flutter test` → ✅ 60 passed
+- `php artisan test` → ✅ 72 passed (450 assertions)
+- Storage link + GLB: `GET /storage/models/wireless_router.glb` → HTTP 200 (1.748.608 byte)
 
 ### 🔧 Bugfix & UI Polish (18 Sep 2026)
 - **Fix Right Overflowed by X Pixels di Card 3D Model**: Mengganti `Row` chip info dengan `Wrap` + `ConstrainedBox` pada `guru_ar_management_screen.dart` dan `admin_ar_management_screen.dart`.
@@ -158,7 +176,7 @@
 | TP/ATP (Informatika Fase E) | 3 | ✅ |
 | Materi (terhubung ke TP/ATP) | 4 | ✅ |
 | AR Models (CPU, Router) | 2 | ✅ |
-| AR Markers | 0 | ❌ Belum ada |
+| AR Markers (MARKER-CPU-001, MARKER-ROUTER-001) | 2 | ✅ |
 
 ### 1.5 Akun Demo
 
@@ -237,9 +255,9 @@ frontend/lib/
 | Screen | Deskripsi | Prioritas |
 |--------|-----------|-----------| 
 | **Siswa — Profile Edit** | Edit profil siswa | 🟡 Sedang |
-| **Guru — AR Management** | Upload marker + model + hotspot | 🔴 Tinggi |
 | **Guru — Hasil Quiz Siswa** | Lihat skor siswa | 🟡 Sedang |
-| **Admin — AR Management** | CRUD marker + model + hotspot + mapping | 🔴 Tinggi |
+
+> **Catatan:** AR Management Guru (`guru_ar_management_screen.dart`) dan Admin (`admin_ar_management_screen.dart`) **sudah diimplementasikan** sejak pengembangan backend AR (tab Model / Marker / Hotspot / Mapping, terhubung ke `ArController`).
 
 ### 2.4 Dependencies
 
@@ -413,18 +431,17 @@ Bagian-bagian master prompt yang sudah diimplementasi:
 - ✅ Admin Materi Management (CRUD semua data)
 - ✅ Admin Quiz Management (CRUD semua quiz + soal)
 - ✅ Admin Hasil Quiz (lihat semua hasil siswa + statistik)
+- ✅ Admin AR management (marker, model, hotspot) — `admin_ar_management_screen.dart`
+- ✅ Guru AR management (marker, model, hotspot) — `guru_ar_management_screen.dart`
+- ✅ File upload GLB/3D model (guru & admin AR management)
 - ✅ Role-based routing
 - ✅ Logout dengan konfirmasi
 
 Bagian master prompt yang belum diimplementasi:
-- ❌ Admin AR management (marker, model, hotspot)
-- ❌ Guru AR management (marker, model, hotspot)
 - ❌ Guru lihat hasil quiz siswa
 - ❌ Profile edit screen
-- ❌ File upload GLB/3D model
-- ❌ Error/empty states yang konsisten di semua halaman
 
 ---
 
 *Report ini dibuat untuk referensi pengerjaan selanjutnya.*
-*Terakhir diperbarui: 18 September 2026, 08:30 WIB*
+*Terakhir diperbarui: 21 September 2026*
