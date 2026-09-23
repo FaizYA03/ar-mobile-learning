@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/debug/ar_debug_log.dart';
 import '../models/models.dart';
 import '../screens/model_viewer_screen.dart';
+import '../services/ar_camera_projector.dart';
 import '../services/ar_uco_service.dart';
 import '../services/ar_content_resolver.dart';
 import '../services/content_sync_service.dart';
@@ -29,18 +33,22 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   String? _manualMarkerId;
   bool _showManualInput = false;
 
-  static const List<Color> _markerColors = [
-    Colors.red,
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.pink,
-    Colors.amber,
-    Colors.cyan,
-    Colors.lime,
-  ];
+  ArResolveResult? _arResolve;
+  String? _arModelSrc;
+  String? _arModelName;
+  ModelAnchor? _arAnchor;
+  List<Offset>? _arTrackedCorners;
+  ModelAnchor? _arHeldAnchor;
+  List<Offset>? _arHeldCorners;
+  bool _arMarkerLost = false;
+  Size _previewSize = Size.zero;
+  int _arLastLogMs = 0;
+  WebViewController? _arWebViewController;
+  bool _showDebug = false;
+
+  static const String _arInitialOrbit = '0deg 75deg 105%';
+  static const String _arInitialTarget = '0m 0m 0m';
+  static const String _arInitialFov = '45deg';
 
   bool _cameraPermissionDenied = false;
 
@@ -101,7 +109,11 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     try {
       _service = ArUcoService();
       await _service!.initialize();
-      ArDebugLog.log('Camera initialized, refreshing content...');
+      ArDebugLog.log(
+          'Camera initialized: format=${_service!.frameFormatLabel}, '
+          'sensorOrientation=${_service!.sensorOrientation}, '
+          'nativeReady=${_service!.nativeLibraryReady}');
+      ArDebugLog.log('Refreshing AR content...');
       await ArContentResolver.refreshContent();
       if (mounted) {
         setState(() {
@@ -171,10 +183,77 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   }
 
   void _onResultsChanged() {
-    if (mounted) {
-      setState(() {
-        _detectedMarkers = _service!.resultsNotifier.value;
-      });
+    if (!mounted) return;
+    final markers = _service!.resultsNotifier.value;
+    final arActive = _arResolve != null;
+    List<Offset>? previewCorners;
+    ModelAnchor? newAnchor;
+
+    if (arActive && markers.isNotEmpty) {
+      previewCorners = _mapPreviewCorners(markers.first.corners);
+      if (previewCorners != null && previewCorners.isNotEmpty) {
+        final raw = previewCorners.map((p) => [p.dx, p.dy]).toList();
+        final footprint = ArCameraProjector.computeMarkerFootprint(raw);
+        newAnchor = ArCameraProjector.computeModelAnchor(
+          footprint,
+          previewW: _previewSize.width,
+          previewH: _previewSize.height,
+          modelScale: 1.6,
+          liftFactor: 0.8,
+        );
+      }
+    }
+
+    setState(() {
+      _detectedMarkers = markers;
+      if (arActive) {
+        if (newAnchor != null && newAnchor.isValid && previewCorners != null) {
+          // Marker terdeteksi: simpan posisi terkini sekaligus "last known".
+          _arAnchor = newAnchor;
+          _arTrackedCorners = previewCorners;
+          _arHeldAnchor = newAnchor;
+          _arHeldCorners = previewCorners;
+          _arMarkerLost = false;
+        } else {
+          // Marker hilang / di luar kamera / footprint tidak valid:
+          // model tetap di posisi terakhir yang diketahui.
+          _arAnchor = _arHeldAnchor;
+          _arTrackedCorners = _arHeldCorners;
+          _arMarkerLost = _arHeldAnchor != null;
+        }
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (now - _arLastLogMs > 1000) {
+          _arLastLogMs = now;
+          final a = _arAnchor;
+          ArDebugLog.log(
+            '[AR] markers=${markers.length} anchor=${a == null ? 'null' : '${a.left.round()},${a.top.round()},${a.width.round()}x${a.height.round()}'} lost=$_arMarkerLost',
+          );
+        }
+      }
+    });
+  }
+
+  List<Offset>? _mapPreviewCorners(List<List<double>> rawCorners) {
+    final w = _previewSize.width;
+    final h = _previewSize.height;
+    if (w <= 0 || h <= 0) return null;
+    try {
+      final deviceRotationDeg = ArCameraProjector.deviceRotationToDegrees(
+        _service?.controller?.value.deviceOrientation.index ?? 0,
+      );
+      final mapped = ArUcoService.mapCornersToPreview(
+        corners: rawCorners,
+        imageWidth: _service!.frameWidth.toDouble(),
+        imageHeight: _service!.frameHeight.toDouble(),
+        sensorOrientationDeg: _service!.sensorOrientation,
+        deviceRotationDeg: deviceRotationDeg,
+      );
+      // mapCornersToPreview mengembalikan koordinat ternormalisasi (0..1);
+      // kalikan dengan ukuran viewport agar menjadi koordinat piksel untuk
+      // overlay (painter quad & anchor model).
+      return mapped.map((p) => Offset(p[0] * w, p[1] * h)).toList();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -285,7 +364,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       return;
     }
 
-    await _downloadAndNavigate(resolveResult);
+    await _enterArModeAfterResolve(resolveResult);
   }
 
   void _showManualIdInput() {
@@ -365,40 +444,112 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     await _downloadAndNavigate(fallbackResult);
   }
 
+  Future<void> _enterArModeAfterResolve(ArResolveResult resolveResult) async {
+    if (mounted) {
+      setState(() => _isResolving = true);
+    }
+    final src = await _prepareModelSrc(resolveResult);
+    if (!mounted) return;
+
+    if (src == null) {
+      setState(() => _isResolving = false);
+      _downloadAndNavigate(resolveResult);
+      return;
+    }
+
+    setState(() {
+      _isResolving = false;
+      _arResolve = resolveResult;
+      _arModelSrc = src;
+      _arModelName = resolveResult.model.modelName;
+      _arAnchor = null;
+      _arTrackedCorners = null;
+      _arHeldAnchor = null;
+      _arHeldCorners = null;
+      _arMarkerLost = false;
+    });
+    ArDebugLog.log(
+        'AR overlay mode: model ${resolveResult.model.id} (${resolveResult.model.modelName})');
+
+    if (!_isScanning) {
+      _toggleScanning();
+    } else {
+      _onResultsChanged();
+    }
+  }
+
+  void _exitArMode() {
+    final wasScanning = _isScanning;
+    if (wasScanning) _toggleScanning();
+    setState(() {
+      _arResolve = null;
+      _arModelSrc = null;
+      _arModelName = null;
+      _arAnchor = null;
+      _arTrackedCorners = null;
+      _arHeldAnchor = null;
+      _arHeldCorners = null;
+      _arMarkerLost = false;
+      _arWebViewController = null;
+    });
+    if (wasScanning) _toggleScanning();
+  }
+
+  void _openFullScreen() {
+    final result = _arResolve;
+    if (result == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModelViewerScreen(
+          arModelId: result.model.id,
+          modelName: result.model.modelName,
+          modelUrl: _arModelSrc?.isNotEmpty == true
+              ? _arModelSrc
+              : result.model.glbUrl,
+          hotspots: result.hotspots,
+        ),
+      ),
+    ).then((_) {
+      ArContentResolver.refreshContent();
+    });
+  }
+
+  Future<String?> _prepareModelSrc(ArResolveResult resolveResult) async {
+    final cachedPath =
+        await ContentSyncService.getCachedModelPath(resolveResult.model.id);
+    if (cachedPath != null && await File(cachedPath).exists()) {
+      ArDebugLog.log('Using cached model: $cachedPath');
+      return cachedPath;
+    }
+    if (resolveResult.model.glbUrl == null) return null;
+    ArDebugLog.log('Downloading GLB: ${resolveResult.model.glbUrl}');
+    if (mounted) {
+      setState(() => _isResolving = true);
+    }
+    final asset = AssetDownloadInfo(
+      modelId: resolveResult.model.id,
+      version: resolveResult.model.version,
+      url: resolveResult.model.glbUrl!,
+      assetType: 'model',
+      fileName:
+          'model_${resolveResult.model.id}_v${resolveResult.model.version}.glb',
+    );
+    final downloadResult = await ContentSyncService.downloadAsset(asset);
+    if (downloadResult.success && downloadResult.localPath != null) {
+      await ContentSyncService.updateManifestAfterDownload(
+          asset, downloadResult.localPath!);
+      ArDebugLog.log('Downloaded to: ${downloadResult.localPath}');
+      return downloadResult.localPath;
+    }
+    ArDebugLog.error('Download failed: ${downloadResult.error}');
+    return null;
+  }
+
   Future<void> _downloadAndNavigate(ArResolveResult resolveResult) async {
     final result = resolveResult;
 
-    final cachedPath =
-        await ContentSyncService.getCachedModelPath(result.model.id);
-    String displayPath;
-    if (cachedPath != null && await File(cachedPath).exists()) {
-      displayPath = cachedPath;
-      ArDebugLog.log('Using cached model: $displayPath');
-    } else if (result.model.glbUrl != null) {
-      ArDebugLog.log('Downloading GLB: ${result.model.glbUrl}');
-      if (mounted) {
-        setState(() => _isResolving = true);
-      }
-      final asset = AssetDownloadInfo(
-        modelId: result.model.id,
-        version: result.model.version,
-        url: result.model.glbUrl!,
-        assetType: 'model',
-        fileName: 'model_${result.model.id}_v${result.model.version}.glb',
-      );
-      final downloadResult = await ContentSyncService.downloadAsset(asset);
-      if (downloadResult.success && downloadResult.localPath != null) {
-        await ContentSyncService.updateManifestAfterDownload(
-            asset, downloadResult.localPath!);
-        displayPath = downloadResult.localPath!;
-        ArDebugLog.log('Downloaded to: $displayPath');
-      } else {
-        ArDebugLog.error('Download failed: ${downloadResult.error}');
-        displayPath = result.model.glbUrl ?? '';
-      }
-    } else {
-      displayPath = result.model.glbPath ?? '';
-    }
+    final displayPath = await _prepareModelSrc(result);
 
     if (mounted) {
       setState(() => _isResolving = false);
@@ -408,8 +559,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
           builder: (context) => ModelViewerScreen(
             arModelId: result.model.id,
             modelName: result.model.modelName,
-            modelUrl:
-                displayPath.isNotEmpty ? displayPath : result.model.glbUrl,
+            modelUrl: displayPath ?? result.model.glbUrl,
             hotspots: result.hotspots,
           ),
         ),
@@ -422,200 +572,351 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ArUco Marker Scanner'),
-        actions: [
-          if (_isScanning)
-            IconButton(
-              icon: const Icon(Icons.stop),
-              onPressed: _toggleScanning,
-              tooltip: 'Stop',
-            )
-          else if (_isInitialized)
-            IconButton(
-              icon: const Icon(Icons.qr_code_scanner),
-              onPressed: _toggleScanning,
-              tooltip: 'Start',
+      // Full-bleed kamera: tanpa AppBar. Semua kontrol lebih kecil, transparan,
+      // dan ditempatkan di safe area agar tidak menutupi AR/objek 3D.
+      backgroundColor: Colors.black,
+      body: _cameraPermissionDenied
+          ? _buildPermissionDeniedUI()
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                _previewSize = constraints.biggest;
+                return Stack(
+                  children: [
+                    if (_isInitialized && (_service?.controller != null))
+                      CameraPreview(_service!.controller!),
+                    if (!_isInitialized)
+                      const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: Colors.greenAccent,
+                        ),
+                      ),
+                    if (_arTrackedCorners != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _MarkerQuadPainter(
+                              _arTrackedCorners,
+                              dimmed: _arMarkerLost,
+                            ),
+                          ),
+                        ),
+                      ),
+                    _buildArModelOverlay(),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildTopBar(),
+                            const SizedBox(height: 6),
+                            if (_arResolve == null)
+                              Center(child: _buildScanStatusPill())
+                            else
+                              Center(child: _buildArStatusPill()),
+                            if (_showDebug) _buildDebugPanel(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_arResolve == null && (_isScanning || _isResolving))
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: SafeArea(
+                          top: false,
+                          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: _buildScanBottomPanel(),
+                        ),
+                      ),
+                    if (_arResolve != null) _buildArControlBar(),
+                  ],
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          _circleIconBtn(
+            Icons.arrow_back,
+            20,
+            () => Navigator.maybePop(context),
+            tooltip: 'Kembali',
+          ),
+          const Spacer(),
+          _circleIconBtn(
+            Icons.tag,
+            20,
+            _showManualIdInput,
+            tooltip: 'Marker ID manual',
+          ),
+          _circleIconBtn(
+            _isScanning ? Icons.videocam_off : Icons.videocam,
+            20,
+            _isInitialized ? _toggleScanning : null,
+            tooltip: _isScanning ? 'Hentikan scan' : 'Mulai scan',
+          ),
+          if (kDebugMode)
+            _circleIconBtn(
+              _showDebug ? Icons.info : Icons.info_outline,
+              20,
+              () => setState(() => _showDebug = !_showDebug),
+              tooltip: 'Info debug',
             ),
         ],
       ),
-      body: _cameraPermissionDenied
-          ? _buildPermissionDeniedUI()
-          : Stack(
-              children: [
-                if (_isInitialized && (_service?.controller != null))
-                  CameraPreview(_service!.controller!),
-                if (!_isInitialized)
-                  const Center(child: CircularProgressIndicator()),
-                Positioned(
-                  top: 80,
-                  left: 16,
-                  right: 16,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _isScanning ? 'Scanning...' : 'Ready',
-                          style: TextStyle(
-                            color: (_service?.nativeLibraryReady ?? false)
-                                ? Colors.greenAccent
-                                : Colors.orangeAccent,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          !(_service?.nativeLibraryReady ?? false)
-                              ? 'OpenCV library NOT loaded - detection unavailable'
-                              : _detectedMarkers.isNotEmpty
-                                  ? 'Markers detected: ${_detectedMarkers.length}'
-                                  : 'No markers detected yet',
-                          style: TextStyle(
-                            color: (_service?.nativeLibraryReady ?? false)
-                                ? Colors.white
-                                : Colors.orangeAccent,
-                            fontSize: 14,
-                          ),
-                        ),
-                        if (!(_service?.nativeLibraryReady ?? false) &&
-                            _isInitialized) ...[
-                          const SizedBox(height: 8),
-                          FilledButton.icon(
-                            onPressed: _reinitService,
-                            icon: const Icon(Icons.refresh, size: 18),
-                            label: const Text('Coba Lagi'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              minimumSize: const Size(0, 36),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+    );
+  }
+
+  Widget _circleIconBtn(IconData icon, double size, VoidCallback? onTap,
+      {String? tooltip}) {
+    final button = Material(
+      color: Colors.black38,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, size: size, color: Colors.white),
+        ),
+      ),
+    );
+    if (tooltip == null) return button;
+    return Tooltip(message: tooltip, child: button);
+  }
+
+  Widget _buildPill(
+    String text, {
+    IconData? icon,
+    Color color = Colors.white,
+    bool glowing = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black38,
+        borderRadius: BorderRadius.circular(20),
+        border: glowing
+            ? Border.all(
+                color: color.withValues(alpha: 0.6),
+                width: 1,
+              )
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScanStatusPill() {
+    if (!_isScanning && !_isResolving) {
+      if (_isInitialized) return const SizedBox.shrink();
+      return _buildPill('Menyiapkan kamera...', icon: Icons.hourglass_top);
+    }
+    if (_isResolving) {
+      return _buildPill(
+        'Menghubungi server...',
+        icon: Icons.sync,
+        color: Colors.greenAccent,
+      );
+    }
+    if (_detectedMarkers.isNotEmpty) {
+      return _buildPill(
+        'Marker terdeteksi',
+        icon: Icons.check_circle_outline,
+        color: Colors.greenAccent,
+        glowing: true,
+      );
+    }
+    return _buildPill(
+      'Scanning marker...',
+      icon: Icons.qr_code_scanner,
+      color: Colors.white70,
+    );
+  }
+
+  Widget _buildArStatusPill() {
+    final lost = _arMarkerLost;
+    return _buildPill(
+      lost ? 'Marker hilang - model dipertahankan' : '3D model dimuat',
+      icon: lost ? Icons.touch_app : Icons.view_in_ar,
+      color: lost ? Colors.amberAccent : Colors.greenAccent,
+      glowing: !lost,
+    );
+  }
+
+  Widget _buildDebugPanel() {
+    final first = _detectedMarkers.isNotEmpty ? _detectedMarkers.first : null;
+    final a = _arAnchor;
+    final anchorTxt = a == null
+        ? '-'
+        : '${a.left.round()},${a.top.round()} ${a.width.round()}x${a.height.round()}';
+    final text = 'markers: ${_detectedMarkers.length} | '
+        'id: ${first?.markerId ?? '-'} | '
+        'corners: ${first?.corners.length ?? 0}\n'
+        'anchor: $anchorTxt | lost: $_arMarkerLost | '
+        'lib: ${(_service?.nativeLibraryReady ?? false) ? 'ok' : 'missing'}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black45,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  height: 1.4,
+                ),
+              ),
+              if (!(_service?.nativeLibraryReady ?? false) && _isInitialized)
+                TextButton.icon(
+                  onPressed: _reinitService,
+                  icon: const Icon(Icons.refresh, size: 14),
+                  label: const Text('Coba Lagi'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.orangeAccent,
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 32),
                   ),
                 ),
-                if (_detectedMarkers.isNotEmpty && _isScanning)
-                  Positioned(
-                    top: MediaQuery.of(context).size.height * 0.15,
-                    left: 0,
-                    right: 0,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: _detectedMarkers.map((marker) {
-                          final colorIndex =
-                              marker.markerId % _markerColors.length;
-                          final color = _markerColors[colorIndex];
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: color, width: 2),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Marker #${marker.markerId}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '${marker.corners.length ~/ 2} corners',
-                                  style: TextStyle(
-                                    color: color.withValues(alpha: 0.5),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                if (_isScanning || _isResolving)
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 40),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_isResolving) ...[
-                            const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.greenAccent,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Menghubungi server...',
-                              style: TextStyle(
-                                color: Colors.greenAccent,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ] else ...[
-                            Text(
-                              'Marker ID: ${_detectedMarkers.isNotEmpty ? _detectedMarkers.first.markerId : 'none detected'}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildResolveButton(),
-                            const SizedBox(height: 8),
-                            TextButton(
-                              onPressed: _showManualIdInput,
-                              child: const Text(
-                                'Masukkan Marker ID Manual',
-                                style: TextStyle(color: Colors.white70),
-                              ),
-                            ),
-                            if (_showManualInput) ...[
-                              const SizedBox(height: 8),
-                              _buildManualInputField(),
-                              const SizedBox(height: 8),
-                              _buildManualSubmitButton(),
-                            ],
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _panel(Widget child) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildScanBottomPanel() {
+    if (_isResolving) {
+      return _panel(
+        const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.greenAccent,
+              ),
             ),
+            SizedBox(width: 10),
+            Text(
+              'Menghubungi server...',
+              style: TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_showManualInput) {
+      return _panel(
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildManualInputField(),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _buildManualSubmitButton()),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: () => setState(() => _showManualInput = false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text('Batal'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_detectedMarkers.isNotEmpty) {
+      return _panel(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.view_in_ar, size: 16, color: Colors.greenAccent),
+            const SizedBox(width: 8),
+            Text(
+              'Marker #${_detectedMarkers.first.markerId}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 12),
+            _buildResolveButton(),
+          ],
+        ),
+      );
+    }
+
+    return _panel(
+      const Text(
+        'Arahkan kamera ke marker AR',
+        style: TextStyle(color: Colors.white70, fontSize: 12.5),
+      ),
     );
   }
 
@@ -625,15 +926,17 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     }
 
     final markerId = _detectedMarkers.first.markerId.toString();
-    return ElevatedButton(
+    return FilledButton(
       onPressed: _isResolving ? null : () => _resolveMarker(markerId),
-      style: ElevatedButton.styleFrom(
+      style: FilledButton.styleFrom(
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         disabledBackgroundColor: Colors.green.withValues(alpha: 0.5),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        minimumSize: const Size(0, 36),
       ),
-      child: const Text('Resolve ke 3D Model'),
+      child: const Text('Lihat 3D'),
     );
   }
 
@@ -728,4 +1031,158 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       ),
     );
   }
+
+  Widget _buildArModelOverlay() {
+    if (_arResolve == null || _arModelSrc == null) {
+      return const SizedBox.shrink();
+    }
+    // Posisi model: ikuti marker jika terdeteksi; jika marker keluar kamera,
+    // "tahan" di posisi terakhir agar model tetap stay dan tetap bisa
+    // diputar/di-zoom/digeser.
+    final anchor = _arAnchor;
+    if (anchor == null || !anchor.isValid) {
+      return const SizedBox.shrink();
+    }
+
+    final src = 'file://$_arModelSrc';
+    return Positioned(
+      left: anchor.left,
+      top: anchor.top,
+      width: anchor.width,
+      height: anchor.height,
+      child: ModelViewer(
+        src: src,
+        alt: _arModelName ?? 'Model 3D',
+        ar: false,
+        autoRotate: false,
+        // Interaksi native model-viewer: drag = rotate, pinch = zoom,
+        // dua jari geser = pan. Tidak mengubah tracking ArUco sama sekali.
+        cameraControls: true,
+        disableZoom: false,
+        cameraOrbit: _arInitialOrbit,
+        cameraTarget: _arInitialTarget,
+        fieldOfView: _arInitialFov,
+        minFieldOfView: '20deg',
+        maxFieldOfView: '60deg',
+        minCameraOrbit: '-360deg 15deg auto',
+        maxCameraOrbit: '360deg 90deg auto',
+        backgroundColor: Colors.transparent,
+        interactionPrompt: InteractionPrompt.none,
+        id: 'ar-model',
+        onWebViewCreated: (controller) => _arWebViewController = controller,
+      ),
+    );
+  }
+
+  void _resetArView() {
+    final controller = _arWebViewController;
+    if (controller == null) return;
+    unawaited(
+      controller.runJavaScript('''
+      (function() {
+        const el = document.querySelector('model-viewer');
+        if (!el) return;
+        el.cameraOrbit = '$_arInitialOrbit';
+        el.cameraTarget = '$_arInitialTarget';
+        el.fieldOfView = '$_arInitialFov';
+      })();
+    '''),
+    );
+  }
+
+  Widget _buildArControlBar() {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 460),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.black45,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.view_in_ar, size: 16, color: Colors.greenAccent),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  _arModelName ?? 'Model 3D',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.restart_alt, size: 20),
+                color: Colors.white,
+                tooltip: 'Reset View',
+                onPressed: _resetArView,
+              ),
+              IconButton(
+                icon: const Icon(Icons.fullscreen, size: 20),
+                color: Colors.cyanAccent,
+                tooltip: 'Layar Penuh',
+                onPressed: _openFullScreen,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 20),
+                color: Colors.redAccent,
+                tooltip: 'Keluar',
+                onPressed: _exitArMode,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MarkerQuadPainter extends CustomPainter {
+  final List<Offset>? corners;
+  final bool dimmed;
+
+  _MarkerQuadPainter(this.corners, {this.dimmed = false});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pts = corners;
+    if (pts == null || pts.length < 4) return;
+
+    final alpha = dimmed ? 0.25 : 0.8;
+
+    final path = Path()..addPolygon(pts, true);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = Colors.greenAccent.withValues(alpha: alpha)
+        ..strokeWidth = dimmed ? 1 : 1.5,
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.greenAccent.withValues(alpha: 0.06 * alpha),
+    );
+    for (final p in pts) {
+      canvas.drawCircle(
+        p,
+        dimmed ? 2 : 3,
+        Paint()..color = Colors.greenAccent.withValues(alpha: alpha),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MarkerQuadPainter oldDelegate) =>
+      oldDelegate.corners != corners || oldDelegate.dimmed != dimmed;
 }

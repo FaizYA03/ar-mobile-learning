@@ -1,27 +1,95 @@
-import 'dart:async';
-
 import 'package:camera/camera.dart';
 import 'package:dartcv4/dartcv.dart' as cv;
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
+import 'ar_uco_frame_math.dart';
 
+/// Format piksel aktif dari kamera. Bervariasi antar device Android.
+enum ArFrameFormat {
+  /// `ImageFormatGroup.yuv420` (paling umum, dipakai mayoritas device).
+  yuv420,
+
+  /// `ImageFormatGroup.bgra8888` (fallback untuk device yang menolak yuv420).
+  bgra8888,
+}
+
+extension ArFrameFormatLabel on ArFrameFormat {
+  String get label => switch (this) {
+        ArFrameFormat.yuv420 => 'yuv420',
+        ArFrameFormat.bgra8888 => 'bgra8888',
+      };
+}
+
+/// Pipeline deteksi ArUco dengan fokus kompatibilitas lintas device Android:
+///
+/// 1. Negosiasi format kamera (yuv420 -> bgra8888 fallback).
+/// 2. Konversi frame -> grayscale tanpa menyentuh native thread blocking UI
+///    (grayscale Y sudah chanel tunggal, tidak perlu cvtColor).
+/// 3. Deteksi asinkron via native OpenCV (`detectMarkersAsync`) sehingga
+///    frame berat tidak memblokir UI thread (penting untuk HP kelas bawah).
+/// 4. Detektor/dictionary dibuat sekali dan dipakai ulang (bukan tiap frame).
+/// 5. Geometri frame + orientasi sensor diekspos agar overlay dapat
+///    memetakan koordinat corner ke ruang preview yang benar (rotasi aman).
 class ArUcoService {
   CameraController? _controller;
   final ValueNotifier<List<ArUcoResult>> _resultsNotifier =
       ValueNotifier<List<ArUcoResult>>([]);
+
   bool _isScanning = false;
-  Timer? _debounceTimer;
-  int _frameCount = 0;
   bool _nativeLibraryReady = false;
   String? _nativeLibraryError;
+  ArFrameFormat _frameFormat = ArFrameFormat.yuv420;
+  int _sensorOrientation = 90;
+
+  int _frameSkip = 5;
+  int _frameCount = 0;
+  bool _isProcessing = false;
+  bool _disposeRequested = false;
+
+  int _frameWidth = 0;
+  int _frameHeight = 0;
+  int _processedFrames = 0;
+  int? _lastProcessMicros;
+
+  Uint8List? _pendingGray;
+  Uint8List _grayBuffer = Uint8List(0);
+
+  cv.ArucoDictionary? _dictionary;
+  cv.ArucoDetectorParameters? _detectorParams;
+  cv.ArucoDetector? _detector;
+
+  List<CameraDescription>? _cameras;
 
   CameraController? get controller => _controller;
   ValueNotifier<List<ArUcoResult>> get resultsNotifier => _resultsNotifier;
   bool get isScanning => _isScanning;
   bool get nativeLibraryReady => _nativeLibraryReady;
   String? get nativeLibraryError => _nativeLibraryError;
-  List<CameraDescription>? _cameras;
+
+  /// Format piksel aktif saat ini (untuk statistik/debugging).
+  String get frameFormatLabel => _frameFormat.label;
+
+  /// Orientasi sensor kamera dalam derajat (biasanya 90 atau 270).
+  int get sensorOrientation => _sensorOrientation;
+
+  /// Dimensi frame terakhir yang diproses.
+  int get frameWidth => _frameWidth;
+  int get frameHeight => _frameHeight;
+
+  /// Jumlah frame yang berhasil dideteksi (untuk pemonitoran performa).
+  int get processedFrameCount => _processedFrames;
+
+  /// Waktu proses deteksi terakhir dalam milidetik.
+  double? get lastProcessMs =>
+      _lastProcessMicros == null ? null : _lastProcessMicros! / 1000.0;
+
+  /// Seberapa sering frame diproses. 1 = setiap frame, 5 = tiap frame ke-5.
+  /// Turunkan pada perangkat kelas bawah untuk menghemat CPU.
+  int get frameSkip => _frameSkip;
+  set frameSkip(int value) {
+    _frameSkip = value < 1 ? 1 : value;
+  }
 
   Future<void> initialize() async {
     _cameras = await availableCameras();
@@ -30,48 +98,98 @@ class ArUcoService {
       orElse: () => _cameras!.first,
     );
 
-    _controller = CameraController(
+    final controller = await _tryCreateController(
       backCamera!,
-      ResolutionPreset.low,
-      enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.yuv420,
+      ImageFormatGroup.yuv420,
     );
+    if (controller != null) {
+      _frameFormat = ArFrameFormat.yuv420;
+      _controller = controller;
+    } else {
+      final fallback =
+          await _tryCreateController(backCamera, ImageFormatGroup.bgra8888);
+      if (fallback != null) {
+        _frameFormat = ArFrameFormat.bgra8888;
+        _controller = fallback;
+      }
+    }
 
-    await _controller!.initialize();
+    if (_controller == null) {
+      throw CameraException(
+        'initialize',
+        'Tidak dapat menginisialisasi kamera '
+            '(format yuv420 dan bgra8888 gagal di device ini).',
+      );
+    }
+
+    _sensorOrientation = backCamera.sensorOrientation;
+
     await _controller!.setExposureMode(ExposureMode.locked);
     await _controller!.setFocusMode(FocusMode.locked);
+
     _nativeLibraryReady = await _probeNativeLibrary();
     if (kDebugMode) {
-      print('Camera initialized: ${_controller?.description}');
-      print('Native library ready: $_nativeLibraryReady');
-      if (_nativeLibraryError != null) {
-        print('Native library error: $_nativeLibraryError');
+      debugPrint('Camera initialized: ${_controller!.description}');
+      debugPrint(
+        'Frame format: ${_frameFormat.label}, '
+        'sensorOrientation: $_sensorOrientation',
+      );
+      debugPrint('Native library ready: $_nativeLibraryReady');
+    }
+  }
+
+  Future<CameraController?> _tryCreateController(
+    CameraDescription description,
+    ImageFormatGroup format,
+  ) async {
+    final controller = CameraController(
+      description,
+      ResolutionPreset.low,
+      enableAudio: false,
+      imageFormatGroup: format,
+    );
+    try {
+      await controller.initialize();
+      return controller;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Camera init failed (${format.name}): $e');
       }
+      try {
+        await controller.dispose();
+      } catch (_) {
+        // Abaikan: controller gagal initialize, dispose sebatas bisa.
+      }
+      return null;
     }
   }
 
   Future<bool> _probeNativeLibrary() async {
     _nativeLibraryError = null;
     try {
+      _dictionary = cv.ArucoDictionary.predefined(
+        cv.PredefinedDictionaryType.DICT_4X4_50,
+      );
+      _detectorParams = cv.ArucoDetectorParameters.empty();
+      _detector = cv.ArucoDetector.create(_dictionary!, _detectorParams!);
+
+      // Smoke-test alokasi native agar status "siap" benar-benar akurat.
       final probe =
           cv.Mat.fromList(16, 16, cv.MatType.CV_8UC1, List<int>.filled(256, 0));
       probe.dispose();
-
-      final dict = cv.ArucoDictionary.predefined(
-        cv.PredefinedDictionaryType.DICT_4X4_50,
-      );
-      final detectorParams = cv.ArucoDetectorParameters.empty();
-      final detector = cv.ArucoDetector.create(dict, detectorParams);
-      detector.dispose();
-      detectorParams.dispose();
-      dict.dispose();
       return true;
     } catch (e, stack) {
       _nativeLibraryError = '$e';
       if (kDebugMode) {
-        print('OpenCV native library probe failed: $e');
-        print('Stack: $stack');
+        debugPrint('OpenCV native library probe failed: $e');
+        debugPrint('$stack');
       }
+      _detector?.dispose();
+      _detector = null;
+      _detectorParams?.dispose();
+      _detectorParams = null;
+      _dictionary?.dispose();
+      _dictionary = null;
       return false;
     }
   }
@@ -79,133 +197,196 @@ class ArUcoService {
   void startScanning() {
     if (_isScanning || _controller == null) return;
     if (!_nativeLibraryReady) {
-      if (kDebugMode) print('Native library not ready!');
+      if (kDebugMode) debugPrint('Native library not ready!');
       return;
     }
     _isScanning = true;
     _frameCount = 0;
+    _processedFrames = 0;
+    _lastProcessMicros = null;
+    _pendingGray = null;
+    _isProcessing = false;
     _controller!.startImageStream(_onCameraFrame);
-    if (kDebugMode) print('Scanning started');
+    if (kDebugMode) debugPrint('Scanning started');
   }
 
   void stopScanning() {
     _isScanning = false;
-    _debounceTimer?.cancel();
+    _pendingGray = null;
     if (_controller != null && _controller!.value.isStreamingImages) {
       _controller!.stopImageStream();
     }
     _resultsNotifier.value = [];
-    if (kDebugMode) print('Scanning stopped');
+    if (kDebugMode) debugPrint('Scanning stopped');
   }
 
   void _onCameraFrame(CameraImage image) {
-    if (!_isScanning) return;
+    if (!_isScanning || _disposeRequested) return;
     _frameCount++;
-    if (_frameCount % 5 != 0) return;
+    if (_frameCount % _frameSkip != 0) return;
 
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 200), () {
-      if (!_isScanning) return;
-      _processFrame(image);
-    });
+    final gray = _extractGray(image);
+    if (gray.isEmpty) return;
+
+    _frameWidth = image.width;
+    _frameHeight = image.height;
+    _pendingGray = gray;
+    _pump();
   }
 
-  Future<void> _processFrame(CameraImage image) async {
-    if (!_nativeLibraryReady) return;
+  Future<void> _pump() async {
+    if (_isProcessing || _pendingGray == null) return;
+    final detector = _detector;
+    if (detector == null) return;
 
+    final gray = _pendingGray!;
+    _pendingGray = null;
+    _isProcessing = true;
     try {
-      if (kDebugMode)
-        print(
-            'Frame ${image.width}x${image.height} planes=${image.planes.length}');
+      final results = await _detectMarkers(detector, gray);
+      if (_disposeRequested) return;
+      _resultsNotifier.value = results;
+    } finally {
+      _isProcessing = false;
+      if (!_disposeRequested) _pump();
+    }
+  }
 
-      final mat = _convertCameraImageToMat(image);
-      if (mat == null) return;
+  Future<List<ArUcoResult>> _detectMarkers(
+    cv.ArucoDetector detector,
+    Uint8List gray,
+  ) async {
+    final w = _frameWidth;
+    final h = _frameHeight;
+    final stopwatch = Stopwatch()..start();
 
-      final gray = cv.cvtColor(mat, 6);
-      mat.dispose();
+    final mat = cv.Mat.fromList(h, w, cv.MatType.CV_8UC1, gray);
+    cv.VecVecPoint2f? cornersVec;
+    cv.VecI32? idsVec;
+    cv.VecVecPoint2f? rejectedVec;
+    try {
+      // Deteksi berjalan di thread native (tidak memblokir UI isolate).
+      final detectResult = await detector.detectMarkersAsync(mat);
+      cornersVec = detectResult.$1;
+      idsVec = detectResult.$2;
+      rejectedVec = detectResult.$3;
 
-      final dict = cv.ArucoDictionary.predefined(
-        cv.PredefinedDictionaryType.DICT_4X4_50,
-      );
-      final detectorParams = cv.ArucoDetectorParameters.empty();
-      final detector = cv.ArucoDetector.create(dict, detectorParams);
-
-      final detectResult = detector.detectMarkers(gray);
-      gray.dispose();
-      dict.dispose();
-      detectorParams.dispose();
-
-      final cornersVec = detectResult.$1;
-      final idsVec = detectResult.$2;
+      final ids = idsVec.toList().cast<int>();
+      if (ids.isEmpty) return const [];
 
       final cornersList = cornersVec.toList();
-      final ids = idsVec.toList().cast<int>();
-
-      if (kDebugMode) print('Detected ${ids.length} markers');
-
-      if (ids.isNotEmpty) {
-        final results = <ArUcoResult>[];
-        for (int i = 0; i < ids.length; i++) {
-          final cornerPoints = <List<double>>[];
-          final markerCornersList = cornersList[i].toList();
-          for (int c = 0; c < markerCornersList.length; c++) {
-            final point = markerCornersList[c];
-            cornerPoints.add([point.x, point.y]);
-          }
-          results.add(ArUcoResult(
-            markerId: ids[i],
-            arucoDictionary: 'DICT_4X4_50',
-            corners: cornerPoints,
-          ));
+      final results = <ArUcoResult>[];
+      for (int i = 0; i < ids.length && i < cornersList.length; i++) {
+        final points = <List<double>>[];
+        for (final p in cornersList[i].toList()) {
+          points.add([p.x, p.y]);
         }
-        _resultsNotifier.value = results;
-      } else {
-        _resultsNotifier.value = [];
+        results.add(ArUcoResult(
+          markerId: ids[i],
+          arucoDictionary: 'DICT_4X4_50',
+          corners: points,
+        ));
       }
 
-      detector.dispose();
+      _processedFrames++;
+      _lastProcessMicros = stopwatch.elapsedMicroseconds;
+      if (kDebugMode) {
+        debugPrint(
+          'Detected ${ids.length} markers in '
+          '${stopwatch.elapsedMilliseconds}ms',
+        );
+      }
+      return results;
     } catch (e, stack) {
       if (kDebugMode) {
-        print('ArUco detection error: $e');
-        print('Stack: $stack');
+        debugPrint('ArUco detection error: $e');
+        debugPrint('$stack');
       }
+      return const [];
+    } finally {
+      cornersVec?.dispose();
+      idsVec?.dispose();
+      rejectedVec?.dispose();
+      mat.dispose();
     }
   }
 
-  cv.Mat? _convertCameraImageToMat(CameraImage image) {
+  Uint8List _extractGray(CameraImage image) {
     try {
-      final int width = image.width;
-      final int height = image.height;
-
+      final w = image.width;
+      final h = image.height;
+      if (_grayBuffer.length != w * h) {
+        _grayBuffer = Uint8List(w * h);
+      }
       final plane = image.planes[0];
-      final Uint8List yBytes = plane.bytes;
-
-      if (yBytes.length >= width * height) {
-        return cv.Mat.fromList(
-            height, width, cv.MatType.CV_8UC1, yBytes.toList());
+      switch (_frameFormat) {
+        case ArFrameFormat.yuv420:
+          ArUcoFrameMath.cropYPlane(plane.bytes, w, h,
+              stride: plane.bytesPerRow, out: _grayBuffer);
+        case ArFrameFormat.bgra8888:
+          ArUcoFrameMath.bgraToGray(plane.bytes, w, h,
+              rowStride: plane.bytesPerRow, out: _grayBuffer);
       }
-
-      final cropped = Uint8List(width * height);
-      final int stride = yBytes.length ~/ height;
-      for (int y = 0; y < height; y++) {
-        final int srcOffset = y * stride;
-        final int dstOffset = y * width;
-        cropped.setRange(dstOffset, dstOffset + width, yBytes, srcOffset);
-      }
-      return cv.Mat.fromList(
-          height, width, cv.MatType.CV_8UC1, cropped.toList());
+      return _grayBuffer;
     } catch (e, stack) {
       if (kDebugMode) {
-        print('Convert CameraImage to Mat error: $e');
-        print('Stack: $stack');
+        debugPrint('Extract grayscale error: $e');
+        debugPrint('$stack');
       }
-      return null;
+      return Uint8List(0);
     }
   }
+
+  // ---------------------------------------------------------------------
+  // Delegasi ke helper murni (di-unit-test via ar_uco_frame_math.dart).
+  // ---------------------------------------------------------------------
+
+  static int normalizeDegrees(int deg) => ArUcoFrameMath.normalizeDegrees(deg);
+
+  static Uint8List cropYPlane(
+    Uint8List bytes,
+    int width,
+    int height, {
+    int stride = -1,
+    Uint8List? out,
+  }) =>
+      ArUcoFrameMath.cropYPlane(bytes, width, height, stride: stride, out: out);
+
+  static Uint8List bgraToGray(
+    Uint8List bgra,
+    int width,
+    int height, {
+    int rowStride = -1,
+    Uint8List? out,
+  }) =>
+      ArUcoFrameMath.bgraToGray(bgra, width, height,
+          rowStride: rowStride, out: out);
+
+  static List<List<double>> mapCornersToPreview({
+    required List<List<double>> corners,
+    required double imageWidth,
+    required double imageHeight,
+    required int sensorOrientationDeg,
+    required int deviceRotationDeg,
+  }) =>
+      ArUcoFrameMath.mapCornersToPreview(
+        corners: corners,
+        imageWidth: imageWidth,
+        imageHeight: imageHeight,
+        sensorOrientationDeg: sensorOrientationDeg,
+        deviceRotationDeg: deviceRotationDeg,
+      );
 
   Future<void> dispose() async {
+    _disposeRequested = true;
     stopScanning();
     await _controller?.dispose();
     _controller = null;
+    _detector?.dispose();
+    _detector = null;
+    _detectorParams?.dispose();
+    _detectorParams = null;
+    _dictionary?.dispose();
+    _dictionary = null;
   }
 }

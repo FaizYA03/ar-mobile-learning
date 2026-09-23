@@ -43,8 +43,12 @@ class ArHotspotController extends Controller
 
         if ($request->hasFile('image_path')) {
             $imageFile = $request->file('image_path');
-            $filename = 'hotspots/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $imageFile->storeAs(
+                'hotspots',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? $stored : '';
         }
 
         $validated['is_active'] = $validated['is_active'] ?? true;
@@ -79,8 +83,12 @@ class ArHotspotController extends Controller
                 Storage::disk('public')->delete($hotspot->image_path);
             }
             $imageFile = $request->file('image_path');
-            $filename = 'hotspots/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $imageFile->storeAs(
+                'hotspots',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? $stored : '';
         }
 
         $hotspot->update($validated);

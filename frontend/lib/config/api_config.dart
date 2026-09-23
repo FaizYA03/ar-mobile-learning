@@ -5,7 +5,7 @@ class ApiConfig {
   ApiConfig._();
 
   static const String _webUrl = 'http://127.0.0.1:8000/api';
-  static const String _physicalDeviceUrl = 'http://10.42.37.181:8000/api';
+  static const String _physicalDeviceUrl = 'http://10.31.163.181:8000/api';
 
   static const String v1Prefix = '/v1';
 

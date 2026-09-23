@@ -24,9 +24,7 @@ class ApiClient {
 
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        if (_token == null) {
-          _token = await SecureStorageService.getToken();
-        }
+        _token ??= await SecureStorageService.getToken();
         if (_token != null) {
           options.headers['Authorization'] = 'Bearer $_token';
         }

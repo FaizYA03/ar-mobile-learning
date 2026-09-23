@@ -143,9 +143,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Widget _buildHome() {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(

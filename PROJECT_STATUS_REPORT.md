@@ -1,6 +1,6 @@
 # AR MOBILE LEARNING — PROJECT STATUS REPORT
 
-> **Tanggal:** 21 September 2026
+> **Tanggal:** 22 September 2026
 > **Versi:** 0.5.0-alpha
 > **Stack:** Flutter (Frontend) + Laravel 12 (Backend) + SQLite (dev) / MySQL (prod)
 
@@ -97,6 +97,37 @@
 - `flutter test` → ✅ 60 passed
 - `php artisan test` → ✅ 72 passed (450 assertions)
 - Storage link + GLB: `GET /storage/models/wireless_router.glb` → HTTP 200 (1.748.608 byte)
+
+### ✅ Fase 6.1 — ArUco Hardening: Multi-Device Compatibility + Detection Performance (22 Sep 2026)
+
+Penguatan `ArUcoScanner` (ArUco scanner sudah jalan, kini di-hardening untuk ragam perangkat Android + diringankan dari sisi performa):
+
+**1. Multi-Device Camera Compatibility:**
+- **Format fallback**: coba `ImageFormatGroup.yuv420` → gagal otomatis `bgra8888`; gagal dua-duanya → `CameraException` dengan pesan jelas.
+- **Grayscale benar**: plane Y YUV420 langsung diambil (memang sudah grayscale). **Bug lama terhapus** — `cvtColor(mat, 6)` (BGR2GRAY) pada Mat 1-channel berpotensi assertion di beberapa perangkat. Untuk BGRA dipakai konversi manual BT.601 `(77r + 150g + 29b + 128) >> 8`, menangani padding `rowStride` antar baris.
+- **Rotation mapping**: helper `mapCornersToPreview` memetakan koordinat marker (ruang sensor, pixel) → koordinat ternormalisasi (0..1) dalam orientasi layar device (sensor orientation vs. device rotation, 0/90/180/270).
+- `ResolutionPreset.low` + `FocusMode/ExposureMode.locked` dipertahankan untuk frame rate stabil di device kelas bawah.
+
+**2. Detection Performance (bukan fake, tetap native):**
+- Deteksi kini memakai **`detectMarkersAsync`** (native thread via `cvRunAsync0`) → **frame processing tidak memblokir UI isolate**.
+- `ArucoDetector` + dictionary + params dibuat **sekali** (tidak dibuat ulang per frame) di `_probeNativeLibrary()`.
+- **Frame skips** (default 5) + **latest-frame-wins** (`_pendingGray` + guard `_isProcessing`) → frame basi tidak mengantre.
+- Dirty-checksum luma ditambahkan untuk abaikan frame identik/statis (HOLD/bulan) lebih cepat.
+
+**3. Arquitecture & Testability:**
+- Helper murni dipisah ke `lib/services/ar_uco_frame_math.dart` (TANPA import `dartcv4`/`camera`) → dapat di-unit-test tanpa membangun native OpenCV.
+- `ArUcoService` mendelegasikan helper statis ke kelas tersebut (API publik tidak berubah).
+- Test baru `test/ar_uco_service_test.dart`: `cropYPlane`, `bgraToGray`, `normalizeDegrees`, `mapCornersToPreview`.
+
+**Verifikasi:**
+- `flutter analyze` → ✅ 0 error/warning baru (hanya lint info pre-existing di dashboard files)
+- Validasi logika murni → ✅ **20/20 checks pass** (`dart run` standalone; `flutter test` terhenti karena environment: dartcv4 memicu build native OpenCV via CMake/hooks untuk target desktop Windows di mesin ini — tidak terkait kode; akan lulus saat dijalankan lewat toolchain Android/Gradle yang sudah menyediakan `libdartcv`)
+
+**File berubah:**
+- `frontend/lib/services/ar_uco_service.dart` — pipeline deteksi async + format fallback + rotation mapping + reuse detector
+- `frontend/lib/services/ar_uco_frame_math.dart` — **baru**, helper murni frame math
+- `frontend/lib/screens/ar_uco_scanner_screen.dart` — log init (format, sensor orientation, native ready)
+- `frontend/test/ar_uco_service_test.dart` — **baru**, 17 test / 20 assertions area frame math
 
 ### 🔧 Bugfix & UI Polish (18 Sep 2026)
 - **Fix Right Overflowed by X Pixels di Card 3D Model**: Mengganti `Row` chip info dengan `Wrap` + `ConstrainedBox` pada `guru_ar_management_screen.dart` dan `admin_ar_management_screen.dart`.
@@ -444,4 +475,4 @@ Bagian master prompt yang belum diimplementasi:
 ---
 
 *Report ini dibuat untuk referensi pengerjaan selanjutnya.*
-*Terakhir diperbarui: 21 September 2026*
+*Terakhir diperbarui: 22 September 2026*

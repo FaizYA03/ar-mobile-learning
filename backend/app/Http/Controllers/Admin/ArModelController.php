@@ -44,14 +44,22 @@ class ArModelController extends Controller
 
         if ($request->hasFile('glb_path')) {
             $glbFile = $request->file('glb_path');
-            $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
-            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $glbFile->storeAs(
+                'models',
+                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['glb_path'] = $stored ? $stored : '';
         }
 
         if ($request->hasFile('thumbnail_path')) {
             $thumbFile = $request->file('thumbnail_path');
-            $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
-            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $thumbFile->storeAs(
+                'thumbnails',
+                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['thumbnail_path'] = $stored ? $stored : '';
         }
 
         $validated['is_active'] = $validated['is_active'] ?? true;
@@ -85,8 +93,12 @@ class ArModelController extends Controller
                 Storage::disk('public')->delete($model->glb_path);
             }
             $glbFile = $request->file('glb_path');
-            $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
-            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $glbFile->storeAs(
+                'models',
+                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['glb_path'] = $stored ? $stored : '';
             $validated['version'] = $model->version + 1;
         }
 
@@ -95,8 +107,12 @@ class ArModelController extends Controller
                 Storage::disk('public')->delete($model->thumbnail_path);
             }
             $thumbFile = $request->file('thumbnail_path');
-            $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
-            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $thumbFile->storeAs(
+                'thumbnails',
+                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['thumbnail_path'] = $stored ? $stored : '';
         }
 
         $model->update($validated);

@@ -148,7 +148,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   decoration: InputDecoration(
                     labelText: 'Role',
                     border: OutlineInputBorder(
@@ -246,7 +246,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   decoration: InputDecoration(
                     labelText: 'Role',
                     border: OutlineInputBorder(
@@ -388,9 +388,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildHome() {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -575,9 +576,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildUsersPage() {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    }
     return Column(
       children: [
         Padding(

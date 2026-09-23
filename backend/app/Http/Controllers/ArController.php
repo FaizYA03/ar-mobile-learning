@@ -54,14 +54,22 @@ class ArController extends Controller
 
         if ($request->hasFile('glb_path')) {
             $glbFile = $request->file('glb_path');
-            $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
-            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $glbFile->storeAs(
+                'models',
+                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['glb_path'] = $stored ? $stored : '';
         }
 
         if ($request->hasFile('thumbnail_path')) {
             $thumbFile = $request->file('thumbnail_path');
-            $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
-            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $thumbFile->storeAs(
+                'thumbnails',
+                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['thumbnail_path'] = $stored ? $stored : '';
         }
 
         $model = ArModel::create($validated);
@@ -94,8 +102,12 @@ class ArController extends Controller
                 }
             }
             $glbFile = $request->file('glb_path');
-            $filename = 'models/' . Str::uuid() . '.' . $glbFile->getClientOriginalExtension();
-            $validated['glb_path'] = $glbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $glbFile->storeAs(
+                'models',
+                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['glb_path'] = $stored ? $stored : '';
             $validated['version'] = $arModel->version + 1;
         }
 
@@ -107,8 +119,12 @@ class ArController extends Controller
                 }
             }
             $thumbFile = $request->file('thumbnail_path');
-            $filename = 'thumbnails/' . Str::uuid() . '.' . $thumbFile->getClientOriginalExtension();
-            $validated['thumbnail_path'] = $thumbFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $thumbFile->storeAs(
+                'thumbnails',
+                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['thumbnail_path'] = $stored ? $stored : '';
         }
 
         $arModel->update($validated);
@@ -184,8 +200,12 @@ class ArController extends Controller
 
         if ($request->hasFile('image_path')) {
             $imageFile = $request->file('image_path');
-            $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $imageFile->storeAs(
+                'markers',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? $stored : '';
         }
 
         $marker = ArMarker::create($validated);
@@ -218,8 +238,12 @@ class ArController extends Controller
                 }
             }
             $imageFile = $request->file('image_path');
-            $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $imageFile->storeAs(
+                'markers',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? $stored : '';
         }
 
         $arMarker->update($validated);
@@ -288,8 +312,12 @@ class ArController extends Controller
 
         if ($request->hasFile('image_path')) {
             $imageFile = $request->file('image_path');
-            $filename = 'hotspots/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $stored = $imageFile->storeAs(
+                'hotspots',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? 'storage/' . $stored : '';
         }
 
         $hotspot = ArHotspot::create($validated);
@@ -318,8 +346,12 @@ class ArController extends Controller
                 Storage::disk('public')->delete(str_replace('storage/', '', $arHotspot->image_path));
             }
             $imageFile = $request->file('image_path');
-            $filename = 'hotspots/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? 'storage/' . $filename : '';
+            $stored = $imageFile->storeAs(
+                'hotspots',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? 'storage/' . $stored : '';
         }
 
         $arHotspot->update($validated);

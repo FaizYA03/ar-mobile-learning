@@ -45,11 +45,12 @@ class _ArHubScreenState extends State<ArHubScreen> {
         arcoreEnabled = config['data']['arcore_enabled'] ?? true;
       }
     } catch (_) {}
-    if (mounted)
+    if (mounted) {
       setState(() {
         _availability = availability;
         _arcoreEnabled = arcoreEnabled;
       });
+    }
   }
 
   Future<void> _loadModels() async {

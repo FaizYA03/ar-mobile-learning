@@ -38,8 +38,12 @@ class ArMarkerController extends Controller
 
         if ($request->hasFile('image_path')) {
             $imageFile = $request->file('image_path');
-            $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $imageFile->storeAs(
+                'markers',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? $stored : '';
         }
 
         $validated['status'] = $validated['status'] ?? 'active';
@@ -70,8 +74,12 @@ class ArMarkerController extends Controller
                 Storage::disk('public')->delete($marker->image_path);
             }
             $imageFile = $request->file('image_path');
-            $filename = 'markers/' . Str::uuid() . '.' . $imageFile->getClientOriginalExtension();
-            $validated['image_path'] = $imageFile->storeAs('public', $filename) ? $filename : '';
+            $stored = $imageFile->storeAs(
+                'markers',
+                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                'public'
+            );
+            $validated['image_path'] = $stored ? $stored : '';
         }
 
         $marker->update($validated);
