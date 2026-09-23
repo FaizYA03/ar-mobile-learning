@@ -101,6 +101,25 @@ class ApiService {
   // Dashboard
   static Future<Map<String, dynamic>> getDashboard() => _get('/dashboard');
 
+  // Profile (semua role)
+  static Future<Map<String, dynamic>> getProfile() => _get('/user');
+  static Future<Map<String, dynamic>> updateProfile({required String name}) =>
+      _put('/user/profile', {'name': name});
+  static Future<Map<String, dynamic>> updatePassword({
+    required String currentPassword,
+    required String password,
+    required String passwordConfirmation,
+  }) =>
+      _put('/user/password', {
+        'current_password': currentPassword,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      });
+  static Future<Map<String, dynamic>> uploadAvatar(
+          {required String filePath}) =>
+      _postMultipart('/user/avatar', {},
+          filePath: filePath, fileField: 'avatar');
+
   // Quizzes (public)
   static Future<Map<String, dynamic>> getQuizzes() => _get('/quizzes');
   static Future<Map<String, dynamic>> getQuiz(int id) => _get('/quizzes/$id');
@@ -111,7 +130,19 @@ class ApiService {
       _get('/quizzes/$quizId/attempts');
 
   // Admin
-  static Future<Map<String, dynamic>> adminGetUsers() => _get('/admin/users');
+  static Future<Map<String, dynamic>> adminGetUsers(
+      {String? search, String? role}) {
+    final params = <String>[];
+    if (search != null && search.isNotEmpty) {
+      params.add('search=${Uri.encodeQueryComponent(search)}');
+    }
+    if (role != null && role.isNotEmpty) {
+      params.add('role=${Uri.encodeQueryComponent(role)}');
+    }
+    final query = params.isEmpty ? '' : '?${params.join('&')}';
+    return _get('/admin/users$query');
+  }
+
   static Future<Map<String, dynamic>> adminCreateUser(
           Map<String, dynamic> data) =>
       _post('/admin/users', data);
@@ -138,6 +169,10 @@ class ApiService {
       _post('/guru/quizzes/$quizId/questions', data);
   static Future<Map<String, dynamic>> guruDeleteQuestion(int questionId) =>
       _delete('/guru/questions/$questionId');
+  static Future<Map<String, dynamic>> guruGetQuizAttempts({int? quizId}) {
+    final query = quizId != null ? '?quiz_id=$quizId' : '';
+    return _get('/guru/quiz-attempts$query');
+  }
 
   // TP/ATP (Siswa / Guru / Admin)
   static Future<Map<String, dynamic>> getTpAtpList() => _get('/tp-atp');

@@ -106,19 +106,29 @@ class ArHotspotSpeechBubble extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          title,
-                          style: _titleStyle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        // Flexible: teks mengikuti ruang tersisa di dalam kotak
+                        // berukuran tetap, sehingga berapa pun variasi font
+                        // metrics device, bubble tidak pernah RenderFlex
+                        // overflow (teks menyusut dengan ellipsis).
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: Text(
+                            title,
+                            style: _titleStyle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         if (hasDesc) ...[
                           const SizedBox(height: 6),
-                          Text(
-                            description!,
-                            style: _descStyle,
-                            maxLines: 6,
-                            overflow: TextOverflow.ellipsis,
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: Text(
+                              description!,
+                              style: _descStyle,
+                              maxLines: 6,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ],
@@ -183,7 +193,7 @@ class ArHotspotSpeechBubble extends StatelessWidget {
 
     final inner = titleH + (hasDesc ? 6.0 + descH : 0.0);
     final height = math.max(
-      _padding.vertical + inner + 3,
+      _padding.vertical + inner + 6,
       _closeSize + _padding.vertical,
     );
     return Size(contentWidth, height);

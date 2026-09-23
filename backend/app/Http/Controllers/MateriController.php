@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\MateriStoreRequest;
 use App\Http\Requests\MateriUpdateRequest;
 use App\Http\Resources\MateriResource;
+use App\Http\Traits\ApiResponse;
 use App\Models\Materi;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,8 @@ use Illuminate\Support\Str;
 
 class MateriController extends Controller
 {
+    use ApiResponse;
+
     public function index(Request $request): JsonResponse
     {
         $query = Materi::with(['tpAtp:id,kode,fase,elemen,judul', 'arModel:id,model_name,thumbnail_path,glb_path'])
@@ -26,6 +29,15 @@ class MateriController extends Controller
 
         if (!$request->user() || $request->user()->role === 'siswa') {
             $query->where('is_published', true);
+        }
+
+        if ($perPage = $this->requestedPerPage($request)) {
+            $paginator = $query->paginate($perPage);
+            return $this->paginatedResources(
+                $paginator,
+                MateriResource::collection($paginator->items()),
+                'Berhasil mengambil daftar materi'
+            );
         }
 
         $materi = $query->get();

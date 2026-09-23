@@ -48,6 +48,14 @@ class ApiClient {
     _token = null;
   }
 
+  /// Buang instance Dio agar baseUrl terbaru (mis. setelah ganti
+  /// --dart-define atau dalam test) dipakai ulang.
+  static void reset() {
+    _dio?.close(force: true);
+    _dio = null;
+    _token = null;
+  }
+
   static Future<Response> get(String path,
       {Map<String, dynamic>? queryParameters}) async {
     return instance.get(path, queryParameters: queryParameters);

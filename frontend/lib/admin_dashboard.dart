@@ -5,6 +5,8 @@ import 'screens/admin_materi_screen.dart';
 import 'screens/admin_quiz_management_screen.dart';
 import 'screens/admin_hasil_quiz_screen.dart';
 import 'screens/admin_ar_management_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/info_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -21,10 +23,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _totalQuizzes = 0;
   bool _isLoading = true;
   List<dynamic> _users = [];
+  String? _userRoleFilter;
+  bool _isLoadingUsers = false;
+  final TextEditingController _userSearchCtrl = TextEditingController();
   int _arModelCount = 0;
   int _arMarkerCount = 0;
   int _arHotspotCount = 0;
   int _contentVersion = 0;
+
+  @override
+  void dispose() {
+    _userSearchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -74,6 +85,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _openProfile() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+
+  Future<void> _fetchUsers() async {
+    setState(() => _isLoadingUsers = true);
+    try {
+      final res = await ApiService.adminGetUsers(
+        search: _userSearchCtrl.text.trim().isEmpty
+            ? null
+            : _userSearchCtrl.text.trim(),
+        role: _userRoleFilter,
+      );
+      if (res['success'] == true && mounted) {
+        setState(() {
+          _users = (res['data'] as List?) ?? [];
+          _isLoadingUsers = false;
+        });
+      } else if (mounted) {
+        setState(() => _isLoadingUsers = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingUsers = false);
+    }
   }
 
   Future<void> _logout() async {
@@ -603,6 +642,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _userSearchCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Cari nama/email...',
+                    prefixIcon: Icon(Icons.search, size: 20),
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _fetchUsers(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              DropdownButton<String?>(
+                value: _userRoleFilter,
+                hint: const Text('Role'),
+                items: const [
+                  DropdownMenuItem<String?>(value: null, child: Text('Semua')),
+                  DropdownMenuItem<String?>(
+                      value: 'admin', child: Text('Admin')),
+                  DropdownMenuItem<String?>(value: 'guru', child: Text('Guru')),
+                  DropdownMenuItem<String?>(
+                      value: 'siswa', child: Text('Siswa')),
+                ],
+                onChanged: (v) {
+                  setState(() => _userRoleFilter = v);
+                  _fetchUsers();
+                },
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: _isLoadingUsers ? null : _fetchUsers,
+                icon: _isLoadingUsers
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search),
+                tooltip: 'Cari',
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: _users.isEmpty
               ? const Center(
@@ -695,11 +784,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
             style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
         const SizedBox(height: 32),
         _buildProfileOption(
-            icon: Icons.person_outline, title: 'Profil Saya', onTap: () {}),
+            icon: Icons.person_outline,
+            title: 'Profil Saya',
+            onTap: _openProfile),
         _buildProfileOption(
-            icon: Icons.help_outline, title: 'Bantuan', onTap: () {}),
+            icon: Icons.help_outline,
+            title: 'Bantuan',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const InfoScreen.help()),
+                )),
         _buildProfileOption(
-            icon: Icons.info_outline, title: 'Tentang', onTap: () {}),
+            icon: Icons.info_outline,
+            title: 'Tentang',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const InfoScreen.about()),
+                )),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,

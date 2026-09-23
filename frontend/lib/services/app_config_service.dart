@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 import '../models/models.dart';
 import '../services/api_client.dart';
 
 class AppConfigService {
+  static const String cacheKey = 'app_config_cache';
   static AppConfigData? _config;
   static DateTime? _lastFetchTime;
 
@@ -9,13 +13,50 @@ class AppConfigService {
     try {
       final response = await ApiClient.getV1('/app/config');
       if (response.statusCode == 200 && response.data['success'] == true) {
-        _config = AppConfigData.fromJson(response.data['data']);
+        _config = AppConfigData.fromJson(
+            Map<String, dynamic>.from(response.data['data']));
         _lastFetchTime = DateTime.now();
+        await _saveCache(_config!);
         return _config;
       }
     } catch (_) {}
     return null;
   }
+
+  /// Muat cache terakhir agar splash/onboarding tetap tampil
+  /// dinamis meski offline atau sebelum login.
+  static Future<AppConfigData?> loadCached() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(cacheKey);
+      if (raw == null || raw.isEmpty) return null;
+      _config =
+          AppConfigData.fromJson(Map<String, dynamic>.from(jsonDecode(raw)));
+      return _config;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _saveCache(AppConfigData config) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(cacheKey, jsonEncode(config.toJson()));
+    } catch (_) {}
+  }
+
+  /// Ubah logo_url/path relatif (/storage/...) menjadi URL absolut.
+  /// Pure helper agar bisa di-unit-test.
+  static String? resolveAssetUrl(String baseUrl, String? urlOrPath) {
+    if (urlOrPath == null || urlOrPath.isEmpty) return null;
+    if (urlOrPath.startsWith('http')) return urlOrPath;
+    var path = urlOrPath.startsWith('/') ? urlOrPath.substring(1) : urlOrPath;
+    if (!path.startsWith('storage/')) path = 'storage/$path';
+    return '${baseUrl.replaceFirst('/api', '')}/$path';
+  }
+
+  static String? resolveLogoUrl(AppConfigData config) =>
+      resolveAssetUrl(ApiConfig.baseUrl, config.logoUrl ?? config.logoPath);
 
   static AppConfigData? get config => _config;
   static DateTime? get lastFetchTime => _lastFetchTime;

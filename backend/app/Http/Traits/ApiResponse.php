@@ -3,6 +3,7 @@
 namespace App\Http\Traits;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 trait ApiResponse
 {
@@ -40,6 +41,42 @@ trait ApiResponse
             'success' => true,
             'message' => $message,
             'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Paginasi opt-in: kembalikan null jika client tidak meminta ?per_page=.
+     * Response legacy (tanpa paginasi) tetap dipertahankan agar aplikasi
+     * lama tidak rusak.
+     */
+    protected function requestedPerPage(Request $request): ?int
+    {
+        if (!$request->has('per_page')) {
+            return null;
+        }
+
+        $validated = $request->validate([
+            'per_page' => 'integer|min:1|max:100',
+        ]);
+
+        return (int) $validated['per_page'];
+    }
+
+    /**
+     * Envelope paginasi konsisten untuk Resource collection.
+     */
+    protected function paginatedResources($paginator, mixed $resources, string $message = 'Success'): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $resources,
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),

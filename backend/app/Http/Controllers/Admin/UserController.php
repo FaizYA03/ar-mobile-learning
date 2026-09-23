@@ -43,7 +43,7 @@ class UserController extends Controller
             'role' => 'required|in:admin,guru,siswa',
         ]);
 
-        User::create([
+        User::forceCreate([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -75,7 +75,14 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        $role = $validated['role'] ?? null;
+        unset($validated['role']);
+
         $user->update($validated);
+        if ($role !== null) {
+            // Role hanya boleh ditentukan server (CMS ini di balik role:admin).
+            $user->forceFill(['role' => $role])->save();
+        }
 
         \App\Services\ActivityLogger::updated('user', $user->id, "User '{$user->name}' updated via admin");
 
@@ -85,6 +92,9 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         \App\Services\ActivityLogger::deleted('user', $user->id, "User '{$user->name}' deleted via admin");
+        if ($user->avatar) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+        }
         $user->delete();
 
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus.');

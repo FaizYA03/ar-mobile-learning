@@ -23,8 +23,9 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => 'siswa',
         ]);
+        // Role ditentukan server, bukan dari input client.
+        $user->forceFill(['role' => 'siswa'])->save();
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
@@ -100,6 +101,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'avatar' => $user->avatar,
+                'avatar_url' => $user->avatar ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar) : null,
             ],
         ]);
     }

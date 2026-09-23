@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'models/models.dart';
+import 'services/app_config_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -11,6 +13,17 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
+
+  static const List<IconData> _slideIcons = [
+    Icons.menu_book_rounded,
+    Icons.view_in_ar_rounded,
+    Icons.quiz_rounded,
+    Icons.school_rounded,
+    Icons.lightbulb_rounded,
+  ];
+
+  List<OnboardingSlideData> get _slides =>
+      AppConfigService.config?.onboardingSlides ?? AppConfigData.defaultSlides;
 
   @override
   void dispose() {
@@ -34,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _onSkip() {
     _pageController.animateToPage(
-      2,
+      _slides.length - 1,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
@@ -42,6 +55,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final slides = _slides;
+    // Ikon berputar mengikuti jumlah slide (maks 5 dari CMS).
+    final icons = List<IconData>.generate(
+      slides.length,
+      (i) => _slideIcons[i % _slideIcons.length],
+    );
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -53,31 +72,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 onPageChanged: (index) {
                   setState(() => _currentIndex = index);
                 },
-                children: const [
-                  _OnboardingSlide(
-                    icon: Icons.menu_book_rounded,
-                    title: 'Belajar Informatika\nLebih Menarik',
-                    description:
-                        'Pelajari konsep Informatika melalui materi yang terstruktur dan mudah dipahami.',
-                  ),
-                  _OnboardingSlide(
-                    icon: Icons.view_in_ar_rounded,
-                    title: 'Temukan\nDunia 3D',
-                    description:
-                        'Scan marker dan lihat objek pembelajaran dalam bentuk 3D secara interaktif.',
-                  ),
-                  _OnboardingSlide(
-                    icon: Icons.quiz_rounded,
-                    title: 'Uji\nPemahamanmu',
-                    description:
-                        'Uji pemahaman setelah belajar dan lihat hasilnya.',
-                  ),
+                children: [
+                  for (var i = 0; i < slides.length; i++)
+                    _OnboardingSlide(
+                      icon: icons[i],
+                      title: slides[i].title,
+                      description: slides[i].description,
+                    ),
                 ],
               ),
             ),
-            _buildIndicator(),
+            _buildIndicator(slides.length),
             const SizedBox(height: 12),
-            _buildButtons(),
+            _buildButtons(slides.length),
             const SizedBox(height: 24),
           ],
         ),
@@ -85,10 +92,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildIndicator() {
+  Widget _buildIndicator(int count) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
+      children: List.generate(count, (index) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -105,10 +112,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildButtons() {
+  Widget _buildButtons(int slideCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: _currentIndex == 2
+      child: _currentIndex == slideCount - 1
           ? SizedBox(
               width: double.infinity,
               height: 52,

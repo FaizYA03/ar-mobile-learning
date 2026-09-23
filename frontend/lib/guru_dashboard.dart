@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/models.dart';
 import 'services/api_service.dart';
+import 'services/app_config_service.dart';
 import 'services/secure_storage_service.dart';
 import 'screens/guru_tp_atp_screen.dart';
 import 'screens/guru_materi_screen.dart';
 import 'screens/guru_ar_management_screen.dart';
+import 'screens/guru_hasil_quiz_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/info_screen.dart';
+import 'widgets/announcement_banner.dart';
 
 class GuruDashboard extends StatefulWidget {
   const GuruDashboard({super.key});
@@ -65,6 +70,16 @@ class _GuruDashboardState extends State<GuruDashboard> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _openProfile() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+    if (changed == true && mounted) {
+      final name = await SecureStorageService.getUserName() ?? 'Guru';
+      setState(() => _userName = name);
     }
   }
 
@@ -422,6 +437,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
             const GuruTpAtpScreen(),
             const GuruMateriScreen(),
             _buildQuizManagement(),
+            const GuruHasilQuizScreen(),
             const GuruArManagementScreen(),
             _buildProfile(),
           ],
@@ -455,6 +471,10 @@ class _GuruDashboardState extends State<GuruDashboard> {
               activeIcon: Icon(Icons.quiz),
               label: 'Quiz'),
           BottomNavigationBarItem(
+              icon: Icon(Icons.assignment_outlined),
+              activeIcon: Icon(Icons.assignment),
+              label: 'Hasil'),
+          BottomNavigationBarItem(
               icon: Icon(Icons.view_in_ar_outlined),
               activeIcon: Icon(Icons.view_in_ar),
               label: 'AR'),
@@ -483,8 +503,11 @@ class _GuruDashboardState extends State<GuruDashboard> {
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1A1A2E))),
           const SizedBox(height: 4),
-          const Text('Kelola pembelajaran Anda',
-              style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
+          Text(
+              AppConfigService.config?.greetingGuru ??
+                  'Kelola pembelajaran Anda',
+              style: const TextStyle(fontSize: 14, color: Color(0xFF637080))),
+          const AnnouncementBanner(),
           const SizedBox(height: 24),
           _buildSyncStatusCard(),
           const SizedBox(height: 20),
@@ -537,10 +560,16 @@ class _GuruDashboardState extends State<GuruDashboard> {
               onTap: () => setState(() => _currentIndex = 1)),
           const SizedBox(height: 10),
           _buildQuickAction(
+              icon: Icons.assignment_outlined,
+              title: 'Lihat Hasil Quiz',
+              color: const Color(0xFF27AE60),
+              onTap: () => setState(() => _currentIndex = 4)),
+          const SizedBox(height: 10),
+          _buildQuickAction(
               icon: Icons.view_in_ar_outlined,
               title: 'Kelola AR',
               color: const Color(0xFF5B6ABF),
-              onTap: () => setState(() => _currentIndex = 4)),
+              onTap: () => setState(() => _currentIndex = 5)),
         ],
       ),
     );
@@ -830,11 +859,21 @@ class _GuruDashboardState extends State<GuruDashboard> {
             style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
         const SizedBox(height: 32),
         _buildProfileOption(
-            icon: Icons.person_outline, title: 'Profil Saya', onTap: () {}),
+            icon: Icons.person_outline,
+            title: 'Profil Saya',
+            onTap: _openProfile),
         _buildProfileOption(
-            icon: Icons.help_outline, title: 'Bantuan', onTap: () {}),
+            icon: Icons.help_outline,
+            title: 'Bantuan',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const InfoScreen.help()),
+                )),
         _buildProfileOption(
-            icon: Icons.info_outline, title: 'Tentang', onTap: () {}),
+            icon: Icons.info_outline,
+            title: 'Tentang',
+            onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const InfoScreen.about()),
+                )),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,

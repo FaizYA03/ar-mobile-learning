@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Traits\ApiResponse;
 use App\Models\User;
 use App\Models\QuizAttempt;
 use App\Services\ActivityLogger;
@@ -11,11 +12,36 @@ use Illuminate\Validation\ValidationException;
 
 class AdminController extends Controller
 {
-    public function users()
+    use ApiResponse;
+
+    public function users(Request $request)
     {
-        $users = User::select('id', 'name', 'email', 'role', 'created_at')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = User::select('id', 'name', 'email', 'role', 'created_at')
+            ->orderBy('created_at', 'desc');
+
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $validated = $request->validate([
+                'role' => 'in:admin,guru,siswa',
+            ]);
+            $query->where('role', $validated['role']);
+        }
+
+        if ($perPage = $this->requestedPerPage($request)) {
+            return $this->paginatedResponse(
+                $query->paginate($perPage),
+                'Berhasil mengambil daftar user'
+            );
+        }
+
+        $users = $query->get();
 
         return response()->json([
             'success' => true,
@@ -36,8 +62,9 @@ class AdminController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'],
         ]);
+        // Role hanya boleh ditentukan server (endpoint ini di balik role:admin).
+        $user->forceFill(['role' => $validated['role']])->save();
 
         ActivityLogger::created('user', $user->id, "User '{$user->name}' ({$user->role}) created");
 
@@ -68,7 +95,14 @@ class AdminController extends Controller
             unset($validated['password']);
         }
 
+        $role = $validated['role'] ?? null;
+        unset($validated['role']);
+
         $user->update($validated);
+        if ($role !== null) {
+            // Role hanya boleh ditentukan server (endpoint ini di balik role:admin).
+            $user->forceFill(['role' => $role])->save();
+        }
 
         ActivityLogger::updated('user', $user->id, "User '{$user->name}' updated");
 
@@ -87,6 +121,9 @@ class AdminController extends Controller
     public function deleteUser(User $user)
     {
         ActivityLogger::deleted('user', $user->id, "User '{$user->name}' deleted");
+        if ($user->avatar) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+        }
         $user->delete();
 
         return response()->json([
@@ -95,11 +132,19 @@ class AdminController extends Controller
         ]);
     }
 
-    public function quizAttempts()
+    public function quizAttempts(Request $request)
     {
-        $attempts = QuizAttempt::with(['user:id,name,email', 'quiz:id,title,passing_score'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = QuizAttempt::with(['user:id,name,email', 'quiz:id,title,passing_score'])
+            ->orderBy('created_at', 'desc');
+
+        if ($perPage = $this->requestedPerPage($request)) {
+            return $this->paginatedResponse(
+                $query->paginate($perPage),
+                'Berhasil mengambil hasil quiz'
+            );
+        }
+
+        $attempts = $query->get();
 
         return response()->json([
             'success' => true,

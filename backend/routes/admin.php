@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\TpAtpController;
 use App\Http\Controllers\Admin\MateriController;
 use App\Http\Controllers\Admin\QuizController;
+use App\Http\Controllers\Admin\QuizAttemptController;
 use App\Http\Controllers\Admin\ArModelController;
 use App\Http\Controllers\Admin\ArMarkerController;
 use App\Http\Controllers\Admin\ArHotspotController;
@@ -29,6 +30,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('quiz/{quiz}/questions', [QuizController::class, 'questions'])->name('quiz.questions');
     Route::post('quiz/{quiz}/questions', [QuizController::class, 'storeQuestion'])->name('quiz.store-question');
     Route::delete('quiz/questions/{question}', [QuizController::class, 'deleteQuestion'])->name('quiz.delete-question');
+    Route::get('quiz-attempts', [QuizAttemptController::class, 'index'])->name('quiz-attempts.index');
 
     Route::prefix('ar')->name('ar.')->group(function () {
         Route::resource('models', ArModelController::class)->except('show');
@@ -49,6 +51,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('system/settings', [SystemController::class, 'settings'])->name('system.settings');
     Route::post('system/settings', [SystemController::class, 'updateSettings'])->name('system.settings.update');
+    Route::get('system/content', [SystemController::class, 'content'])->name('system.content');
+    Route::post('system/content/branding', [SystemController::class, 'updateBranding'])->name('system.content.branding');
+    Route::post('system/content/splash', [SystemController::class, 'updateSplash'])->name('system.content.splash');
+    Route::post('system/content/greetings', [SystemController::class, 'updateGreetings'])->name('system.content.greetings');
+    Route::post('system/content/announcement', [SystemController::class, 'updateAnnouncement'])->name('system.content.announcement');
+    Route::post('system/content/help', [SystemController::class, 'updateHelp'])->name('system.content.help');
+    Route::post('system/content/onboarding', [SystemController::class, 'updateOnboarding'])->name('system.content.onboarding');
     Route::get('system/versions', [SystemController::class, 'versions'])->name('system.versions');
     Route::post('system/versions', [SystemController::class, 'storeVersion'])->name('system.versions.store');
     Route::put('system/versions/{appVersion}', [SystemController::class, 'updateVersion'])->name('system.versions.update');

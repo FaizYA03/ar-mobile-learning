@@ -27,7 +27,8 @@ class AppSetting extends Model
         }
 
         return match ($setting->type) {
-            'boolean' => (bool) $setting->value,
+            // NOTE: tidak boleh (bool) $value karena string 'false' = true di PHP.
+            'boolean' => filter_var($setting->value, FILTER_VALIDATE_BOOLEAN),
             'integer' => (int) $setting->value,
             'json' => json_decode($setting->value, true),
             default => $setting->value,

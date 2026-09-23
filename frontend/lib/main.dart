@@ -42,15 +42,17 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     final prefs = await SharedPreferences.getInstance();
     _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
 
+    // Config CMS: pakai cache dulu agar splash/onboarding dinamis
+    // meski offline; segarkan dari server (endpoint publik).
+    _appConfig = await AppConfigService.loadCached();
+    await _fetchAppConfig();
+
     final token = await SecureStorageService.getToken();
     if (token != null) {
       _userRole = await SecureStorageService.getUserRole();
       ApiClient.setToken(token);
 
-      await Future.wait([
-        _fetchAppConfig(),
-        _syncContent(),
-      ]);
+      await _syncContent();
     }
 
     setState(() {

@@ -12,11 +12,14 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    // NOTE: 'role' sengaja TIDAK ada di fillable agar tidak bisa
+    // di-mass-assign dari input client. Role hanya ditentukan server
+    // via forceFill() di AuthController (register=siswa) dan
+    // controller admin (store/update user).
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',
         'avatar',
     ];
 

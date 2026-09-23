@@ -50,6 +50,22 @@ class LoginResponse {
   }
 }
 
+class OnboardingSlideData {
+  final String title;
+  final String description;
+
+  const OnboardingSlideData({required this.title, required this.description});
+
+  factory OnboardingSlideData.fromJson(Map<String, dynamic> json) {
+    return OnboardingSlideData(
+      title: '${json['title'] ?? ''}',
+      description: '${json['description'] ?? ''}',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {'title': title, 'description': description};
+}
+
 class AppConfigData {
   final bool maintenanceMode;
   final bool arcoreEnabled;
@@ -60,6 +76,41 @@ class AppConfigData {
   final String? downloadUrl;
   final int contentVersion;
 
+  // Batch 1: konten CMS (branding + teks + onboarding).
+  final int uiContentVersion;
+  final String appName;
+  final String appTagline;
+  final String? logoPath;
+  final String? logoUrl;
+  final String splashTitle;
+  final String splashSubtitle;
+  final String greetingSiswa;
+  final String greetingGuru;
+  final String greetingAdmin;
+  final List<OnboardingSlideData> onboardingSlides;
+
+  // Batch 2: pengumuman + bantuan/tentang + kontak.
+  final String announcementText;
+  final bool announcementActive;
+  final String helpContent;
+  final String aboutContent;
+  final String contactEmail;
+  final String contactWa;
+
+  static const List<OnboardingSlideData> defaultSlides = [
+    OnboardingSlideData(
+        title: 'Belajar Informatika\nLebih Menarik',
+        description:
+            'Pelajari konsep Informatika melalui materi yang terstruktur dan mudah dipahami.'),
+    OnboardingSlideData(
+        title: 'Temukan\nDunia 3D',
+        description:
+            'Scan marker dan lihat objek pembelajaran dalam bentuk 3D secara interaktif.'),
+    OnboardingSlideData(
+        title: 'Uji\nPemahamanmu',
+        description: 'Uji pemahaman setelah belajar dan lihat hasilnya.'),
+  ];
+
   AppConfigData({
     required this.maintenanceMode,
     this.arcoreEnabled = true,
@@ -69,9 +120,36 @@ class AppConfigData {
     this.releaseNotes,
     this.downloadUrl,
     required this.contentVersion,
+    this.uiContentVersion = 1,
+    this.appName = 'AR Mobile Learning',
+    this.appTagline = 'Informatika dengan Augmented Reality',
+    this.logoPath,
+    this.logoUrl,
+    this.splashTitle = 'AR Mobile Learning',
+    this.splashSubtitle = 'Informatika dengan Augmented Reality',
+    this.greetingSiswa = 'Mari lanjutkan belajar',
+    this.greetingGuru = 'Kelola pembelajaran Anda',
+    this.greetingAdmin = 'Kelola sistem pembelajaran',
+    this.onboardingSlides = defaultSlides,
+    this.announcementText = '',
+    this.announcementActive = false,
+    this.helpContent = '',
+    this.aboutContent = '',
+    this.contactEmail = '',
+    this.contactWa = '',
   });
 
   factory AppConfigData.fromJson(Map<String, dynamic> json) {
+    final branding = json['branding'] as Map<String, dynamic>?;
+    final texts = json['texts'] as Map<String, dynamic>?;
+    final announcement = json['announcement'] as Map<String, dynamic>?;
+    final contact = json['contact'] as Map<String, dynamic>?;
+    final rawSlides = json['onboarding_slides'] as List?;
+    final slides = (rawSlides ?? [])
+        .whereType<Map>()
+        .map((s) => OnboardingSlideData.fromJson(Map<String, dynamic>.from(s)))
+        .where((s) => s.title.isNotEmpty)
+        .toList();
     return AppConfigData(
       maintenanceMode: json['maintenance_mode'] ?? false,
       arcoreEnabled: json['arcore_enabled'] ?? true,
@@ -81,8 +159,58 @@ class AppConfigData {
       releaseNotes: json['release_notes'],
       downloadUrl: json['download_url'],
       contentVersion: json['content_version'] ?? 0,
+      uiContentVersion: json['ui_content_version'] ?? 1,
+      appName: branding?['app_name'] ?? 'AR Mobile Learning',
+      appTagline: branding?['app_tagline'] ?? '',
+      logoPath: branding?['logo_path'],
+      logoUrl: branding?['logo_url'],
+      splashTitle: texts?['splash_title'] ?? 'AR Mobile Learning',
+      splashSubtitle: texts?['splash_subtitle'] ?? '',
+      greetingSiswa: texts?['greeting_siswa'] ?? 'Mari lanjutkan belajar',
+      greetingGuru: texts?['greeting_guru'] ?? 'Kelola pembelajaran Anda',
+      greetingAdmin: texts?['greeting_admin'] ?? 'Kelola sistem pembelajaran',
+      onboardingSlides: slides.isEmpty ? defaultSlides : slides,
+      announcementText: '${announcement?['text'] ?? ''}',
+      announcementActive: announcement?['active'] ?? false,
+      helpContent: '${json['help_content'] ?? ''}',
+      aboutContent: '${json['about_content'] ?? ''}',
+      contactEmail: '${contact?['email'] ?? ''}',
+      contactWa: '${contact?['wa'] ?? ''}',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'maintenance_mode': maintenanceMode,
+        'arcore_enabled': arcoreEnabled,
+        'latest_version': latestVersion,
+        'minimum_supported_version': minimumSupportedVersion,
+        'build_number': buildNumber,
+        'release_notes': releaseNotes,
+        'download_url': downloadUrl,
+        'content_version': contentVersion,
+        'ui_content_version': uiContentVersion,
+        'branding': {
+          'app_name': appName,
+          'app_tagline': appTagline,
+          'logo_path': logoPath,
+          'logo_url': logoUrl,
+        },
+        'texts': {
+          'splash_title': splashTitle,
+          'splash_subtitle': splashSubtitle,
+          'greeting_siswa': greetingSiswa,
+          'greeting_guru': greetingGuru,
+          'greeting_admin': greetingAdmin,
+        },
+        'onboarding_slides': onboardingSlides.map((s) => s.toJson()).toList(),
+        'announcement': {
+          'text': announcementText,
+          'active': announcementActive
+        },
+        'help_content': helpContent,
+        'about_content': aboutContent,
+        'contact': {'email': contactEmail, 'wa': contactWa},
+      };
 }
 
 class ContentVersionData {

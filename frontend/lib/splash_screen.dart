@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/app_config_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -36,6 +37,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Teks & logo dari CMS (cache), fallback ke default bila offline.
+    final config = AppConfigService.config;
+    final title = config?.splashTitle ?? 'AR Mobile Learning';
+    final subtitle = config?.splashSubtitle ?? '';
+    final logoUrl =
+        config != null ? AppConfigService.resolveLogoUrl(config) : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A8477),
       body: Center(
@@ -51,31 +59,48 @@ class _SplashScreenState extends State<SplashScreen>
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(
-                  Icons.view_in_ar,
-                  size: 56,
-                  color: Colors.white,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: logoUrl != null
+                      ? Image.network(
+                          logoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.view_in_ar,
+                            size: 56,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.view_in_ar,
+                          size: 56,
+                          color: Colors.white,
+                        ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'AR Mobile Learning',
-                style: TextStyle(
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                   letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Informatika dengan Augmented Reality',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w300,
-                  color: Colors.white70,
+              if (subtitle.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300,
+                    color: Colors.white70,
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 32),
               SizedBox(
                 width: 24,

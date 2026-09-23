@@ -7,10 +7,13 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TpAtpController;
 use App\Http\Controllers\MateriController;
 use App\Http\Controllers\ArController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 // Public AR routes (siswa bisa akses tanpa login)
 Route::get('/ar/public/models', [ArController::class, 'publicModels']);
@@ -20,6 +23,9 @@ Route::get('/ar/public/models/{arModel}/markers', [ArController::class, 'markerB
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user/profile', [ProfileController::class, 'update']);
+    Route::put('/user/password', [ProfileController::class, 'updatePassword']);
+    Route::post('/user/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/quizzes', [QuizController::class, 'index']);
     Route::get('/quizzes/{quiz}', [QuizController::class, 'show']);
@@ -47,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/guru/quizzes/{quiz}', [QuizController::class, 'guruDestroy']);
         Route::post('/guru/quizzes/{quiz}/questions', [QuizController::class, 'addQuestion']);
         Route::delete('/guru/questions/{question}', [QuizController::class, 'deleteQuestion']);
+        Route::get('/guru/quiz-attempts', [QuizController::class, 'guruAttempts']);
 
         // TP/ATP Management
         Route::post('/guru/tp-atp', [TpAtpController::class, 'store']);

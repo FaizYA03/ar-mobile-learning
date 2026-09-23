@@ -477,6 +477,151 @@ AR content untuk Flutter (authenticated). Mengembalikan semua active models + ma
 
 ---
 
+## Profile (auth:sanctum, semua role)
+
+### PUT `/api/user/profile`
+
+Ubah nama. `role` dari client diabaikan (ditentukan server).
+
+**Request:**
+```json
+{ "name": "Andi Baru" }
+```
+
+### PUT `/api/user/password`
+
+Ganti password. `current_password` diverifikasi ke hash tersimpan.
+
+**Request:**
+```json
+{
+  "current_password": "password",
+  "password": "baru1234",
+  "password_confirmation": "baru1234"
+}
+```
+
+### POST `/api/user/avatar`
+
+Upload avatar (multipart, `avatar`: jpg/jpeg/png/webp maks 2MB). File lama dihapus otomatis.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Avatar berhasil diperbarui",
+  "data": {
+    "id": 1, "name": "Andi", "role": "siswa",
+    "avatar": "avatars/xyz.jpg",
+    "avatar_url": "http://<host>:8000/storage/avatars/xyz.jpg"
+  }
+}
+```
+
+---
+
+## Guru — Hasil Quiz (role:guru,admin)
+
+### GET `/api/guru/quiz-attempts`
+
+Lihat semua hasil pengerjaan siswa. Filter opsional `?quiz_id=`.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Berhasil mengambil hasil quiz siswa",
+  "data": [
+    {
+      "id": 1, "score": 80, "passed": true,
+      "user": { "id": 3, "name": "Andi", "email": "siswa@demo.com" },
+      "quiz": { "id": 1, "title": "Quiz Algoritma", "passing_score": 70 }
+    }
+  ]
+}
+```
+
+---
+
+## Pagination (opt-in)
+
+Endpoint list mendukung `?per_page=1-100`. Tanpa `per_page`, format legacy (array penuh) tetap dikembalikan agar aplikasi lama tidak rusak.
+
+Endpoint: `GET /api/tp-atp`, `GET /api/materi`, `GET /api/quizzes`, `GET /api/guru/quizzes`, `GET /api/admin/users`, `GET /api/admin/quiz-attempts`, `GET /api/guru/quiz-attempts`.
+
+**Contoh:** `GET /api/materi?per_page=10`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Berhasil mengambil daftar materi",
+  "data": [ "..." ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 5,
+    "per_page": 10,
+    "total": 48
+  }
+}
+```
+
+---
+
+## Search & Filter
+
+- `GET /api/admin/users?search=andi&role=guru` — cari nama/email + filter role (`admin|guru|siswa`). Role invalid → 422.
+- `GET /api/guru/quiz-attempts?quiz_id=1` — filter hasil per quiz. Quiz tidak ada → 422.
+
+---
+
+## Konten Aplikasi / Branding (Batch 1)
+
+### GET `/api/v1/app/config` (publik, tambahan blok baru)
+
+```json
+{
+  "success": true,
+  "data": {
+    "ui_content_version": 2,
+    "branding": {
+      "app_name": "Sekolah Hebat",
+      "app_tagline": "Belajar Seru",
+      "logo_path": "branding/logo.png",
+      "logo_url": "http://<host>:8000/storage/branding/logo.png"
+    },
+    "texts": {
+      "splash_title": "Sekolah Hebat",
+      "splash_subtitle": "Belajar Seru Setiap Hari",
+      "greeting_siswa": "Ayo belajar!",
+      "greeting_guru": "Kelola kelasmu",
+      "greeting_admin": "Atur sistem"
+    },
+    "onboarding_slides": [
+      { "title": "Satu", "description": "Deskripsi satu" }
+    ],
+    "announcement": { "text": "Ujian Senin!", "active": true },
+    "help_content": "Panduan...",
+    "about_content": "Tentang...",
+    "contact": { "email": "cs@sekolah.id", "wa": "6281234567890" }
+  }
+}
+```
+
+Aplikasi: fetch saat cold start (cache `SharedPreferences`, fallback default bila offline). Setiap simpan via CMS → `ui_content_version` naik otomatis.
+
+---
+
+## CMS Web (session, role:admin)
+
+- `GET /admin/quiz-attempts` — halaman Hasil Quiz Siswa (statistik + filter quiz + cari siswa).
+- `GET /admin/system/content` — halaman Konten Aplikasi (branding, splash, sapaan, onboarding, upload logo).
+  Simpan per-section (tombol & endpoint terpisah, tiap simpan menaikkan `ui_content_version`):
+  `POST .../content/branding`, `.../splash`, `.../greetings`, `.../announcement`, `.../help`, `.../onboarding`.
+- Maintenance storage: `php artisan media:clean-orphans` (dry-run daftar file yatim), tambah `--force` untuk menghapus. File avatar ikut terhapus saat user dihapus.
+
+---
+
 ## Error Responses
 
 ### 422 Validation Error

@@ -18,15 +18,30 @@ flutter run
 
 ### API Configuration
 
-Update IP address di file berikut sesuai environment:
-- `lib/services/api_config.dart` — base URL utama
-- `lib/services/api_service.dart` — API endpoint base
-- `lib/services/api_client.dart` — Dio instance
+JANGAN edit kode untuk ganti server — pakai `--dart-define=API_BASE_URL`:
 
-| Environment | URL |
-|-------------|-----|
-| Android Emulator | `http://10.0.2.2:8000/api` |
-| Physical Device | `http://<LAPTOP_IP>:8000/api` |
+```bash
+# Chrome / web (default http://127.0.0.1:8000/api)
+flutter run -d chrome
+
+# Android emulator (default http://10.0.2.2:8000/api)
+flutter run
+
+# HP fisik — isi IP LAN laptop (lihat via ipconfig), contoh:
+flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8000/api
+
+# Release production (HTTPS wajib):
+flutter build apk --release --dart-define=API_BASE_URL=https://api.domain.com/api
+```
+
+| Environment | URL default | Override |
+|-------------|-------------|----------|
+| Web/Chrome | `http://127.0.0.1:8000/api` | `--dart-define=API_BASE_URL=...` |
+| Android Emulator | `http://10.0.2.2:8000/api` | `--dart-define=API_BASE_URL=...` |
+| HP fisik | — (wajib override) | `--dart-define=API_BASE_URL=http://<LAPTOP_LAN_IP>:8000/api` |
+| Production | — (wajib override) | `--dart-define=API_BASE_URL=https://<DOMAIN>/api` |
+
+Sumber tunggal: `lib/config/api_config.dart` (dipakai `api_service.dart` + `api_client.dart`).
 
 ## Project Structure
 

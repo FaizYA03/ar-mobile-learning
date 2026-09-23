@@ -8,6 +8,7 @@ use App\Http\Requests\QuizSubmitRequest;
 use App\Http\Requests\QuizUpdateRequest;
 use App\Http\Resources\QuizAttemptResource;
 use App\Http\Resources\QuizResource;
+use App\Http\Traits\ApiResponse;
 use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\Quiz;
@@ -19,9 +20,22 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class QuizController extends Controller
 {
+    use ApiResponse;
+
     public function index(Request $request): JsonResponse
     {
-        $quizzes = Quiz::withCount('questions')->get();
+        $query = Quiz::withCount('questions');
+
+        if ($perPage = $this->requestedPerPage($request)) {
+            $paginator = $query->paginate($perPage);
+            return $this->paginatedResources(
+                $paginator,
+                QuizResource::collection($paginator->items()),
+                'Berhasil mengambil daftar quiz'
+            );
+        }
+
+        $quizzes = $query->get();
 
         return response()->json([
             'success' => true,
@@ -103,9 +117,20 @@ class QuizController extends Controller
     }
 
     // Guru methods
-    public function guruIndex(): JsonResponse
+    public function guruIndex(Request $request): JsonResponse
     {
-        $quizzes = Quiz::withCount('questions')->orderBy('created_at', 'desc')->get();
+        $query = Quiz::withCount('questions')->orderBy('created_at', 'desc');
+
+        if ($perPage = $this->requestedPerPage($request)) {
+            $paginator = $query->paginate($perPage);
+            return $this->paginatedResources(
+                $paginator,
+                QuizResource::collection($paginator->items()),
+                'Berhasil mengambil daftar quiz guru'
+            );
+        }
+
+        $quizzes = $query->get();
 
         return response()->json([
             'success' => true,
@@ -198,8 +223,7 @@ class QuizController extends Controller
     }
 
     public function attempts(Quiz $quiz, Request $request): JsonResponse
-    {
-        $attempts = QuizAttempt::where('user_id', $request->user()->id)
+    {        $attempts = QuizAttempt::where('user_id', $request->user()->id)
             ->where('quiz_id', $quiz->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -218,6 +242,36 @@ class QuizController extends Controller
                 'passed' => $passed,
                 'attempts' => QuizAttemptResource::collection($attempts),
             ],
+        ]);
+    }
+
+    /**
+     * Guru/Admin: lihat semua hasil pengerjaan siswa.
+     * Filter opsional: ?quiz_id= untuk satu quiz.
+     */
+    public function guruAttempts(Request $request): JsonResponse
+    {
+        $query = QuizAttempt::with(['user:id,name,email', 'quiz:id,title,passing_score'])
+            ->orderBy('created_at', 'desc');
+
+        if ($request->has('quiz_id')) {
+            $validated = $request->validate([
+                'quiz_id' => 'integer|exists:quizzes,id',
+            ]);
+            $query->where('quiz_id', $validated['quiz_id']);
+        }
+
+        if ($perPage = $this->requestedPerPage($request)) {
+            return $this->paginatedResponse(
+                $query->paginate($perPage),
+                'Berhasil mengambil hasil quiz siswa'
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil mengambil hasil quiz siswa',
+            'data' => $query->get(),
         ]);
     }
 }

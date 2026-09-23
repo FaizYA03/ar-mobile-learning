@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Traits\ApiResponse;
 use App\Models\TpAtp;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
@@ -9,12 +10,21 @@ use Illuminate\Support\Str;
 
 class TpAtpController extends Controller
 {
+    use ApiResponse;
+
     public function index(Request $request)
     {
         $query = TpAtp::withCount('materi')->orderBy('order', 'asc');
 
         if (!$request->user() || $request->user()->role === 'siswa') {
             $query->where('is_active', true);
+        }
+
+        if ($perPage = $this->requestedPerPage($request)) {
+            return $this->paginatedResponse(
+                $query->paginate($perPage),
+                'Berhasil mengambil daftar TP/ATP'
+            );
         }
 
         $tpAtp = $query->get();

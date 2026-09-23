@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
+import 'services/app_config_service.dart';
 import 'services/secure_storage_service.dart';
 import 'screens/tp_atp_screen.dart';
 import 'screens/ar_hub_screen.dart';
 import 'screens/quiz_list_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/info_screen.dart';
+import 'widgets/announcement_banner.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -64,6 +68,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _openProfile() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+    if (changed == true && mounted) {
+      final name = await SecureStorageService.getUserName() ?? 'Siswa';
+      setState(() => _userName = name);
     }
   }
 
@@ -158,8 +172,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1A1A2E))),
           const SizedBox(height: 4),
-          const Text('Mari lanjutkan belajar',
-              style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
+          Text(
+              AppConfigService.config?.greetingSiswa ??
+                  'Mari lanjutkan belajar',
+              style: const TextStyle(fontSize: 14, color: Color(0xFF637080))),
+          const AnnouncementBanner(),
           const SizedBox(height: 24),
           _buildSyncStatusCard(),
           const SizedBox(height: 20),
@@ -373,11 +390,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
               style: TextStyle(fontSize: 14, color: Color(0xFF637080))),
           const SizedBox(height: 32),
           _buildProfileOption(
-              icon: Icons.person_outline, title: 'Profil Saya', onTap: () {}),
+              icon: Icons.person_outline,
+              title: 'Profil Saya',
+              onTap: _openProfile),
           _buildProfileOption(
-              icon: Icons.help_outline, title: 'Bantuan', onTap: () {}),
+              icon: Icons.help_outline,
+              title: 'Bantuan',
+              onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const InfoScreen.help()),
+                  )),
           _buildProfileOption(
-              icon: Icons.info_outline, title: 'Tentang', onTap: () {}),
+              icon: Icons.info_outline,
+              title: 'Tentang',
+              onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const InfoScreen.about()),
+                  )),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,

@@ -19,6 +19,8 @@ class AppConfigController extends Controller
         $arcoreEnabled = AppSetting::getValue('arcore_enabled', true);
         $latestVersion = AppVersion::getLatest('android');
 
+        $logoPath = AppSetting::getValue('app_logo', '');
+
         return response()->json([
             'success' => true,
             'message' => 'Konfigurasi aplikasi berhasil diambil',
@@ -31,6 +33,31 @@ class AppConfigController extends Controller
                 'release_notes' => $latestVersion?->release_notes ?? null,
                 'download_url' => $latestVersion?->download_url ?? null,
                 'content_version' => $this->getAggregateContentVersion(),
+                'ui_content_version' => (int) AppSetting::getValue('ui_content_version', 1),
+                'branding' => [
+                    'app_name' => AppSetting::getValue('app_name', 'AR Mobile Learning'),
+                    'app_tagline' => AppSetting::getValue('app_tagline', ''),
+                    'logo_path' => $logoPath ?: null,
+                    'logo_url' => $logoPath ? \Illuminate\Support\Facades\Storage::disk('public')->url($logoPath) : null,
+                ],
+                'texts' => [
+                    'splash_title' => AppSetting::getValue('splash_title', 'AR Mobile Learning'),
+                    'splash_subtitle' => AppSetting::getValue('splash_subtitle', ''),
+                    'greeting_siswa' => AppSetting::getValue('greeting_siswa', ''),
+                    'greeting_guru' => AppSetting::getValue('greeting_guru', ''),
+                    'greeting_admin' => AppSetting::getValue('greeting_admin', ''),
+                ],
+                'onboarding_slides' => AppSetting::getValue('onboarding_slides', []),
+                'announcement' => [
+                    'text' => AppSetting::getValue('announcement_text', ''),
+                    'active' => (bool) AppSetting::getValue('announcement_active', false),
+                ],
+                'help_content' => AppSetting::getValue('help_content', ''),
+                'about_content' => AppSetting::getValue('about_content', ''),
+                'contact' => [
+                    'email' => AppSetting::getValue('contact_email', ''),
+                    'wa' => AppSetting::getValue('contact_wa', ''),
+                ],
             ],
         ]);
     }
