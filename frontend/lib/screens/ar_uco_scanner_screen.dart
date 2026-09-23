@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,7 @@ import '../services/ar_camera_projector.dart';
 import '../services/ar_uco_service.dart';
 import '../services/ar_content_resolver.dart';
 import '../services/content_sync_service.dart';
+import '../widgets/ar_hotspot_speech_bubble.dart';
 
 class ArUcoScannerScreen extends StatefulWidget {
   const ArUcoScannerScreen({super.key});
@@ -46,6 +48,17 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   WebViewController? _arWebViewController;
   bool _showDebug = false;
 
+  // --- State hotspot / penjelasan interaktif pada 3D model ---
+  // Data hotspot diambil bersama hasil resolve (`ArResolveResult.hotspots`)
+  // dari backend. Posisi layar hotspot dihitung dari fraksi proyeksi yang
+  // dilaporkan WebView model-viewer (anchor) + anchor marker (cek Task 13:
+  // hanya dimuat sekali per resolve, tidak per frame).
+  int? _selectedHotspotId;
+  final Map<int, Offset> _hotspotProjections = {};
+  bool _hotspotsLoading = false;
+  bool _hotspotsError = false;
+  Timer? _hotspotsTimer;
+
   static const String _arInitialOrbit = '0deg 75deg 105%';
   static const String _arInitialTarget = '0m 0m 0m';
   static const String _arInitialFov = '45deg';
@@ -62,6 +75,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _hotspotsTimer?.cancel();
     _service?.dispose();
     super.dispose();
   }
@@ -467,7 +481,24 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       _arHeldAnchor = null;
       _arHeldCorners = null;
       _arMarkerLost = false;
+      _selectedHotspotId = null;
+      _hotspotProjections.clear();
+      _hotspotsError = false;
+      // Indikator kecil "Memuat penjelasan..." hanya muncul jika model
+      // memiliki hotspot; kondisi cleared setelah JS melaporkan 'ready'.
+      _hotspotsLoading = resolveResult.hotspots.isNotEmpty;
     });
+    _hotspotsTimer?.cancel();
+    if (resolveResult.hotspots.isNotEmpty) {
+      _hotspotsTimer = Timer(const Duration(seconds: 6), () {
+        if (mounted && _hotspotsLoading) {
+          setState(() {
+            _hotspotsLoading = false;
+            _hotspotsError = true;
+          });
+        }
+      });
+    }
     ArDebugLog.log(
         'AR overlay mode: model ${resolveResult.model.id} (${resolveResult.model.modelName})');
 
@@ -481,6 +512,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   void _exitArMode() {
     final wasScanning = _isScanning;
     if (wasScanning) _toggleScanning();
+    _hotspotsTimer?.cancel();
     setState(() {
       _arResolve = null;
       _arModelSrc = null;
@@ -491,6 +523,10 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       _arHeldCorners = null;
       _arMarkerLost = false;
       _arWebViewController = null;
+      _selectedHotspotId = null;
+      _hotspotProjections.clear();
+      _hotspotsLoading = false;
+      _hotspotsError = false;
     });
     if (wasScanning) _toggleScanning();
   }
@@ -511,7 +547,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         ),
       ),
     ).then((_) {
-      ArContentResolver.refreshContent();
+      ArContentResolver.refreshIfNeeded();
     });
   }
 
@@ -564,7 +600,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
           ),
         ),
       ).then((_) {
-        ArContentResolver.refreshContent();
+        ArContentResolver.refreshIfNeeded();
       });
     }
   }
@@ -603,6 +639,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                         ),
                       ),
                     _buildArModelOverlay(),
+                    _buildArHotspotLayer(),
                     Positioned(
                       top: 0,
                       left: 0,
@@ -616,8 +653,26 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                             const SizedBox(height: 6),
                             if (_arResolve == null)
                               Center(child: _buildScanStatusPill())
-                            else
+                            else ...[
                               Center(child: _buildArStatusPill()),
+                              if (_hotspotsLoading || _hotspotsError)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Center(
+                                    child: _buildPill(
+                                      _hotspotsLoading
+                                          ? 'Memuat penjelasan...'
+                                          : 'Gagal memuat penjelasan.',
+                                      icon: _hotspotsLoading
+                                          ? Icons.hourglass_top
+                                          : Icons.info_outline,
+                                      color: _hotspotsLoading
+                                          ? Colors.cyanAccent
+                                          : Colors.orangeAccent,
+                                    ),
+                                  ),
+                                ),
+                            ],
                             if (_showDebug) _buildDebugPanel(),
                           ],
                         ),
@@ -1045,6 +1100,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     }
 
     final src = 'file://$_arModelSrc';
+    final hotspots = _arResolve!.hotspots;
     return Positioned(
       left: anchor.left,
       top: anchor.top,
@@ -1057,6 +1113,9 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         autoRotate: false,
         // Interaksi native model-viewer: drag = rotate, pinch = zoom,
         // dua jari geser = pan. Tidak mengubah tracking ArUco sama sekali.
+        // Hotspot ditanam sebagai elemen slot `<button data-position=x y z>`,
+        // sehingga secara native "menempel" pada koordinat 3D model (ikuti
+        // rotate/zoom/pan) dan click-nya terpisah dari gesture kamera.
         cameraControls: true,
         disableZoom: false,
         cameraOrbit: _arInitialOrbit,
@@ -1069,9 +1128,307 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         backgroundColor: Colors.transparent,
         interactionPrompt: InteractionPrompt.none,
         id: 'ar-model',
+        innerModelViewerHtml:
+            hotspots.isEmpty ? null : _buildHotspotHtml(hotspots),
+        relatedCss: hotspots.isEmpty ? null : _buildHotspotCss(),
+        relatedJs: hotspots.isEmpty ? null : _buildHotspotJs(hotspots),
+        javascriptChannels: hotspots.isEmpty
+            ? null
+            : <JavascriptChannel>{
+                JavascriptChannel(
+                  'ArHotspotChannel',
+                  onMessageReceived: _onArHotspotMessage,
+                ),
+              },
         onWebViewCreated: (controller) => _arWebViewController = controller,
       ),
     );
+  }
+
+  /// Lapisan overlay speech bubble untuk hotspot yang sedang dipilih.
+  ///
+  /// Posisi bubble diturunkan dari proyeksi hotspot (fraksi di dalam WebView
+  /// model-viewer) yang digabung dengan posisi anchor model saat ini. Karena
+  /// keduanya diperbarui ketika kamera model berubah / marker bergerak, bubble
+  /// selalu mengikuti model (Task 2 & 10) dan marker out-of-frame tetap
+  /// berfungsi selama anchor ditahan (Task 11).
+  Widget _buildArHotspotLayer() {
+    final hotspotId = _selectedHotspotId;
+    if (hotspotId == null) return const SizedBox.shrink();
+
+    final anchor = _arAnchor;
+    final resolveResult = _arResolve;
+    if (anchor == null ||
+        !anchor.isValid ||
+        resolveResult == null ||
+        _previewSize.width <= 0 ||
+        _previewSize.height <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    ArHotspotData? selected;
+    for (final h in resolveResult.hotspots) {
+      if (h.id == hotspotId) {
+        selected = h;
+        break;
+      }
+    }
+    if (selected == null) return const SizedBox.shrink();
+
+    final projection = _hotspotProjections[hotspotId];
+    final hotspotCenter = projection != null
+        ? Offset(
+            anchor.left + projection.dx * anchor.width,
+            anchor.top + projection.dy * anchor.height,
+          )
+        // Fallback jika proyeksi belum tersedia (WebView belum melaporkan):
+        // taruh dekat bagian atas model, akan dikoreksi saat proyeksi tiba.
+        : Offset(
+            anchor.left + anchor.width / 2,
+            anchor.top + anchor.height * 0.25,
+          );
+
+    return ArHotspotSpeechBubble(
+      anchorCenter: hotspotCenter,
+      viewport: _previewSize,
+      title: selected.title,
+      description: selected.description,
+      onClose: () => setState(() => _selectedHotspotId = null),
+    );
+  }
+
+  /// Menghasilkan elemen hotspot model-viewer (`<button slot="hotspot-N">`).
+  ///
+  /// `data-position` memakai koordinat 3D dari backend (format
+  /// `"x m, y m, z m"`) yang sama persis dengan mekanisme pada
+  /// [ModelViewerScreen] (sudah
+  /// terbukti berfungsi). Model-viewer secara native menambatkan tombol ini
+  /// ke titik 3D tersebut sehingga melewati/mengikuti seluruh transformasi
+  /// kamera (rotate/zoom/pan) serta perubahan sudut pandang.
+  String _buildHotspotHtml(List<ArHotspotData> hotspots) {
+    final buffer = StringBuffer();
+    for (final h in hotspots) {
+      final pos = '${h.positionX}m ${h.positionY}m ${h.positionZ}m';
+      buffer.writeln(
+        '<button slot="hotspot-${h.id}" data-position="$pos" '
+        'data-visibility-attribute="visible" '
+        'style="width:20px;height:20px;border-radius:50%;'
+        'background:rgba(10,132,119,0.92);border:2px solid #ffffff;'
+        'box-shadow:0 1px 6px rgba(0,0,0,0.45);cursor:pointer;'
+        'display:flex;align-items:center;justify-content:center;'
+        'padding:0;transition:transform 0.15s ease, background 0.15s ease;">'
+        '<svg width="10" height="10" viewBox="0 0 24 24" fill="#ffffff">'
+        '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 '
+        '7-13c0-3.87-3.13-7-7-7z"/></svg></button>',
+      );
+    }
+    return buffer.toString();
+  }
+
+  String _buildHotspotCss() {
+    return '''
+.mv-hotspot-selected {
+  transform: scale(1.3);
+}
+''';
+  }
+
+  /// JavaScript untuk: (1) tap hotspot -> pilih, (2) laporkan posisi proyeksi
+  /// hotspot (fraksi) ketika model di-rotate/zoom/pan, (3) tap area kosong
+  /// model -> tutup bubble, (4) sinyal siap/gagal ke Flutter.
+  ///
+  /// Posisi yang dilaporkan berupa fraksi (0..1) relatif terhadap elemen
+  /// `model-viewer`; Flutter menggabungkannya dengan rect anchor marker untuk
+  /// mendapat koordinat layar speech bubble.
+  String _buildHotspotJs(List<ArHotspotData> hotspots) {
+    if (hotspots.isEmpty) return '';
+    final ids = hotspots.map((h) => h.id).join(',');
+    return '''
+(function() {
+  var H = window.ArHotspotChannel;
+  function post(obj) {
+    try {
+      if (H) { H.postMessage(JSON.stringify(obj)); }
+    } catch (e) {}
+  }
+  var ids = [$ids];
+  var el = null;
+  var rafPending = false;
+  var lastPosted = 0;
+
+  function readPositions() {
+    if (!el) return [];
+    var host = el.getBoundingClientRect();
+    var out = [];
+    ids.forEach(function(id) {
+      var btn = document.querySelector('[slot="hotspot-' + id + '"]');
+      if (!btn) return;
+      var r = btn.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && host.width > 0 && host.height > 0) {
+        out.push({
+          id: id,
+          fx: (r.left + r.width / 2 - host.left) / host.width,
+          fy: (r.top + r.height / 2 - host.top) / host.height
+        });
+      }
+    });
+    return out;
+  }
+
+  function postCamera() {
+    post({ type: 'camera', positions: readPositions() });
+  }
+
+  function schedulePost() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(function() {
+      rafPending = false;
+      var now = Date.now();
+      if (now - lastPosted >= 60) {
+        lastPosted = now;
+        postCamera();
+      }
+    });
+  }
+
+  function select(id) {
+    var fx = null;
+    var fy = null;
+    var btn = document.querySelector('[slot="hotspot-' + id + '"]');
+    if (btn) {
+      document.querySelectorAll('[slot^="hotspot-"].mv-hotspot-selected')
+        .forEach(function(b) { b.classList.remove('mv-hotspot-selected'); });
+      btn.classList.add('mv-hotspot-selected');
+      var r = btn.getBoundingClientRect();
+      var host = el ? el.getBoundingClientRect() : null;
+      if (r.width > 0 && host && host.width > 0 && host.height > 0) {
+        fx = (r.left + r.width / 2 - host.left) / host.width;
+        fy = (r.top + r.height / 2 - host.top) / host.height;
+      }
+    }
+    post({ type: 'select', id: id, fx: fx, fy: fy });
+  }
+
+  function setup() {
+    el = document.querySelector('model-viewer');
+    if (!el) {
+      setTimeout(setup, 200);
+      return;
+    }
+    ids.forEach(function(id) {
+      var btn = document.querySelector('[slot="hotspot-' + id + '"]');
+      if (!btn) return;
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        select(id);
+      });
+    });
+
+    var downX = 0, downY = 0, isDrag = false;
+    el.addEventListener('pointerdown', function(e) {
+      downX = e.clientX; downY = e.clientY; isDrag = false;
+    });
+    el.addEventListener('pointerup', function(e) {
+      var dx = e.clientX - downX;
+      var dy = e.clientY - downY;
+      if (dx * dx + dy * dy > 36) { isDrag = true; }
+    });
+    el.addEventListener('click', function(e) {
+      var t = e.target;
+      if (t && t.getAttribute && t.getAttribute('slot') &&
+          t.getAttribute('slot').indexOf('hotspot-') === 0) {
+        return;
+      }
+      if (isDrag) return;
+      post({ type: 'background' });
+    });
+
+    el.addEventListener('camera-change', schedulePost);
+    el.addEventListener('load', schedulePost);
+    el.addEventListener('poster-dismissed', schedulePost);
+    window.addEventListener('resize', schedulePost);
+    post({ type: 'ready' });
+    schedulePost();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup);
+  } else {
+    setup();
+  }
+})();
+''';
+  }
+
+  /// Handler pesan dari WebView model-viewer (channel 'ArHotspotChannel').
+  ///
+  /// Pesan:
+  ///  - select  : hotspot di-tap -> set sebagai selected (Task 4 & 7).
+  ///  - camera  : proyeksi hotspot terkini -> ikuti model saat rotate/zoom/pan
+  ///              (Task 10).
+  ///  - background : tap area kosong -> tutup bubble (Task 8).
+  ///  - ready/error : status pemuatan data hotspot (Task 12).
+  void _onArHotspotMessage(JavaScriptMessage message) {
+    if (!mounted) return;
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(message.message);
+    } catch (_) {
+      return;
+    }
+    if (decoded is! Map<String, dynamic>) return;
+
+    switch (decoded['type']) {
+      case 'select':
+        final id = (decoded['id'] as num?)?.toInt();
+        if (id == null) return;
+        final fx = (decoded['fx'] as num?)?.toDouble();
+        final fy = (decoded['fy'] as num?)?.toDouble();
+        if (fx != null && fy != null) {
+          _hotspotProjections[id] = Offset(fx, fy);
+        }
+        setState(() => _selectedHotspotId = id);
+
+      case 'camera':
+        final positions = decoded['positions'] as List<dynamic>?;
+        if (positions == null || positions.isEmpty) return;
+        var changed = false;
+        for (final raw in positions) {
+          if (raw is! Map<String, dynamic>) continue;
+          final id = (raw['id'] as num?)?.toInt();
+          final fx = (raw['fx'] as num?)?.toDouble();
+          final fy = (raw['fy'] as num?)?.toDouble();
+          if (id != null && fx != null && fy != null) {
+            _hotspotProjections[id] = Offset(fx, fy);
+            changed = true;
+          }
+        }
+        if (changed && _selectedHotspotId != null) setState(() {});
+
+      case 'background':
+        if (_selectedHotspotId != null) {
+          setState(() => _selectedHotspotId = null);
+        }
+
+      case 'ready':
+        _hotspotsTimer?.cancel();
+        if (_hotspotsLoading || _hotspotsError) {
+          setState(() {
+            _hotspotsLoading = false;
+            _hotspotsError = false;
+          });
+        }
+
+      case 'error':
+        _hotspotsTimer?.cancel();
+        if (mounted) {
+          setState(() {
+            _hotspotsLoading = false;
+            _hotspotsError = true;
+          });
+        }
+    }
   }
 
   void _resetArView() {

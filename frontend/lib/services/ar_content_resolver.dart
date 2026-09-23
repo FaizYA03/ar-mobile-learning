@@ -7,6 +7,8 @@ class ArContentResolver {
   static List<ArContentItem>? _cachedContent;
   static DateTime? _lastFetchTime;
 
+  static const Duration maxCacheAge = Duration(minutes: 5);
+
   static Future<void> refreshContent() async {
     try {
       final response = await ApiClient.getV1('/ar/content');
@@ -17,6 +19,25 @@ class ArContentResolver {
         _lastFetchTime = DateTime.now();
       }
     } catch (_) {}
+  }
+
+  /// Menyegarkan konten hanya jika cache kosong atau sudah basi
+  /// (melewati [maxCacheAge]) sejak pemuatan terakhir.
+  ///
+  /// Dipakai saat kembali dari layar penuh (ModelViewerScreen) agar tidak
+  /// memicu request `/ar/content` yang tidak perlu jika data masih segar.
+  /// Hotspot AR overlay di scanner sudah disuplai dari `/ar/resolve`,
+  /// sehingga cache hanya perlu disinkronkan ulang bila jarang ter-update.
+  static Future<void> refreshIfNeeded() async {
+    final now = DateTime.now();
+    final cached = _cachedContent;
+    if (cached != null &&
+        cached.isNotEmpty &&
+        _lastFetchTime != null &&
+        now.difference(_lastFetchTime!) <= maxCacheAge) {
+      return;
+    }
+    await refreshContent();
   }
 
   static List<ArContentItem> get content => _cachedContent ?? [];
