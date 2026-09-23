@@ -1,0 +1,61 @@
+name: Release APK
+
+# Cara rilis versi baru:
+#   git tag v1.1.0 && git push origin v1.1.0
+# Workflow: build APK release signed → GitHub Release.
+# Butuh Secrets: KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD,
+#   STORE_PASSWORD, PROD_API_URL
+# Butuh Variables (atau Secrets): tidak ada — cukup di atas.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build signed APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Restore keystore + key.properties
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+          cat > android/app/key.properties <<EOF
+          storeFile=release.keystore
+          storePassword=${{ secrets.STORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --dart-define=API_BASE_URL=${{ secrets.PROD_API_URL }}
+
+      - name: Rename APK with version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             "build/app/outputs/flutter-apk/ar-mobile-learning-${TAG}.apk"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: frontend/build/app/outputs/flutter-apk/ar-mobile-learning-*.apk
+          generate_release_notes: true

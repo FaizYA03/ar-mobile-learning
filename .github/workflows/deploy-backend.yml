@@ -1,0 +1,36 @@
+name: Deploy Backend
+
+# Jalan otomatis tiap push ke main yang menyentuh backend/.
+# Butuh Secrets (repo Settings → Secrets → Actions):
+#   VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_PATH
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+
+jobs:
+  deploy:
+    name: Deploy via SSH
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.VPS_PATH }}
+            git pull origin main
+            cd backend
+            composer install --no-dev --optimize-autoloader --no-interaction
+            php artisan migrate --force
+            php artisan storage:link || true
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan queue:restart || true
+            echo "Deploy OK: $(date -u)"

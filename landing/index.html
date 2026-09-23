@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download AR Mobile Learning</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #F5F7FA; color: #1A1A2E; display: flex; justify-content: center; padding: 24px 16px; }
+    .card { background: #fff; border-radius: 20px; padding: 32px 24px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(10,132,119,.12); }
+    .logo { width: 84px; height: 84px; border-radius: 22px; background: #0A8477; color: #fff; font-size: 44px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .tagline { font-size: 13px; color: #637080; margin-bottom: 20px; }
+    .version { display: inline-block; background: #0A847720; color: #0A8477; font-weight: 700; font-size: 13px; padding: 4px 14px; border-radius: 20px; margin-bottom: 16px; }
+    .btn { display: block; background: #0A8477; color: #fff; font-weight: 700; font-size: 16px; padding: 14px; border-radius: 12px; text-decoration: none; margin-bottom: 10px; }
+    .btn.disabled { background: #B0B8C1; pointer-events: none; }
+    .meta { font-size: 12px; color: #637080; margin-bottom: 16px; }
+    .notes { text-align: left; font-size: 13px; color: #444; background: #F5F7FA; border-radius: 12px; padding: 14px; margin-bottom: 16px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; }
+    #qr { width: 140px; height: 140px; margin: 0 auto 8px; display: none; border-radius: 8px; }
+    .hint { font-size: 12px; color: #B0B8C1; }
+    .steps { text-align: left; font-size: 13px; color: #637080; margin-top: 16px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🧪</div>
+    <h1>AR Mobile Learning</h1>
+    <div class="tagline">Informatika dengan Augmented Reality</div>
+    <div class="version" id="version">Memuat versi...</div>
+    <a class="btn disabled" id="downloadBtn" href="#">Memuat...</a>
+    <div class="meta" id="meta"></div>
+    <div class="notes" id="notes" style="display:none"></div>
+    <img id="qr" alt="QR download">
+    <div class="hint">Scan QR / ketuk tombol untuk download APK</div>
+    <div class="steps">
+      1. Download file APK di atas<br>
+      2. Buka file → izinkan "Install dari sumber tak dikenal"<br>
+      3. Login dengan akun siswa/guru/admin
+    </div>
+  </div>
+
+  <script>
+    const REPO = 'FaizYA03/ar-mobile-learning';
+    const btn = document.getElementById('downloadBtn');
+    const ver = document.getElementById('version');
+    const meta = document.getElementById('meta');
+    const notes = document.getElementById('notes');
+    const qr = document.getElementById('qr');
+
+    fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
+      .then(r => { if (!r.ok) throw 0; return r.json(); })
+      .then(rel => {
+        const apk = (rel.assets || []).find(a => a.name.endsWith('.apk'));
+        ver.textContent = rel.tag_name || rel.name || 'Versi terbaru';
+        if (apk) {
+          btn.href = apk.browser_download_url;
+          btn.textContent = '⬇ Download APK (' + (apk.size / 1048576).toFixed(1) + ' MB)';
+          btn.classList.remove('disabled');
+          meta.textContent = 'Dirilis ' + new Date(rel.published_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+          qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(apk.browser_download_url);
+          qr.style.display = 'block';
+          qr.onerror = () => qr.style.display = 'none';
+        } else {
+          throw 0;
+        }
+        if (rel.body) { notes.textContent = rel.body; notes.style.display = 'block'; }
+      })
+      .catch(() => {
+        ver.textContent = 'Lihat semua versi';
+        btn.href = 'https://github.com/' + REPO + '/releases';
+        btn.textContent = 'Buka halaman rilis';
+        btn.classList.remove('disabled');
+      });
+  </script>
+</body>
+</html>
