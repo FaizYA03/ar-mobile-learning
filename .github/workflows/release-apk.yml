@@ -15,6 +15,9 @@ jobs:
   build:
     name: Build signed APK
     runs-on: ubuntu-latest
+    # Rilis butuh izin tulis (repo memakai default read-only).
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: frontend
