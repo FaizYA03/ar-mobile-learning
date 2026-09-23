@@ -63,7 +63,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('admin.materi.edit', $m) }}" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Edit</a>
-                                <form method="POST" action="{{ route('admin.materi.destroy', $m) }}" onsubmit="return confirm('Yakin ingin menghapus materi ini?')">
+                                <form method="POST" action="{{ route('admin.materi.destroy', $m) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus Materi', message: 'Yakin ingin menghapus materi ini?' })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-medium">Hapus</button>

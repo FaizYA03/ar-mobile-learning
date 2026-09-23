@@ -54,7 +54,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('admin.ar.markers.edit', $marker) }}" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Edit</a>
-                                <form method="POST" action="{{ route('admin.ar.markers.destroy', $marker) }}" onsubmit="return confirm('Yakin ingin menghapus marker ini?')">
+                                <form method="POST" action="{{ route('admin.ar.markers.destroy', $marker) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus Marker', message: 'Yakin ingin menghapus marker ini?' })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-medium">Hapus</button>

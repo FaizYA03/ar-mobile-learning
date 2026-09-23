@@ -5,7 +5,7 @@
 @section('content')
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 
-<div class="max-w-6xl mx-auto">
+<div class="max-w-7xl mx-auto">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- LEFT: 3D Viewer --}}
         <div class="lg:col-span-2">
@@ -44,25 +44,37 @@
                         >
                             <div id="loading-overlay" slot="progress-bar" style="display:none;"></div>
 
-                            {{-- Hotspot slots will be injected via JS --}}
                             @foreach($model->hotspots()->where('is_active', true)->orderBy('sort_order')->get() as $hotspot)
                                 <button
-                                    class="hotspot-btn"
+                                    class="hotspot-btn existing-hotspot"
                                     slot="hotspot-{{ $hotspot->id }}"
                                     data-position="{{ $hotspot->position_x }} {{ $hotspot->position_y }} {{ $hotspot->position_z }}"
                                     data-normal="{{ $hotspot->rotation_x }} {{ $hotspot->rotation_y }} {{ $hotspot->rotation_z }}"
                                     data-visibility-attribute="visible"
                                     style="--min-hotspot-opacity: 0;"
+                                    data-existing-id="{{ $hotspot->id }}"
                                 >
                                     <div class="hotspot-dot" data-hotspot-id="{{ $hotspot->id }}"></div>
                                 </button>
                             @endforeach
 
+                            <button
+                                id="tempHotspot"
+                                class="hotspot-btn"
+                                slot="hotspot-temp"
+                                data-position="0 0 0"
+                                data-normal="0 1 0"
+                                data-visibility-attribute="visible"
+                                style="--min-hotspot-opacity: 0; display: none;"
+                            >
+                                <div class="hotspot-dot hotspot-dot-temp"></div>
+                            </button>
+
                             <div id="poster" slot="poster" style="display:none;"></div>
                         </model-viewer>
 
-                        {{-- Hotspot Info Panel --}}
-                        <div id="hotspotPanel" class="hidden absolute top-4 right-4 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-10">
+                        {{-- Hotspot Info Panel (view mode) --}}
+                        <div id="hotspotPanel" class="hidden absolute top-4 right-4 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-20">
                             <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                                 <h4 id="hotspotTitle" class="text-sm font-semibold text-gray-900"></h4>
                                 <button onclick="closeHotspotPanel()" class="text-gray-400 hover:text-gray-600">
@@ -73,24 +85,34 @@
                                 <p id="hotspotDescription" class="text-sm text-gray-600 leading-relaxed"></p>
                             </div>
                             <div class="px-4 pb-3 flex gap-2">
-                                <button onclick="editHotspot()" class="flex-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg px-3 py-2 transition">Edit</button>
-                                <button onclick="deleteHotspot()" class="flex-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg px-3 py-2 transition">Hapus</button>
+                                <button onclick="editFromPanel()" class="flex-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg px-3 py-2 transition">Edit</button>
+                                <button onclick="deleteFromPanel()" class="flex-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg px-3 py-2 transition">Hapus</button>
                             </div>
                         </div>
 
-                        {{-- Mode Toggle --}}
-                        <div class="absolute bottom-4 left-4 z-10 flex gap-2">
-                            <button id="btnViewMode" onclick="setMode('view')" class="mode-btn active px-3 py-2 rounded-lg text-xs font-medium transition shadow-sm">
-                                <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                Lihat
-                            </button>
-                            <button id="btnAddMode" onclick="setMode('add')" class="mode-btn px-3 py-2 rounded-lg text-xs font-medium transition shadow-sm">
-                                <svg class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                Tambah Penjelasan
-                            </button>
+                        {{-- Positioning Overlay --}}
+                        <div id="positioningOverlay" class="hidden absolute inset-0 z-10 pointer-events-none">
+                            <div class="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-auto">
+                                <div id="positioningStatus" class="px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 text-amber-800 shadow-sm">
+                                    Klik pada bagian model untuk menempatkan titik
+                                </div>
+                                <div class="flex gap-2">
+                                    <button id="btnUnlockPosition" onclick="unlockPosition()" class="hidden px-3 py-2 rounded-lg text-xs font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 shadow-sm transition">
+                                        <svg class="h-3.5 w-3.5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                                        Ubah Posisi
+                                    </button>
+                                    <button id="btnLockPosition" onclick="lockPosition()" class="hidden px-3 py-2 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition">
+                                        <svg class="h-3.5 w-3.5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                                        Kunci Posisi
+                                    </button>
+                                    <button id="btnCancelPlacement" onclick="cancelPlacement()" class="px-3 py-2 rounded-lg text-xs font-medium bg-white text-red-600 border border-red-300 hover:bg-red-50 shadow-sm transition">
+                                        Batal
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        {{-- Status bar --}}
+                        {{-- Mode Indicator --}}
                         <div id="modeIndicator" class="absolute top-4 left-4 z-10 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-100 text-emerald-800 shadow-sm">
                             Mode: Lihat
                         </div>
@@ -108,7 +130,13 @@
             <div class="bg-white rounded-xl border border-gray-200 mt-6">
                 <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-gray-900">Penjelasan pada Model 3D</h3>
-                    <span id="hotspotCount" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{{ $model->hotspots()->count() }} penjelasan</span>
+                    <div class="flex items-center gap-3">
+                        <span id="hotspotCount" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{{ $model->hotspots()->count() }} penjelasan</span>
+                        <button id="btnAddExplanation" onclick="startAddPlacement()" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Tambah Penjelasan
+                        </button>
+                    </div>
                 </div>
                 <div id="hotspotList" class="divide-y divide-gray-100">
                     @forelse($model->hotspots()->orderBy('sort_order')->get() as $hotspot)
@@ -120,10 +148,10 @@
                                 <p class="text-sm font-medium text-gray-900 truncate">{{ $hotspot->title }}</p>
                                 <p class="text-xs text-gray-500 truncate">{{ $hotspot->description ?? 'Tanpa deskripsi' }}</p>
                             </div>
-                            <div class="flex items-center gap-1 text-xs text-gray-400">
-                                <span>x:{{ number_format($hotspot->position_x, 1) }}</span>
-                                <span>y:{{ number_format($hotspot->position_y, 1) }}</span>
-                                <span>z:{{ number_format($hotspot->position_z, 1) }}</span>
+                            <div class="flex items-center gap-1 text-xs text-gray-400 font-mono">
+                                <span>x:{{ number_format($hotspot->position_x, 2) }}</span>
+                                <span>y:{{ number_format($hotspot->position_y, 2) }}</span>
+                                <span>z:{{ number_format($hotspot->position_z, 2) }}</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 @if($hotspot->is_active)
@@ -131,7 +159,7 @@
                                 @else
                                     <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-500">Nonaktif</span>
                                 @endif
-                                <button onclick="editHotspotById({{ $hotspot->id }})" class="text-gray-400 hover:text-emerald-600 p-1">
+                                <button onclick="startEditPlacement({{ $hotspot->id }})" class="text-gray-400 hover:text-emerald-600 p-1">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" /></svg>
                                 </button>
                                 <button onclick="deleteHotspotById({{ $hotspot->id }})" class="text-gray-400 hover:text-red-600 p-1">
@@ -150,9 +178,11 @@
             </div>
         </div>
 
-        {{-- RIGHT: Edit Form --}}
+        {{-- RIGHT: Panel --}}
         <div class="lg:col-span-1">
-            <div class="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
+            {{-- Model Edit Form --}}
+            <div id="modelFormPanel" class="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Edit Model 3D</h3>
                 <form method="POST" action="{{ route('admin.ar.models.update', $model) }}" enctype="multipart/form-data" class="space-y-5">
                     @csrf
                     @method('PUT')
@@ -216,87 +246,80 @@
                     </div>
                 </form>
             </div>
-        </div>
-    </div>
-</div>
 
-{{-- Add/Edit Hotspot Modal --}}
-<div id="hotspotModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="closeHotspotModal()"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md z-10">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 id="modalTitle" class="text-base font-semibold text-gray-900">Tambah Penjelasan</h3>
-                <button onclick="closeHotspotModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
+            {{-- Explanation Form (hidden by default) --}}
+            <div id="explanationFormPanel" class="hidden bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="explanationFormTitle" class="text-sm font-semibold text-gray-900">Tambah Penjelasan</h3>
+                    <button onclick="cancelPlacement()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <form id="explanationForm" class="space-y-4">
+                    <input type="hidden" id="hs_id" value="">
+                    <input type="hidden" id="hs_position_x" value="0">
+                    <input type="hidden" id="hs_position_y" value="0">
+                    <input type="hidden" id="hs_position_z" value="0">
+                    <input type="hidden" id="hs_rotation_x" value="0">
+                    <input type="hidden" id="hs_rotation_y" value="0">
+                    <input type="hidden" id="hs_rotation_z" value="0">
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Judul Penjelasan <span class="text-red-500">*</span></label>
+                        <input type="text" id="hs_title" required placeholder="Contoh: ALU (Arithmetic Logic Unit)" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Deskripsi / Penjelasan</label>
+                        <textarea id="hs_description" rows="4" placeholder="Jelaskan fungsi dan kegunaan komponen ini..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Posisi (otomatis dari model)</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                <span class="block text-[10px] text-gray-400 uppercase">X</span>
+                                <span id="hs_pos_x_display" class="block text-sm font-mono text-gray-700">0.00</span>
+                            </div>
+                            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                <span class="block text-[10px] text-gray-400 uppercase">Y</span>
+                                <span id="hs_pos_y_display" class="block text-sm font-mono text-gray-700">0.00</span>
+                            </div>
+                            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                <span class="block text-[10px] text-gray-400 uppercase">Z</span>
+                                <span id="hs_pos_z_display" class="block text-sm font-mono text-gray-700">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Urutan</label>
+                            <input type="number" id="hs_sort_order" min="0" value="0" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Ikon (opsional)</label>
+                            <input type="file" id="hs_image" accept="image/*" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="hs_is_active" checked class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        <label class="text-sm text-gray-700">Aktif</label>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="cancelPlacement()" class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
+                        <button type="submit" class="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">Simpan</button>
+                    </div>
+                </form>
             </div>
-            <form id="hotspotForm" class="p-6 space-y-4">
-                <input type="hidden" id="hs_id" value="">
-                <input type="hidden" id="hs_position_x" value="0">
-                <input type="hidden" id="hs_position_y" value="0">
-                <input type="hidden" id="hs_position_z" value="0">
-
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Judul Penjelasan <span class="text-red-500">*</span></label>
-                    <input type="text" id="hs_title" required placeholder="Contoh: ALU (Arithmetic Logic Unit)" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Deskripsi / Penjelasan</label>
-                    <textarea id="hs_description" rows="4" placeholder="Jelaskan fungsi dan kegunaan komponen ini..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
-                </div>
-
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Posisi X</label>
-                        <input type="number" id="hs_pos_x" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Posisi Y</label>
-                        <input type="number" id="hs_pos_y" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Posisi Z</label>
-                        <input type="number" id="hs_pos_z" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Ukuran</label>
-                        <input type="number" id="hs_scale" step="0.1" min="0.1" value="1" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Urutan</label>
-                        <input type="number" id="hs_sort_order" min="0" value="0" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Ikon Hotspot (opsional)</label>
-                    <input type="file" id="hs_image" accept="image/*" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="hs_is_active" checked class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                    <label class="text-sm text-gray-700">Aktif</label>
-                </div>
-
-                <div class="flex gap-3 pt-2">
-                    <button type="button" onclick="closeHotspotModal()" class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
-                    <button type="submit" class="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">Simpan</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
 
 <style>
-    .mode-btn { background: rgba(255,255,255,0.9); color: #637080; border: 1px solid #e5e7eb; }
-    .mode-btn.active { background: #0A8477; color: white; border-color: #0A8477; }
-    .mode-btn:hover:not(.active) { background: #f3f4f6; }
-
     .hotspot-dot {
         width: 28px; height: 28px; border-radius: 50%;
         background: #0A8477; border: 3px solid white;
@@ -310,38 +333,155 @@
     }
     .hotspot-dot:hover { transform: scale(1.2); background: #065e53; }
 
+    .hotspot-dot-temp {
+        background: #f59e0b;
+        border-color: white;
+        animation: hotspot-pulse 1.5s ease-in-out infinite;
+    }
+    .hotspot-dot-temp::after { background: white; }
+
+    @keyframes hotspot-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0,0,0,0.3); }
+        50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0), 0 2px 8px rgba(0,0,0,0.3); }
+    }
+
+    .hotspot-dot-locked {
+        background: #0A8477;
+        border-color: white;
+        animation: none;
+    }
+
     model-viewer { --progress-bar-color: #0A8477; }
     model-viewer::part(default-progress-bar) { display: none; }
-
-    .hotspot-label {
-        position: absolute; transform: translate(-50%, -100%);
-        background: white; border-radius: 8px; padding: 4px 8px;
-        font-size: 11px; font-weight: 600; color: #1a1a2e;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        white-space: nowrap; pointer-events: none;
-        margin-bottom: 8px;
-    }
 </style>
 
 <script>
-    let currentMode = 'view';
-    let currentHotspotId = null;
     const MODEL_ID = {{ $model->id }};
     const CSRF_TOKEN = '{{ csrf_token() }}';
     const HOTSPOT_API = '{{ route("admin.ar.hotspots-api.index") }}';
 
-    function setMode(mode) {
-        currentMode = mode;
-        document.getElementById('btnViewMode').classList.toggle('active', mode === 'view');
-        document.getElementById('btnAddMode').classList.toggle('active', mode === 'add');
+    let placementState = {
+        mode: 'idle',
+        hotspotId: null,
+        position: { x: 0, y: 0, z: 0 },
+        normal: { x: 0, y: 0, z: 0 },
+        isEditing: false,
+        hasPosition: false,
+        editingExistingElement: null
+    };
 
-        const indicator = document.getElementById('modeIndicator');
-        if (mode === 'view') {
-            indicator.textContent = 'Mode: Lihat';
-            indicator.className = 'absolute top-4 left-4 z-10 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-100 text-emerald-800 shadow-sm';
-        } else {
-            indicator.textContent = 'Mode: Klik model untuk tambah penjelasan';
-            indicator.className = 'absolute top-4 left-4 z-10 px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 text-amber-800 shadow-sm';
+    const CLICK_THRESHOLD = 5;
+
+    let pointerSession = null;
+
+    function enterPlacementUi(viewer) {
+        if (!viewer) return;
+        viewer.disableTap = true;
+        viewer.autoRotate = false;
+        viewer.style.cursor = 'crosshair';
+        try {
+            const input = viewer.shadowRoot && viewer.shadowRoot.querySelector('.userInput');
+            const canvas = viewer.shadowRoot && viewer.shadowRoot.querySelector('canvas');
+            if (input) input.style.cursor = 'crosshair';
+            if (canvas) canvas.style.cursor = 'crosshair';
+        } catch (err) {}
+    }
+
+    function leavePlacementUi(viewer) {
+        if (!viewer) return;
+        viewer.disableTap = false;
+        viewer.autoRotate = true;
+        viewer.style.cursor = '';
+        try {
+            const input = viewer.shadowRoot && viewer.shadowRoot.querySelector('.userInput');
+            const canvas = viewer.shadowRoot && viewer.shadowRoot.querySelector('canvas');
+            if (input) input.style.cursor = '';
+            if (canvas) canvas.style.cursor = '';
+        } catch (err) {}
+    }
+
+    function enforcePlacementCursor() {
+        if (placementState.mode !== 'placing') return;
+        const viewer = document.getElementById('modelViewer');
+        if (!viewer) return;
+        try {
+            const input = viewer.shadowRoot && viewer.shadowRoot.querySelector('.userInput');
+            const canvas = viewer.shadowRoot && viewer.shadowRoot.querySelector('canvas');
+            if (input) input.style.cursor = 'crosshair';
+            if (canvas) canvas.style.cursor = 'crosshair';
+        } catch (err) {}
+    }
+
+    function placeTemporaryPoint(e) {
+        const viewer = document.getElementById('modelViewer');
+        if (!viewer || placementState.mode !== 'placing') return;
+
+        const result = viewer.positionAndNormalFromPoint(e.clientX, e.clientY);
+        const status = document.getElementById('positioningStatus');
+
+        if (!result || !result.position) {
+            if (status) {
+                status.textContent = 'Klik pada permukaan model 3D.';
+                status.className = 'px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 text-amber-800 shadow-sm';
+            }
+            return;
+        }
+
+        const pos = result.position;
+        const nor = result.normal;
+        placementState.position = { x: pos.x, y: pos.y, z: pos.z };
+        placementState.normal = { x: nor.x, y: nor.y, z: nor.z };
+        placementState.hasPosition = true;
+        updateTempHotspot(pos.x, pos.y, pos.z, nor.x, nor.y, nor.z);
+        updatePositionDisplay(pos.x, pos.y, pos.z);
+        showPositioningUI();
+        updateModeIndicator('Mode: Penempatan Titik', 'amber');
+    }
+
+    function onViewerPointerDown(e) {
+        if (placementState.mode !== 'placing') return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (e.target && e.target.closest && e.target.closest('.hotspot-btn')) return;
+
+        if (pointerSession == null) {
+            pointerSession = {
+                pointerId: e.pointerId,
+                startX: e.clientX,
+                startY: e.clientY,
+                startTime: performance.now(),
+                moved: false,
+                valid: true
+            };
+        } else if (pointerSession.pointerId !== e.pointerId) {
+            pointerSession.valid = false;
+        }
+        enforcePlacementCursor();
+    }
+
+    function onViewerPointerMove(e) {
+        if (!pointerSession || pointerSession.pointerId !== e.pointerId) return;
+        const dx = e.clientX - pointerSession.startX;
+        const dy = e.clientY - pointerSession.startY;
+        if (Math.sqrt(dx * dx + dy * dy) > CLICK_THRESHOLD) {
+            pointerSession.moved = true;
+        }
+    }
+
+    function onViewerPointerUp(e) {
+        if (!pointerSession || pointerSession.pointerId !== e.pointerId) return;
+        const session = pointerSession;
+        pointerSession = null;
+        enforcePlacementCursor();
+        if (placementState.mode !== 'placing') return;
+        if (!session.valid) return;
+        if (session.moved) return;
+
+        placeTemporaryPoint(e);
+    }
+
+    function onViewerPointerCancel(e) {
+        if (pointerSession && pointerSession.pointerId === e.pointerId) {
+            pointerSession = null;
         }
     }
 
@@ -349,146 +489,280 @@
         const viewer = document.getElementById('modelViewer');
         if (!viewer) return;
 
-        viewer.addEventListener('click', (e) => {
-            if (currentMode !== 'add') return;
-
-            const rect = viewer.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-            const position = viewer.positionAndNormalFromPoint(x, y);
-            if (position) {
-                const pos = position.position;
-                openAddHotspotModal(pos.x, pos.y, pos.z);
-            } else {
-                openAddHotspotModal(
-                    (Math.random() * 2 - 1).toFixed(2),
-                    (Math.random() * 2 - 1).toFixed(2),
-                    (Math.random() * 2 - 1).toFixed(2)
-                );
-            }
-        });
+        viewer.addEventListener('pointerdown', onViewerPointerDown);
+        viewer.addEventListener('pointermove', onViewerPointerMove);
+        viewer.addEventListener('pointerup', onViewerPointerUp);
+        viewer.addEventListener('pointercancel', onViewerPointerCancel);
 
         viewer.addEventListener('load', () => {
             console.log('3D Model loaded successfully');
         });
 
-        // Setup existing hotspot buttons
         document.querySelectorAll('.hotspot-dot').forEach(dot => {
             dot.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (placementState.mode === 'placing') return;
                 const id = dot.dataset.hotspotId;
-                showHotspotInfo(id);
+                if (id) showHotspotInfo(id);
             });
         });
     }
 
-    function openAddHotspotModal(x, y, z) {
+    function updateTempHotspot(x, y, z, nx, ny, nz) {
+        const temp = document.getElementById('tempHotspot');
+        if (!temp) return;
+        temp.style.display = '';
+        temp.setAttribute('data-position', `${x} ${y} ${z}`);
+        temp.setAttribute('data-normal', `${nx} ${ny} ${nz}`);
+
+        const viewer = document.getElementById('modelViewer');
+        if (viewer && typeof viewer.updateHotspot === 'function') {
+            viewer.updateHotspot({
+                name: 'hotspot-temp',
+                position: `${x}m ${y}m ${z}m`,
+                normal: `${nx}m ${ny}m ${nz}m`
+            });
+        }
+
+        const dot = temp.querySelector('.hotspot-dot-temp');
+        if (dot && placementState.mode === 'locked') {
+            dot.classList.add('hotspot-dot-locked');
+        } else if (dot) {
+            dot.classList.remove('hotspot-dot-locked');
+        }
+    }
+
+    function hideTempHotspot() {
+        const temp = document.getElementById('tempHotspot');
+        if (temp) {
+            temp.style.display = 'none';
+            const dot = temp.querySelector('.hotspot-dot-temp');
+            if (dot) dot.classList.remove('hotspot-dot-locked');
+        }
+    }
+
+    function showPositioningUI() {
+        document.getElementById('btnLockPosition').classList.remove('hidden');
+        document.getElementById('btnUnlockPosition').classList.add('hidden');
+        const status = document.getElementById('positioningStatus');
+        status.textContent = 'Titik dipilih — klik untuk memindahkan, atau kunci posisi';
+        status.className = 'px-3 py-2 rounded-lg text-xs font-medium bg-emerald-100 text-emerald-800 shadow-sm';
+    }
+
+    function updateModeIndicator(text, color) {
+        const indicator = document.getElementById('modeIndicator');
+        if (!indicator) return;
+        indicator.textContent = text;
+        if (color === 'emerald') {
+            indicator.className = 'absolute top-4 left-4 z-10 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-100 text-emerald-800 shadow-sm';
+        } else if (color === 'amber') {
+            indicator.className = 'absolute top-4 left-4 z-10 px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 text-amber-800 shadow-sm';
+        } else if (color === 'blue') {
+            indicator.className = 'absolute top-4 left-4 z-10 px-3 py-2 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 shadow-sm';
+        }
+    }
+
+    function startAddPlacement() {
+        const viewer = document.getElementById('modelViewer');
+        if (viewer) {
+            enterPlacementUi(viewer);
+        }
+
+        placementState = {
+            mode: 'placing',
+            hotspotId: null,
+            position: { x: 0, y: 0, z: 0 },
+            normal: { x: 0, y: 0, z: 0 },
+            isEditing: false,
+            hasPosition: false,
+            editingExistingElement: null
+        };
+
+        hideTempHotspot();
+        document.getElementById('btnLockPosition').classList.add('hidden');
+        document.getElementById('btnUnlockPosition').classList.add('hidden');
+        document.getElementById('positioningOverlay').classList.remove('hidden');
+        document.getElementById('positioningStatus').textContent = 'Klik pada bagian model untuk menempatkan titik';
+        document.getElementById('positioningStatus').className = 'px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 text-amber-800 shadow-sm';
+
+        document.getElementById('modelFormPanel').classList.add('hidden');
+        document.getElementById('explanationFormPanel').classList.remove('hidden');
+        document.getElementById('explanationFormTitle').textContent = 'Tambah Penjelasan';
         document.getElementById('hs_id').value = '';
         document.getElementById('hs_title').value = '';
         document.getElementById('hs_description').value = '';
-        document.getElementById('hs_pos_x').value = parseFloat(x).toFixed(2);
-        document.getElementById('hs_pos_y').value = parseFloat(y).toFixed(2);
-        document.getElementById('hs_pos_z').value = parseFloat(z).toFixed(2);
-        document.getElementById('hs_scale').value = '1';
         document.getElementById('hs_sort_order').value = '0';
         document.getElementById('hs_is_active').checked = true;
         document.getElementById('hs_image').value = '';
-        document.getElementById('modalTitle').textContent = 'Tambah Penjelasan';
-        document.getElementById('hotspotModal').classList.remove('hidden');
+        updatePositionDisplay(0, 0, 0);
+
+        updateModeIndicator('Mode: Penempatan Titik', 'amber');
     }
 
-    function closeHotspotModal() {
-        document.getElementById('hotspotModal').classList.add('hidden');
-    }
-
-    function closeHotspotPanel() {
-        document.getElementById('hotspotPanel').classList.add('hidden');
-    }
-
-    async function showHotspotInfo(id) {
+    async function startEditPlacement(id) {
         try {
             const res = await fetch(`${HOTSPOT_API}/${id}`);
             const json = await res.json();
-            if (json.success) {
-                const h = json.data;
-                currentHotspotId = h.id;
-                document.getElementById('hotspotTitle').textContent = h.title;
-                document.getElementById('hotspotDescription').textContent = h.description || 'Tanpa deskripsi';
-                document.getElementById('hotspotPanel').classList.remove('hidden');
+            if (!json.success) return;
+
+            const h = json.data;
+
+            const existingBtn = document.querySelector(`[data-existing-id="${id}"]`);
+            if (existingBtn) {
+                existingBtn.style.display = 'none';
+                placementState.editingExistingElement = existingBtn;
             }
+
+            const viewer = document.getElementById('modelViewer');
+            if (viewer) {
+                enterPlacementUi(viewer);
+            }
+
+            placementState = {
+                mode: 'placing',
+                hotspotId: h.id,
+                position: { x: h.position_x, y: h.position_y, z: h.position_z },
+                normal: { x: h.rotation_x || 0, y: h.rotation_y || 0, z: h.rotation_z || 0 },
+                isEditing: true,
+                hasPosition: true,
+                editingExistingElement: existingBtn || null
+            };
+
+            updateTempHotspot(h.position_x, h.position_y, h.position_z, h.rotation_x || 0, h.rotation_y || 0, h.rotation_z || 0);
+
+            document.getElementById('positioningOverlay').classList.remove('hidden');
+
+            document.getElementById('modelFormPanel').classList.add('hidden');
+            document.getElementById('explanationFormPanel').classList.remove('hidden');
+            document.getElementById('explanationFormTitle').textContent = 'Edit Penjelasan';
+            document.getElementById('hs_id').value = h.id;
+            document.getElementById('hs_title').value = h.title;
+            document.getElementById('hs_description').value = h.description || '';
+            document.getElementById('hs_sort_order').value = h.sort_order || 0;
+            document.getElementById('hs_is_active').checked = h.is_active;
+            document.getElementById('hs_image').value = '';
+
+            lockPosition();
+
+            updateModeIndicator('Mode: Edit Penjelasan', 'blue');
         } catch (e) {
             console.error('Failed to load hotspot:', e);
         }
     }
 
-    function editHotspot() {
-        if (!currentHotspotId) return;
-        editHotspotById(currentHotspotId);
-    }
+    function lockPosition() {
+        if (!placementState.hasPosition) return;
 
-    async function editHotspotById(id) {
-        try {
-            const res = await fetch(`${HOTSPOT_API}/${id}`);
-            const json = await res.json();
-            if (json.success) {
-                const h = json.data;
-                document.getElementById('hs_id').value = h.id;
-                document.getElementById('hs_title').value = h.title;
-                document.getElementById('hs_description').value = h.description || '';
-                document.getElementById('hs_pos_x').value = h.position_x;
-                document.getElementById('hs_pos_y').value = h.position_y;
-                document.getElementById('hs_pos_z').value = h.position_z;
-                document.getElementById('hs_scale').value = h.scale || 1;
-                document.getElementById('hs_sort_order').value = h.sort_order || 0;
-                document.getElementById('hs_is_active').checked = h.is_active;
-                document.getElementById('hs_image').value = '';
-                document.getElementById('modalTitle').textContent = 'Edit Penjelasan';
-                closeHotspotPanel();
-                document.getElementById('hotspotModal').classList.remove('hidden');
-            }
-        } catch (e) {
-            console.error('Failed to load hotspot:', e);
+        placementState.mode = 'locked';
+
+        const temp = document.getElementById('tempHotspot');
+        if (temp) {
+            const dot = temp.querySelector('.hotspot-dot-temp');
+            if (dot) dot.classList.add('hotspot-dot-locked');
         }
+
+        document.getElementById('btnLockPosition').classList.add('hidden');
+        document.getElementById('btnUnlockPosition').classList.remove('hidden');
+        const status = document.getElementById('positioningStatus');
+        status.textContent = 'Posisi terkunci — isi informasi penjelasan di panel sebelah kanan';
+        status.className = 'px-3 py-2 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 shadow-sm';
+
+        document.getElementById('hs_position_x').value = placementState.position.x;
+        document.getElementById('hs_position_y').value = placementState.position.y;
+        document.getElementById('hs_position_z').value = placementState.position.z;
+        document.getElementById('hs_rotation_x').value = placementState.normal.x;
+        document.getElementById('hs_rotation_y').value = placementState.normal.y;
+        document.getElementById('hs_rotation_z').value = placementState.normal.z;
+
+        updatePositionDisplay(placementState.position.x, placementState.position.y, placementState.position.z);
+        updateModeIndicator('Mode: Posisi Terkunci', 'blue');
     }
 
-    function deleteHotspot() {
-        if (!currentHotspotId) return;
-        deleteHotspotById(currentHotspotId);
-    }
+    function unlockPosition() {
+        placementState.mode = 'placing';
 
-    async function deleteHotspotById(id) {
-        if (!confirm('Yakin ingin menghapus penjelasan ini?')) return;
-        try {
-            const res = await fetch(`${HOTSPOT_API}/${id}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' }
-            });
-            const json = await res.json();
-            if (json.success) {
-                closeHotspotPanel();
-                location.reload();
-            }
-        } catch (e) {
-            console.error('Failed to delete hotspot:', e);
-            alert('Gagal menghapus hotspot');
+        const temp = document.getElementById('tempHotspot');
+        if (temp) {
+            const dot = temp.querySelector('.hotspot-dot-temp');
+            if (dot) dot.classList.remove('hotspot-dot-locked');
         }
+
+        document.getElementById('btnLockPosition').classList.remove('hidden');
+        document.getElementById('btnUnlockPosition').classList.add('hidden');
+        const status = document.getElementById('positioningStatus');
+        status.textContent = 'Klik pada bagian model untuk memindahkan titik';
+        status.className = 'px-3 py-2 rounded-lg text-xs font-medium bg-amber-100 text-amber-800 shadow-sm';
+
+        updateModeIndicator('Mode: Penempatan Titik', 'amber');
     }
 
-    document.getElementById('hotspotForm').addEventListener('submit', async (e) => {
+    function cancelPlacement() {
+        const viewer = document.getElementById('modelViewer');
+        if (viewer) {
+            leavePlacementUi(viewer);
+        }
+
+        if (placementState.editingExistingElement) {
+            placementState.editingExistingElement.style.display = '';
+        }
+
+        hideTempHotspot();
+        document.getElementById('positioningOverlay').classList.add('hidden');
+        document.getElementById('modelFormPanel').classList.remove('hidden');
+        document.getElementById('explanationFormPanel').classList.add('hidden');
+
+        placementState = {
+            mode: 'idle',
+            hotspotId: null,
+            position: { x: 0, y: 0, z: 0 },
+            normal: { x: 0, y: 0, z: 0 },
+            isEditing: false,
+            hasPosition: false,
+            editingExistingElement: null
+        };
+
+        updateModeIndicator('Mode: Lihat', 'emerald');
+    }
+
+    function updatePositionDisplay(x, y, z) {
+        document.getElementById('hs_pos_x_display').textContent = parseFloat(x).toFixed(2);
+        document.getElementById('hs_pos_y_display').textContent = parseFloat(y).toFixed(2);
+        document.getElementById('hs_pos_z_display').textContent = parseFloat(z).toFixed(2);
+    }
+
+    document.getElementById('explanationForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        if (!placementState.hasPosition) {
+            alert('Silakan klik bagian model untuk menentukan posisi titik.');
+            return;
+        }
+
+        if (placementState.mode !== 'locked') {
+            alert('Silakan kunci posisi titik.');
+            return;
+        }
+
+        const title = document.getElementById('hs_title').value.trim();
+        if (!title) {
+            alert('Judul penjelasan wajib diisi.');
+            return;
+        }
 
         const id = document.getElementById('hs_id').value;
         const isEdit = id !== '';
 
         const formData = new FormData();
         formData.append('ar_model_id', MODEL_ID);
-        formData.append('title', document.getElementById('hs_title').value);
+        formData.append('title', title);
         formData.append('description', document.getElementById('hs_description').value);
-        formData.append('position_x', document.getElementById('hs_pos_x').value);
-        formData.append('position_y', document.getElementById('hs_pos_y').value);
-        formData.append('position_z', document.getElementById('hs_pos_z').value);
-        formData.append('scale', document.getElementById('hs_scale').value);
+        formData.append('position_x', placementState.position.x);
+        formData.append('position_y', placementState.position.y);
+        formData.append('position_z', placementState.position.z);
+        formData.append('rotation_x', placementState.normal.x || 0);
+        formData.append('rotation_y', placementState.normal.y || 0);
+        formData.append('rotation_z', placementState.normal.z || 0);
+        formData.append('scale', '1');
         formData.append('sort_order', document.getElementById('hs_sort_order').value);
         formData.append('is_active', document.getElementById('hs_is_active').checked ? '1' : '0');
 
@@ -499,7 +773,6 @@
 
         try {
             const url = isEdit ? `${HOTSPOT_API}/${id}` : HOTSPOT_API;
-            const method = isEdit ? 'POST' : 'POST';
             const headers = { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' };
 
             if (isEdit) {
@@ -507,22 +780,80 @@
             }
 
             const res = await fetch(url, {
-                method: method,
+                method: 'POST',
                 headers: headers,
                 body: formData
             });
             const json = await res.json();
             if (json.success) {
-                closeHotspotModal();
                 location.reload();
             } else {
                 alert('Error: ' + (json.message || 'Terjadi kesalahan'));
             }
         } catch (e) {
-            console.error('Failed to save hotspot:', e);
-            alert('Gagal menyimpan hotspot');
+            console.error('Failed to save explanation:', e);
+            alert('Gagal menyimpan penjelasan');
         }
     });
+
+    function closeHotspotPanel() {
+        document.getElementById('hotspotPanel')?.classList.add('hidden');
+    }
+
+    async function showHotspotInfo(id) {
+        try {
+            const res = await fetch(`${HOTSPOT_API}/${id}`);
+            const json = await res.json();
+            if (json.success) {
+                const h = json.data;
+                const panel = document.getElementById('hotspotPanel');
+                if (!panel) return;
+                document.getElementById('hotspotTitle').textContent = h.title;
+                document.getElementById('hotspotDescription').textContent = h.description || 'Tanpa deskripsi';
+                panel.dataset.currentId = h.id;
+                panel.classList.remove('hidden');
+            }
+        } catch (e) {
+            console.error('Failed to load hotspot:', e);
+        }
+    }
+
+    function editFromPanel() {
+        const panel = document.getElementById('hotspotPanel');
+        if (panel && panel.dataset.currentId) {
+            panel.classList.add('hidden');
+            startEditPlacement(parseInt(panel.dataset.currentId));
+        }
+    }
+
+    function deleteFromPanel() {
+        const panel = document.getElementById('hotspotPanel');
+        if (panel && panel.dataset.currentId) {
+            deleteHotspotById(parseInt(panel.dataset.currentId));
+            panel.classList.add('hidden');
+        }
+    }
+
+    async function deleteHotspotById(id) {
+        const confirmed = await window.deleteConfirm.confirm({
+            title: 'Hapus Penjelasan',
+            message: 'Yakin ingin menghapus penjelasan ini?'
+        });
+        if (!confirmed) return;
+        try {
+            const res = await fetch(`${HOTSPOT_API}/${id}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' }
+            });
+            const json = await res.json();
+            if (json.success) {
+                location.reload();
+            }
+        } catch (e) {
+            console.error('Failed to delete hotspot:', e);
+            alert('Gagal menghapus hotspot');
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', initModelViewer);
 </script>

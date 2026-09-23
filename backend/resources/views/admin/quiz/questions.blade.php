@@ -39,7 +39,7 @@
                                     @endforeach
                                 </div>
                             </div>
-                            <form method="POST" action="{{ route('admin.quiz.delete-question', $question) }}" onsubmit="return confirm('Yakin ingin menghapus soal ini?')">
+                            <form method="POST" action="{{ route('admin.quiz.delete-question', $question) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus Soal', message: 'Yakin ingin menghapus soal ini?' })">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-red-500 hover:text-red-600 text-xs font-medium shrink-0">Hapus</button>

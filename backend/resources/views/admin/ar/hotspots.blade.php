@@ -50,7 +50,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('admin.ar.hotspots.edit', $hotspot) }}" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Edit</a>
-                                <form method="POST" action="{{ route('admin.ar.hotspots.destroy', $hotspot) }}" onsubmit="return confirm('Yakin ingin menghapus hotspot ini?')">
+                                <form method="POST" action="{{ route('admin.ar.hotspots.destroy', $hotspot) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus Hotspot', message: 'Yakin ingin menghapus hotspot ini?' })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-medium">Hapus</button>

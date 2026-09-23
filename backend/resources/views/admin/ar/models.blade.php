@@ -65,7 +65,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('admin.ar.models.edit', $model) }}" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Edit</a>
-                                <form method="POST" action="{{ route('admin.ar.models.destroy', $model) }}" onsubmit="return confirm('Yakin ingin menghapus model ini?')">
+                                <form method="POST" action="{{ route('admin.ar.models.destroy', $model) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus Model 3D', message: 'Yakin ingin menghapus model ini?' })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-medium">Hapus</button>

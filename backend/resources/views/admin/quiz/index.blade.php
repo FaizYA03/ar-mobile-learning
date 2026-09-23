@@ -41,7 +41,7 @@
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('admin.quiz.questions', $quiz) }}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Soal</a>
                                 <a href="{{ route('admin.quiz.edit', $quiz) }}" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Edit</a>
-                                <form method="POST" action="{{ route('admin.quiz.destroy', $quiz) }}" onsubmit="return confirm('Yakin ingin menghapus quiz ini?')">
+                                <form method="POST" action="{{ route('admin.quiz.destroy', $quiz) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus Quiz', message: 'Yakin ingin menghapus quiz ini?' })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-medium">Hapus</button>

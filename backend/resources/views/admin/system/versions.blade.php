@@ -42,7 +42,7 @@
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <button @click="editing = !editing" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Edit</button>
-                                        <form method="POST" action="{{ route('admin.system.versions.destroy', $version) }}" onsubmit="return confirm('Yakin ingin menghapus versi ini?')">
+                                        <form method="POST" action="{{ route('admin.system.versions.destroy', $version) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus Versi', message: 'Yakin ingin menghapus versi ini?' })">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-medium">Hapus</button>

@@ -55,7 +55,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('admin.users.edit', $user) }}" class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Edit</a>
-                                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Yakin ingin menghapus user ini?')">
+                                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="deleteConfirm.openForm(event, { title: 'Hapus User', message: 'Yakin ingin menghapus user ini?' })">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-600 text-sm font-medium">Hapus</button>
