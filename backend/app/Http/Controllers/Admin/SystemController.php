@@ -215,9 +215,9 @@ class SystemController extends Controller
 
         $validated['is_active'] = $validated['is_active'] ?? true;
 
-        AppVersion::create($validated);
+        $appVersion = AppVersion::create($validated);
 
-        \App\Services\ActivityLogger::created('app_version', null, "App version {$validated['version']} ({$validated['platform']}) created via admin");
+        \App\Services\ActivityLogger::created('app_version', $appVersion->id, "App version {$validated['version']} ({$validated['platform']}) created via admin");
 
         return redirect()->route('admin.system.versions')->with('success', 'App version berhasil ditambahkan.');
     }

@@ -51,9 +51,9 @@ class TpAtpController extends Controller
         }
         $validated['is_active'] = $validated['is_active'] ?? true;
 
-        TpAtp::create($validated);
+        $tpAtp = TpAtp::create($validated);
 
-        \App\Services\ActivityLogger::created('tp_atp', null, "TP/ATP '{$validated['judul']}' created via admin");
+        \App\Services\ActivityLogger::created('tp_atp', $tpAtp->id, "TP/ATP '{$validated['judul']}' created via admin");
 
         return redirect()->route('admin.tp-atp.index')->with('success', 'TP/ATP berhasil ditambahkan.');
     }

@@ -43,14 +43,14 @@ class UserController extends Controller
             'role' => 'required|in:admin,guru,siswa',
         ]);
 
-        User::forceCreate([
+        $user = User::forceCreate([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
         ]);
 
-        \App\Services\ActivityLogger::created('user', null, "User '{$validated['name']}' ({$validated['role']}) created via admin");
+        \App\Services\ActivityLogger::created('user', $user->id, "User '{$validated['name']}' ({$validated['role']}) created via admin");
 
         return redirect()->route('admin.users.index')->with('success', 'User berhasil ditambahkan.');
     }

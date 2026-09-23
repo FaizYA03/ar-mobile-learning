@@ -59,9 +59,9 @@ class MateriController extends Controller
             $validated['gambar_cover'] = $request->file('gambar_cover')->store('covers', 'public');
         }
 
-        Materi::create($validated);
+        $materi = Materi::create($validated);
 
-        \App\Services\ActivityLogger::created('materi', null, "Materi '{$validated['judul']}' created via admin");
+        \App\Services\ActivityLogger::created('materi', $materi->id, "Materi '{$validated['judul']}' created via admin");
 
         return redirect()->route('admin.materi.index')->with('success', 'Materi berhasil ditambahkan.');
     }
