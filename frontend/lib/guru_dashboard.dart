@@ -186,8 +186,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
                                   onChanged: (v) => options[i]['text'] = v,
                                 ),
                               ),
-                              Radio<bool>(
-                                value: true,
+                              RadioGroup<bool>(
                                 groupValue: options[i]['is_correct'],
                                 onChanged: (v) {
                                   setDialogState(() {
@@ -197,6 +196,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
                                     options[i]['is_correct'] = true;
                                   });
                                 },
+                                child: Radio<bool>(value: true),
                               ),
                             ],
                           ),

@@ -84,7 +84,7 @@ class _AdminMateriScreenState extends State<AdminMateriScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     DropdownButtonFormField<int>(
-                      value: selectedTpAtpId,
+                      initialValue: selectedTpAtpId,
                       decoration: InputDecoration(
                         labelText: 'Tujuan Pembelajaran (TP/ATP) *',
                         border: OutlineInputBorder(
@@ -357,7 +357,7 @@ class _AdminMateriScreenState extends State<AdminMateriScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: DropdownButtonFormField<int?>(
-                    value: _filterTpAtpId,
+                    initialValue: _filterTpAtpId,
                     decoration: InputDecoration(
                       labelText: 'Filter TP/ATP',
                       border: OutlineInputBorder(

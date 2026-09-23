@@ -85,7 +85,7 @@ class _GuruMateriScreenState extends State<GuruMateriScreen> {
                   children: [
                     // TP/ATP Dropdown
                     DropdownButtonFormField<int>(
-                      value: selectedTpAtpId,
+                      initialValue: selectedTpAtpId,
                       decoration: InputDecoration(
                         labelText: 'Tujuan Pembelajaran (TP/ATP) *',
                         border: OutlineInputBorder(
@@ -366,7 +366,7 @@ class _GuruMateriScreenState extends State<GuruMateriScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: DropdownButtonFormField<int?>(
-                    value: _filterTpAtpId,
+                    initialValue: _filterTpAtpId,
                     decoration: InputDecoration(
                       labelText: 'Filter TP/ATP',
                       border: OutlineInputBorder(

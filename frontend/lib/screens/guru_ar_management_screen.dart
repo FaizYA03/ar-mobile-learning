@@ -358,7 +358,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
                     Switch(
                         value: isActive,
                         onChanged: (v) => setDialogState(() => isActive = v),
-                        activeColor: const Color(0xFF0A8477)),
+                        activeThumbColor: const Color(0xFF0A8477)),
                   ],
                 ),
               ],
@@ -628,7 +628,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: markerType,
+                  initialValue: markerType,
                   decoration: InputDecoration(
                       labelText: 'Tipe',
                       border: OutlineInputBorder(
@@ -688,7 +688,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: status,
+                  initialValue: status,
                   decoration: InputDecoration(
                       labelText: 'Status',
                       border: OutlineInputBorder(
@@ -941,7 +941,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<int>(
-                  value: selectedModelId,
+                  initialValue: selectedModelId,
                   decoration: InputDecoration(
                       labelText: '3D Model',
                       border: OutlineInputBorder(
@@ -1022,7 +1022,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
                     Switch(
                         value: isActive,
                         onChanged: (v) => setDialogState(() => isActive = v),
-                        activeColor: const Color(0xFF0A8477)),
+                        activeThumbColor: const Color(0xFF0A8477)),
                   ],
                 ),
               ],
@@ -1213,7 +1213,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
               style: const TextStyle(
                   fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
           content: DropdownButtonFormField<int>(
-            value: selectedModelId,
+            initialValue: selectedModelId,
             isExpanded: true,
             decoration: InputDecoration(
                 labelText: 'Pilih 3D Model',
