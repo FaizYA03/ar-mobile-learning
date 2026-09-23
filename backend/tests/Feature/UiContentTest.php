@@ -31,6 +31,7 @@ class UiContentTest extends TestCase
         $this->assertCount(3, $data['onboarding_slides']);
         $this->assertArrayHasKey('title', $data['onboarding_slides'][0]);
         $this->assertArrayHasKey('description', $data['onboarding_slides'][0]);
+        $this->assertArrayHasKey('server_time', $data);
     }
 
     public function test_guest_cannot_access_content_cms(): void

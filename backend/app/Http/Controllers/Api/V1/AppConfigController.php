@@ -34,6 +34,8 @@ class AppConfigController extends Controller
                 'download_url' => $latestVersion?->download_url ?? null,
                 'content_version' => $this->getAggregateContentVersion(),
                 'ui_content_version' => (int) AppSetting::getValue('ui_content_version', 1),
+                // Penanda deploy: jam server saat response dibuat (untuk verifikasi CI/CD).
+                'server_time' => now()->toIso8601String(),
                 'branding' => [
                     'app_name' => AppSetting::getValue('app_name', 'AR Mobile Learning'),
                     'app_tagline' => AppSetting::getValue('app_tagline', ''),
