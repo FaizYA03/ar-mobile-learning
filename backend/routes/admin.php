@@ -33,6 +33,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('quiz-attempts', [QuizAttemptController::class, 'index'])->name('quiz-attempts.index');
 
     Route::prefix('ar')->name('ar.')->group(function () {
+        Route::get('markers/generate', [ArMarkerController::class, 'showGenerate'])->name('markers.generate');
+        Route::post('markers/generate', [ArMarkerController::class, 'generate'])->name('markers.generate.store');
         Route::resource('models', ArModelController::class)->except('show');
         Route::resource('markers', ArMarkerController::class)->except('show');
         Route::resource('hotspots', ArHotspotController::class)->except('show');

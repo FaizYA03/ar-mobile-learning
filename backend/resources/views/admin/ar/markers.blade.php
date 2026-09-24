@@ -8,10 +8,16 @@
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari marker ID..." class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-full sm:w-64">
         <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Filter</button>
     </form>
-    <a href="{{ route('admin.ar.markers.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-        Upload Marker
-    </a>
+    <div class="flex items-center gap-2">
+        <a href="{{ route('admin.ar.markers.generate') }}" class="inline-flex items-center gap-2 rounded-lg bg-white border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.043-1.622m-4.043 1.622a15.996 15.996 0 0 1-1.622 4.043m1.622-4.043a15.996 15.996 0 0 0 4.043 1.622M16.5 16.5l4.5-4.5" /></svg>
+            Generate Marker
+        </a>
+        <a href="{{ route('admin.ar.markers.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Upload Marker
+        </a>
+    </div>
 </div>
 
 <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">

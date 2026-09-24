@@ -20,7 +20,7 @@ apt update && apt install -y software-properties-common
 add-apt-repository -y ppa:ondrej/php && apt update
 apt install -y php8.2-fpm php8.2-mysql php8.2-mbstring php8.2-xml php8.2-bcmath \
   php8.2-curl php8.2-zip php8.2-gd mysql-server nginx certbot python3-certbot-nginx \
-  git unzip composer
+  git unzip composer python3-pip
 
 # Database
 mysql -e "CREATE DATABASE ar_mobile_learning CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
@@ -55,6 +55,16 @@ Nginx: root ke `backend/public`, `client_max_body_size 100M` (upload GLB),
 PHP-FPM 8.2, lalu `certbot --nginx -d api.domainmu.id -d download.domainmu.id`.
 Landing page: serve folder `landing/` sebagai site `download.domainmu.id`.
 Cron scheduler Laravel: `* * * * * cd /var/www/ar-mobile-learning/backend && php artisan schedule:run >> /dev/null 2>&1`
+
+### Dependensi generator marker ArUco (CMS → Generate Marker)
+
+```bash
+pip3 install --break-system-packages opencv-python-headless numpy
+python3 /var/www/ar-mobile-learning/backend/scripts/generate_aruco.py --help
+```
+
+Tanpa ini, halaman Generate Marker menampilkan peringatan dan menolak generate
+(test otomatis skip bila OpenCV tidak ada).
 
 Deploy pertama (manual, sekali saja): copy `.env`, `composer install --no-dev`,
 `php artisan key:generate`, `migrate --seed`, `storage:link`,

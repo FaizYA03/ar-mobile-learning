@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ArMarker;
+use App\Services\ArMarkerGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -25,6 +26,70 @@ class ArMarkerController extends Controller
     public function create()
     {
         return view('admin.ar.create-marker');
+    }
+
+    /**
+     * Form generate marker ArUco otomatis (tanpa upload file).
+     */
+    public function showGenerate()
+    {
+        $dictionaries = ArMarkerGenerator::DICTIONARIES;
+        $usedIds = ArMarker::whereNotNull('aruco_dictionary')
+            ->whereNotNull('ar_uco_id')
+            ->get(['aruco_dictionary', 'ar_uco_id'])
+            ->groupBy('aruco_dictionary')
+            ->map(fn ($rows) => $rows->pluck('ar_uco_id')->all())
+            ->all();
+        $available = ArMarkerGenerator::isAvailable();
+
+        return view('admin.ar.generate-marker', compact('dictionaries', 'usedIds', 'available'));
+    }
+
+    /**
+     * Generate PNG via OpenCV lalu buat record marker.
+     */
+    public function generate(Request $request)
+    {
+        $validated = $request->validate([
+            'marker_id' => 'required|string|max:100|unique:ar_markers,marker_id',
+            'aruco_dictionary' => 'required|string|in:' . implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
+            'ar_uco_id' => 'required|integer|min:0',
+            'status' => 'nullable|string|in:active,inactive',
+        ]);
+
+        $max = ArMarkerGenerator::maxId($validated['aruco_dictionary']);
+        if ($validated['ar_uco_id'] > $max) {
+            return back()->withErrors(['ar_uco_id' => "ID maksimal untuk {$validated['aruco_dictionary']} adalah {$max}."])->withInput();
+        }
+
+        $exists = ArMarker::where('aruco_dictionary', $validated['aruco_dictionary'])
+            ->where('ar_uco_id', $validated['ar_uco_id'])
+            ->exists();
+        if ($exists) {
+            return back()->withErrors(['ar_uco_id' => "ID {$validated['ar_uco_id']} pada {$validated['aruco_dictionary']} sudah dipakai marker lain."])->withInput();
+        }
+
+        try {
+            $path = ArMarkerGenerator::generate(
+                $validated['aruco_dictionary'],
+                (int) $validated['ar_uco_id']
+            );
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['ar_uco_id' => $e->getMessage()])->withInput();
+        }
+
+        $marker = ArMarker::create([
+            'marker_id' => $validated['marker_id'],
+            'marker_type' => 'pattern',
+            'image_path' => $path,
+            'aruco_dictionary' => $validated['aruco_dictionary'],
+            'ar_uco_id' => $validated['ar_uco_id'],
+            'status' => $validated['status'] ?? 'active',
+        ]);
+
+        \App\Services\ActivityLogger::uploaded('ar_marker', $marker->id, $path, "AR marker '{$marker->marker_id}' digenerate via admin");
+
+        return redirect()->route('admin.ar.markers.index')->with('success', "Marker {$marker->marker_id} berhasil digenerate.");
     }
 
     public function store(Request $request)
