@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
+import '../services/content_sync_service.dart';
 import 'model_viewer_screen.dart';
 
 class GuruArManagementScreen extends StatefulWidget {
@@ -257,14 +258,27 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
     );
   }
 
-  void _show3DPreview(dynamic model) {
+  // Perlakuan sama seperti siswa (ar_hub): utamakan file lokal hasil
+  // sinkronisasi konten, fallback ke URL server.
+  Future<void> _show3DPreview(dynamic model) async {
+    final rawId = model['id'];
+    final modelId = rawId is int ? rawId : int.tryParse('$rawId');
+    String? localPath;
+    if (modelId != null) {
+      localPath = await ContentSyncService.getCachedModelPath(modelId);
+    }
+    final glbPath = model['glb_path'] as String?;
+    final displayUrl = (localPath != null && localPath.isNotEmpty)
+        ? localPath
+        : (glbPath != null && glbPath.isNotEmpty ? _storageUrl(glbPath) : '');
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ModelViewerScreen(
-          arModelId: model['id'],
+          arModelId: modelId,
           modelName: model['model_name'] ?? 'Preview 3D',
-          modelUrl: model['glb_path'],
+          modelUrl: displayUrl,
         ),
       ),
     );

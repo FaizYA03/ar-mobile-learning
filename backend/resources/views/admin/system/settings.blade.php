@@ -4,6 +4,19 @@
 
 @section('content')
 <div class="max-w-3xl">
+    @if(session('success'))
+        <div class="mb-4 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
+    @endif
+
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <h2 class="text-sm font-semibold text-gray-900 mb-1">Cache Aplikasi</h2>
+        <p class="text-xs text-gray-500 mb-4">Bersihkan cache config, route, view, dan data. Jalankan setelah edit <code>.env</code> manual di server agar terbaca.</p>
+        <form method="POST" action="{{ route('admin.system.clear-cache') }}" onsubmit="return confirm('Bersihkan semua cache aplikasi?')">
+            @csrf
+            <button type="submit" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">Bersihkan Cache</button>
+        </form>
+    </div>
+
     <form method="POST" action="{{ route('admin.system.settings.update') }}" x-data="settingsForm()">
         @csrf
         <div class="bg-white rounded-xl border border-gray-200 p-6">

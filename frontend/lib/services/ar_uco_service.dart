@@ -377,6 +377,32 @@ class ArUcoService {
         deviceRotationDeg: deviceRotationDeg,
       );
 
+  static ({double outW, double outH}) previewSpace({
+    required double imageWidth,
+    required double imageHeight,
+    required int sensorOrientationDeg,
+    required int deviceRotationDeg,
+  }) =>
+      ArUcoFrameMath.previewSpace(
+        imageWidth: imageWidth,
+        imageHeight: imageHeight,
+        sensorOrientationDeg: sensorOrientationDeg,
+        deviceRotationDeg: deviceRotationDeg,
+      );
+
+  static ({double scale, double dx, double dy}) coverTransform({
+    required double outW,
+    required double outH,
+    required double previewWidth,
+    required double previewHeight,
+  }) =>
+      ArUcoFrameMath.coverTransform(
+        outW: outW,
+        outH: outH,
+        previewWidth: previewWidth,
+        previewHeight: previewHeight,
+      );
+
   Future<void> dispose() async {
     _disposeRequested = true;
     stopScanning();

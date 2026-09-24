@@ -53,6 +53,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('system/settings', [SystemController::class, 'settings'])->name('system.settings');
     Route::post('system/settings', [SystemController::class, 'updateSettings'])->name('system.settings.update');
+    Route::post('system/clear-cache', [SystemController::class, 'clearCache'])->name('system.clear-cache');
     Route::get('system/content', [SystemController::class, 'content'])->name('system.content');
     Route::post('system/content/branding', [SystemController::class, 'updateBranding'])->name('system.content.branding');
     Route::post('system/content/splash', [SystemController::class, 'updateSplash'])->name('system.content.splash');

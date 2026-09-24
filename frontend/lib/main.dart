@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/models.dart';
@@ -38,26 +39,37 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     _loadInitialState();
   }
 
+  /// Startup cepat: hanya baca lokal (prefs + token + cache config).
+  /// Jaringan (fetch config + sync konten) jalan di background agar
+  /// layar pertama tampil <= ~1 detik + splash 2 detik, bukan menunggu
+  /// download GLB yang bisa puluhan detik di jaringan lambat.
   Future<void> _loadInitialState() async {
     final prefs = await SharedPreferences.getInstance();
     _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
 
     // Config CMS: pakai cache dulu agar splash/onboarding dinamis
-    // meski offline; segarkan dari server (endpoint publik).
+    // meski offline; penyegaran dari server jalan di background.
     _appConfig = await AppConfigService.loadCached();
-    await _fetchAppConfig();
 
     final token = await SecureStorageService.getToken();
     if (token != null) {
       _userRole = await SecureStorageService.getUserRole();
       ApiClient.setToken(token);
-
-      await _syncContent();
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+
+    unawaited(_backgroundRefresh(token != null));
+  }
+
+  /// Refresh jaringan tanpa memblokir UI. Gagal = diam (pakai cache).
+  Future<void> _backgroundRefresh(bool loggedIn) async {
+    await _fetchAppConfig();
+    if (loggedIn) {
+      await _syncContent();
+    }
   }
 
   Future<void> _fetchAppConfig() async {

@@ -246,4 +246,67 @@ void main() {
       expect(ArCameraProjector.deviceRotationToDegrees(3), 270);
     });
   });
+
+  group('ArUcoFrameMath.previewSpace', () {
+    test('swaps dims on 90-degree rotation', () {
+      final s = ArUcoFrameMath.previewSpace(
+        imageWidth: 640,
+        imageHeight: 480,
+        sensorOrientationDeg: 90,
+        deviceRotationDeg: 0,
+      );
+      expect(s.outW, 480);
+      expect(s.outH, 640);
+    });
+
+    test('keeps dims without rotation', () {
+      final s = ArUcoFrameMath.previewSpace(
+        imageWidth: 640,
+        imageHeight: 480,
+        sensorOrientationDeg: 0,
+        deviceRotationDeg: 0,
+      );
+      expect(s.outW, 640);
+      expect(s.outH, 480);
+    });
+  });
+
+  group('ArUcoFrameMath.coverTransform', () {
+    test('same aspect fills exactly without offset', () {
+      final t = ArUcoFrameMath.coverTransform(
+        outW: 480,
+        outH: 640,
+        previewWidth: 360,
+        previewHeight: 480,
+      );
+      expect(t.scale, closeTo(0.75, 1e-9));
+      expect(t.dx, closeTo(0, 1e-9));
+      expect(t.dy, closeTo(0, 1e-9));
+    });
+
+    test('crops sides when preview is narrower', () {
+      final t = ArUcoFrameMath.coverTransform(
+        outW: 640,
+        outH: 480,
+        previewWidth: 360,
+        previewHeight: 640,
+      );
+      // scale by height: 640/480; horizontal overflow centered.
+      expect(t.scale, closeTo(640 / 480, 1e-9));
+      expect(t.dx, closeTo((360 - 640 * (640 / 480)) / 2, 1e-9));
+      expect(t.dy, closeTo(0, 1e-9));
+    });
+
+    test('degenerate input returns identity', () {
+      final t = ArUcoFrameMath.coverTransform(
+        outW: 0,
+        outH: 480,
+        previewWidth: 360,
+        previewHeight: 640,
+      );
+      expect(t.scale, 1.0);
+      expect(t.dx, 0.0);
+      expect(t.dy, 0.0);
+    });
+  });
 }

@@ -39,9 +39,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   String? _arModelSrc;
   String? _arModelName;
   ModelAnchor? _arAnchor;
-  List<Offset>? _arTrackedCorners;
   ModelAnchor? _arHeldAnchor;
-  List<Offset>? _arHeldCorners;
   bool _arMarkerLost = false;
   Size _previewSize = Size.zero;
   int _arLastLogMs = 0;
@@ -149,7 +147,10 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
               backgroundColor: Colors.red,
             ),
           );
+          return;
         }
+        // Masuk layar ini = niat scan: langsung mulai tanpa tekan tombol.
+        if (!_isScanning) _toggleScanning();
       }
     } catch (e) {
       if (mounted) {
@@ -221,18 +222,15 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     setState(() {
       _detectedMarkers = markers;
       if (arActive) {
-        if (newAnchor != null && newAnchor.isValid && previewCorners != null) {
+        if (newAnchor != null && newAnchor.isValid) {
           // Marker terdeteksi: simpan posisi terkini sekaligus "last known".
           _arAnchor = newAnchor;
-          _arTrackedCorners = previewCorners;
           _arHeldAnchor = newAnchor;
-          _arHeldCorners = previewCorners;
           _arMarkerLost = false;
         } else {
           // Marker hilang / di luar kamera / footprint tidak valid:
           // model tetap di posisi terakhir yang diketahui.
           _arAnchor = _arHeldAnchor;
-          _arTrackedCorners = _arHeldCorners;
           _arMarkerLost = _arHeldAnchor != null;
         }
         final now = DateTime.now().millisecondsSinceEpoch;
@@ -247,25 +245,63 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     });
   }
 
+  /// Ruang gambar ternormalisasi (0..1) untuk overlay, atau null bila
+  /// kamera belum siap. Dipakai bersamaan oleh preview (FittedBox.cover)
+  /// dan proyeksi corner agar keduanya memakai geometri yang sama.
+  ({double outW, double outH})? _coverSpace() {
+    final s = _service;
+    if (s == null) return null;
+    final fw = s.frameWidth.toDouble();
+    final fh = s.frameHeight.toDouble();
+    if (fw <= 0 || fh <= 0) return null;
+    final deviceRotationDeg = ArCameraProjector.deviceRotationToDegrees(
+      s.controller?.value.deviceOrientation.index ?? 0,
+    );
+    return ArUcoService.previewSpace(
+      imageWidth: fw,
+      imageHeight: fh,
+      sensorOrientationDeg: s.sensorOrientation,
+      deviceRotationDeg: deviceRotationDeg,
+    );
+  }
+
   List<Offset>? _mapPreviewCorners(List<List<double>> rawCorners) {
     final w = _previewSize.width;
     final h = _previewSize.height;
     if (w <= 0 || h <= 0) return null;
     try {
+      final s = _service;
+      if (s == null) return null;
       final deviceRotationDeg = ArCameraProjector.deviceRotationToDegrees(
-        _service?.controller?.value.deviceOrientation.index ?? 0,
+        s.controller?.value.deviceOrientation.index ?? 0,
       );
+      final fw = s.frameWidth.toDouble();
+      final fh = s.frameHeight.toDouble();
       final mapped = ArUcoService.mapCornersToPreview(
         corners: rawCorners,
-        imageWidth: _service!.frameWidth.toDouble(),
-        imageHeight: _service!.frameHeight.toDouble(),
-        sensorOrientationDeg: _service!.sensorOrientation,
+        imageWidth: fw,
+        imageHeight: fh,
+        sensorOrientationDeg: s.sensorOrientation,
         deviceRotationDeg: deviceRotationDeg,
       );
-      // mapCornersToPreview mengembalikan koordinat ternormalisasi (0..1);
-      // kalikan dengan ukuran viewport agar menjadi koordinat piksel untuk
-      // overlay (painter quad & anchor model).
-      return mapped.map((p) => Offset(p[0] * w, p[1] * h)).toList();
+      // Preview ditampilkan BoxFit.cover: terapkan transform yang sama
+      // (skala + offset crop) agar overlay sejajar dengan gambar.
+      final space = ArUcoService.previewSpace(
+        imageWidth: fw,
+        imageHeight: fh,
+        sensorOrientationDeg: s.sensorOrientation,
+        deviceRotationDeg: deviceRotationDeg,
+      );
+      final t = ArUcoService.coverTransform(
+        outW: space.outW,
+        outH: space.outH,
+        previewWidth: w,
+        previewHeight: h,
+      );
+      return mapped
+          .map((p) => Offset(p[0] * space.outW * t.scale + t.dx,
+              p[1] * space.outH * t.scale + t.dy))
+          .toList();
     } catch (_) {
       return null;
     }
@@ -477,9 +513,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       _arModelSrc = src;
       _arModelName = resolveResult.model.modelName;
       _arAnchor = null;
-      _arTrackedCorners = null;
       _arHeldAnchor = null;
-      _arHeldCorners = null;
       _arMarkerLost = false;
       _selectedHotspotId = null;
       _hotspotProjections.clear();
@@ -518,9 +552,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       _arModelSrc = null;
       _arModelName = null;
       _arAnchor = null;
-      _arTrackedCorners = null;
       _arHeldAnchor = null;
-      _arHeldCorners = null;
       _arMarkerLost = false;
       _arWebViewController = null;
       _selectedHotspotId = null;
@@ -619,23 +651,30 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                 return Stack(
                   children: [
                     if (_isInitialized && (_service?.controller != null))
-                      CameraPreview(_service!.controller!),
+                      Builder(builder: (context) {
+                        final preview = CameraPreview(_service!.controller!);
+                        final space = _coverSpace();
+                        // Full-bleed: crop tepi (cover) alih-alih bar hitam.
+                        // Geometri yang sama dipakai _mapPreviewCorners.
+                        if (space == null) return preview;
+                        return Positioned.fill(
+                          child: ClipRect(
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: space.outW,
+                                height: space.outH,
+                                child: preview,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
                     if (!_isInitialized)
                       const Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 3,
                           color: Colors.greenAccent,
-                        ),
-                      ),
-                    if (_arTrackedCorners != null)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: CustomPaint(
-                            painter: _MarkerQuadPainter(
-                              _arTrackedCorners,
-                              dimmed: _arMarkerLost,
-                            ),
-                          ),
                         ),
                       ),
                     _buildArModelOverlay(),
@@ -1501,45 +1540,4 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       ),
     );
   }
-}
-
-class _MarkerQuadPainter extends CustomPainter {
-  final List<Offset>? corners;
-  final bool dimmed;
-
-  _MarkerQuadPainter(this.corners, {this.dimmed = false});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pts = corners;
-    if (pts == null || pts.length < 4) return;
-
-    final alpha = dimmed ? 0.25 : 0.8;
-
-    final path = Path()..addPolygon(pts, true);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..color = Colors.greenAccent.withValues(alpha: alpha)
-        ..strokeWidth = dimmed ? 1 : 1.5,
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.fill
-        ..color = Colors.greenAccent.withValues(alpha: 0.06 * alpha),
-    );
-    for (final p in pts) {
-      canvas.drawCircle(
-        p,
-        dimmed ? 2 : 3,
-        Paint()..color = Colors.greenAccent.withValues(alpha: alpha),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_MarkerQuadPainter oldDelegate) =>
-      oldDelegate.corners != corners || oldDelegate.dimmed != dimmed;
 }

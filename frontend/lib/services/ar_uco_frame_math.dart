@@ -124,4 +124,44 @@ class ArUcoFrameMath {
       ];
     }).toList();
   }
+
+  /// Dimensi ruang ternormalisasi hasil [mapCornersToPreview]
+  /// (aspek gambar setelah kompensasi rotasi).
+  static ({double outW, double outH}) previewSpace({
+    required double imageWidth,
+    required double imageHeight,
+    required int sensorOrientationDeg,
+    required int deviceRotationDeg,
+  }) {
+    final rot = normalizeDegrees(sensorOrientationDeg - deviceRotationDeg);
+    final swap = rot == 90 || rot == 270;
+    return (
+      outW: swap ? imageHeight : imageWidth,
+      outH: swap ? imageWidth : imageHeight,
+    );
+  }
+
+  /// Transform BoxFit.cover dari ruang ternormalisasi (0..1, berdimensi
+  /// [previewSpace]) ke piksel viewport [previewWidth]x[previewHeight].
+  ///
+  /// Mengembalikan (scale, offsetX, offsetY) sehingga:
+  ///   display = norm * outDim * scale + offset
+  /// Offset negatif = tepi ter-crop (wajar untuk cover).
+  static ({double scale, double dx, double dy}) coverTransform({
+    required double outW,
+    required double outH,
+    required double previewWidth,
+    required double previewHeight,
+  }) {
+    if (outW <= 0 || outH <= 0 || previewWidth <= 0 || previewHeight <= 0) {
+      return (scale: 1.0, dx: 0.0, dy: 0.0);
+    }
+    final scale =
+        math.max(previewWidth / outW, previewHeight / outH).toDouble();
+    return (
+      scale: scale,
+      dx: (previewWidth - outW * scale) / 2,
+      dy: (previewHeight - outH * scale) / 2,
+    );
+  }
 }

@@ -195,6 +195,23 @@ class SystemController extends Controller
         return $this->redirectContent('onboarding', 'Slide onboarding berhasil disimpan.');
     }
 
+    /**
+     * Bersihkan cache aplikasi (config, route, view, data).
+     * Wajib dijalankan setelah edit .env manual di server.
+     */
+    public function clearCache()
+    {
+        $cleared = [];
+        foreach (['optimize:clear', 'cache:clear'] as $command) {
+            \Illuminate\Support\Facades\Artisan::call($command);
+            $cleared[] = $command . ' → ' . trim(\Illuminate\Support\Facades\Artisan::output());
+        }
+
+        \App\Services\ActivityLogger::log('app_cache.cleared', 'app_setting', null, 'Cache aplikasi dibersihkan via admin');
+
+        return redirect()->route('admin.system.settings')->with('success', 'Cache dibersihkan: ' . implode(' | ', $cleared));
+    }
+
     public function versions()
     {
         $versions = AppVersion::orderByDesc('created_at')->get();
