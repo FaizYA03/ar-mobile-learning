@@ -466,6 +466,7 @@ class ArController extends Controller
         ]);
 
         $mapping = ArMarker3dMapping::create($validated);
+        ArMarker3dMapping::syncPivot($mapping->ar_marker_id, $mapping->ar_model_id);
 
         return response()->json([
             'success' => true,
@@ -483,6 +484,7 @@ class ArController extends Controller
         ]);
 
         $arMarker3dMapping->update($validated);
+        ArMarker3dMapping::syncPivot($arMarker3dMapping->ar_marker_id, $arMarker3dMapping->ar_model_id);
 
         return response()->json([
             'success' => true,

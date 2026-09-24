@@ -52,6 +52,7 @@ class ArMappingController extends Controller
         }
 
         $mapping = ArMarker3dMapping::create($validated);
+        ArMarker3dMapping::syncPivot($mapping->ar_marker_id, $mapping->ar_model_id);
 
         \App\Services\ActivityLogger::created('ar_mapping', $mapping->id, "AR mapping created via admin");
 
@@ -74,6 +75,7 @@ class ArMappingController extends Controller
         ]);
 
         $mapping->update($validated);
+        ArMarker3dMapping::syncPivot($mapping->ar_marker_id, $mapping->ar_model_id);
 
         \App\Services\ActivityLogger::updated('ar_mapping', $mapping->id, "AR mapping updated via admin");
 
@@ -82,8 +84,11 @@ class ArMappingController extends Controller
 
     public function destroy(ArMarker3dMapping $mapping)
     {
+        $markerId = $mapping->ar_marker_id;
+        $modelId = $mapping->ar_model_id;
         \App\Services\ActivityLogger::deleted('ar_mapping', $mapping->id, "AR mapping deleted via admin");
         $mapping->delete();
+        ArMarker3dMapping::syncPivot($markerId, $modelId);
 
         return redirect()->route('admin.ar.mappings.index')->with('success', 'Mapping berhasil dihapus.');
     }

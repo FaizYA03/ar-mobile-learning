@@ -29,4 +29,29 @@ class ArMarker3dMapping extends Model
     {
         return $this->belongsTo(ArModel::class, 'ar_model_id');
     }
+
+    /**
+     * Sinkronkan pivot ar_marker_models dengan status mapping.
+     * Pivot inilah yang dibaca count + resolver aplikasi, jadi setiap
+     * tulis mapping (create/update/destroy, API maupun CMS) wajib
+     * memanggil ini agar angka tidak pernah 0 padahal terhubung.
+     */
+    public static function syncPivot(int $markerId, int $modelId): void
+    {
+        $marker = ArMarker::find($markerId);
+        if (!$marker) {
+            return;
+        }
+
+        $hasMapped = static::where('ar_marker_id', $markerId)
+            ->where('ar_model_id', $modelId)
+            ->where('mapping_status', 'mapped')
+            ->exists();
+
+        if ($hasMapped) {
+            $marker->models()->syncWithoutDetaching([$modelId]);
+        } else {
+            $marker->models()->detach($modelId);
+        }
+    }
 }
