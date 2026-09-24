@@ -619,6 +619,9 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
     String status = marker?['status'] ?? 'active';
     String? pickedImagePath;
     String? displayImageName = marker?['image_path'];
+    String? arucoDictionary = marker?['aruco_dictionary'];
+    final arucoIdCtrl =
+        TextEditingController(text: marker?['ar_uco_id']?.toString() ?? '');
 
     showDialog(
       context: context,
@@ -655,6 +658,39 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
                         value: 'image', child: Text('Image (Foto)')),
                   ],
                   onChanged: (v) => setDialogState(() => markerType = v!),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: arucoDictionary,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                      labelText: 'Dictionary ArUco (agar terdeteksi)',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10))),
+                  items: const [
+                    DropdownMenuItem<String?>(
+                        value: null, child: Text('Tanpa ArUco')),
+                    DropdownMenuItem<String?>(
+                        value: 'DICT_4X4_50',
+                        child: Text('DICT_4X4_50 (aplikasi memakai ini)')),
+                    DropdownMenuItem<String?>(
+                        value: 'DICT_5X5_100', child: Text('DICT_5X5_100')),
+                    DropdownMenuItem<String?>(
+                        value: 'DICT_6X6_250', child: Text('DICT_6X6_250')),
+                    DropdownMenuItem<String?>(
+                        value: 'DICT_7X7_1000', child: Text('DICT_7X7_1000')),
+                  ],
+                  onChanged: (v) => setDialogState(() => arucoDictionary = v),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: arucoIdCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                      labelText: 'ID Pola ArUco',
+                      hintText: 'mis. 7 (wajib bila dictionary dipilih)',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10))),
                 ),
                 const SizedBox(height: 12),
                 if (pickedImagePath != null)
@@ -733,6 +769,12 @@ class _AdminArManagementScreenState extends State<AdminArManagementScreen>
                   'marker_type': markerType,
                   'status': status,
                 };
+                if (arucoDictionary != null &&
+                    arucoIdCtrl.text.trim().isNotEmpty) {
+                  data['aruco_dictionary'] = arucoDictionary;
+                  data['ar_uco_id'] = int.tryParse(arucoIdCtrl.text.trim()) ??
+                      arucoIdCtrl.text.trim();
+                }
                 if (pickedImagePath == null && displayImageName != null) {
                   data['image_path'] = displayImageName;
                 }

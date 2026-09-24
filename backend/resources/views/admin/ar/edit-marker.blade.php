@@ -39,6 +39,24 @@
                 <input type="file" name="image_path" id="image_path" accept="image/*" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                 <p class="text-xs text-gray-400 mt-1">Upload baru untuk mengganti gambar marker.</p>
             </div>
+            <div class="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                <div class="text-xs font-semibold text-gray-500 mb-3">IDENTITAS ARUCO (agar terdeteksi aplikasi — kosongkan keduanya untuk menghapus)</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="aruco_dictionary" class="block text-sm font-medium text-gray-700 mb-1">Dictionary</label>
+                        <select name="aruco_dictionary" id="aruco_dictionary" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">— Tanpa ArUco —</option>
+                            @foreach(\App\Services\ArMarkerGenerator::DICTIONARIES as $dict => $count)
+                                <option value="{{ $dict }}" {{ old('aruco_dictionary', $marker->aruco_dictionary) === $dict ? 'selected' : '' }}>{{ $dict }} ({{ $count }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="ar_uco_id" class="block text-sm font-medium text-gray-700 mb-1">ID Pola</label>
+                        <input type="number" name="ar_uco_id" id="ar_uco_id" value="{{ old('ar_uco_id', $marker->ar_uco_id) }}" min="0" placeholder="mis. 7" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+                </div>
+            </div>
             <div>
                 <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select name="status" id="status" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">

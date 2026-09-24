@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ArMarker;
+
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -49,6 +51,48 @@ class ArMarkerGenerator
         }
 
         return self::DICTIONARIES[$dictionary] - 1;
+    }
+
+    /**
+     * Validasi pasangan (dictionary, id) yang dipakai SEMUA jalur tulis
+     * (API, CMS upload/edit, CMS generate, aplikasi) agar aturannya sama.
+     * Return pesan error atau null bila valid. Keduanya boleh null
+     * (marker tanpa identitas ArUco) tapi tidak boleh setengah.
+     */
+    public static function pairError(mixed $dictionary, mixed $id): ?string
+    {
+        $dictionary = $dictionary !== null && $dictionary !== '' ? (string) $dictionary : null;
+        $id = $id !== null && $id !== '' ? (int) $id : null;
+
+        if ($dictionary === null && $id === null) {
+            return null;
+        }
+        if ($dictionary === null || $id === null) {
+            return 'Dictionary dan ID ArUco harus diisi bersamaan.';
+        }
+        if (!isset(self::DICTIONARIES[$dictionary])) {
+            return "Dictionary {$dictionary} tidak didukung.";
+        }
+        $max = self::DICTIONARIES[$dictionary] - 1;
+        if ($id < 0 || $id > $max) {
+            return "ID {$id} di luar rentang 0–{$max} untuk {$dictionary}.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Cek kombinasi (dictionary, id) sudah dipakai marker lain.
+     * Unik per kombinasi — ID yang sama di dictionary beda boleh.
+     */
+    public static function comboExists(string $dictionary, int $id, ?int $ignoreId = null): bool
+    {
+        $query = ArMarker::where('aruco_dictionary', $dictionary)->where('ar_uco_id', $id);
+        if ($ignoreId !== null) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        return $query->exists();
     }
 
     /**

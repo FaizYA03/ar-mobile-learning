@@ -29,6 +29,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gambar</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marker ID</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipe</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ArUco</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
@@ -49,6 +50,13 @@
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $marker->marker_id }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">{{ $marker->marker_type }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            @if($marker->aruco_dictionary && $marker->ar_uco_id !== null)
+                                <span class="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">{{ str_replace('DICT_', '', $marker->aruco_dictionary) }} #{{ $marker->ar_uco_id }}</span>
+                            @else
+                                <span class="text-gray-300">—</span>
+                            @endif
+                        </td>
                         <td class="px-6 py-4 text-sm text-center text-gray-600">{{ $marker->models_count }}</td>
                         <td class="px-6 py-4 text-center">
                             @if($marker->status === 'active')

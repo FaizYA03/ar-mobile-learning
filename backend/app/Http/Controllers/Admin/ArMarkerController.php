@@ -62,10 +62,7 @@ class ArMarkerController extends Controller
             return back()->withErrors(['ar_uco_id' => "ID maksimal untuk {$validated['aruco_dictionary']} adalah {$max}."])->withInput();
         }
 
-        $exists = ArMarker::where('aruco_dictionary', $validated['aruco_dictionary'])
-            ->where('ar_uco_id', $validated['ar_uco_id'])
-            ->exists();
-        if ($exists) {
+        if (ArMarkerGenerator::comboExists($validated['aruco_dictionary'], (int) $validated['ar_uco_id'])) {
             return back()->withErrors(['ar_uco_id' => "ID {$validated['ar_uco_id']} pada {$validated['aruco_dictionary']} sudah dipakai marker lain."])->withInput();
         }
 
@@ -98,8 +95,17 @@ class ArMarkerController extends Controller
             'marker_id' => 'required|string|max:100|unique:ar_markers,marker_id',
             'marker_type' => 'required|string|in:pattern,image',
             'image_path' => 'required|image|max:10240',
+            'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
+            'ar_uco_id' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        if ($error = ArMarkerGenerator::pairError($validated['aruco_dictionary'] ?? null, $validated['ar_uco_id'] ?? null)) {
+            return back()->withErrors(['ar_uco_id' => $error])->withInput();
+        }
+        if (!empty($validated['aruco_dictionary']) && ArMarkerGenerator::comboExists($validated['aruco_dictionary'], (int) $validated['ar_uco_id'])) {
+            return back()->withErrors(['ar_uco_id' => "ID {$validated['ar_uco_id']} pada {$validated['aruco_dictionary']} sudah dipakai marker lain."])->withInput();
+        }
 
         if ($request->hasFile('image_path')) {
             $imageFile = $request->file('image_path');
@@ -131,8 +137,21 @@ class ArMarkerController extends Controller
             'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,' . $marker->id,
             'marker_type' => 'sometimes|required|string|in:pattern,image',
             'image_path' => 'sometimes|max:10240',
+            'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
+            'ar_uco_id' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        $dictionary = array_key_exists('aruco_dictionary', $validated) ? $validated['aruco_dictionary'] : $marker->aruco_dictionary;
+        $arucoId = array_key_exists('ar_uco_id', $validated) ? $validated['ar_uco_id'] : $marker->ar_uco_id;
+        if ($error = ArMarkerGenerator::pairError($dictionary, $arucoId)) {
+            return back()->withErrors(['ar_uco_id' => $error])->withInput();
+        }
+        if (!empty($dictionary) && ArMarkerGenerator::comboExists($dictionary, (int) $arucoId, $marker->id)) {
+            return back()->withErrors(['ar_uco_id' => "ID {$arucoId} pada {$dictionary} sudah dipakai marker lain."])->withInput();
+        }
+        $validated['aruco_dictionary'] = $dictionary;
+        $validated['ar_uco_id'] = $arucoId;
 
         if ($request->hasFile('image_path')) {
             if ($marker->image_path) {
