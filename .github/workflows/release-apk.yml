@@ -2,7 +2,8 @@ name: Release APK
 
 # Cara rilis versi baru:
 #   git tag v1.1.0 && git push origin v1.1.0
-# Workflow: build APK release signed → GitHub Release.
+# Workflow: build APK release signed → GitHub Release (arsip)
+#   → upload ke VPS (landing download langsung) + versions.json.
 # Butuh Secrets: KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD,
 #   STORE_PASSWORD, PROD_API_URL
 # Butuh Variables (atau Secrets): tidak ada — cukup di atas.
@@ -62,3 +63,57 @@ jobs:
         with:
           files: frontend/build/app/outputs/flutter-apk/ar-mobile-learning-*.apk
           generate_release_notes: true
+
+      # Mirror ke VPS agar landing page download langsung (tanpa GitHub).
+      # GitHub Release tetap dipertahankan sebagai arsip/cadangan.
+      - name: Generate versions.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          APK=$(ls build/app/outputs/flutter-apk/ar-mobile-learning-*.apk | head -1)
+          NOTES=$(gh release view "$TAG" --json body --jq '.body // ""')
+          python3 - "$TAG" "$APK" "$NOTES" <<'PYEOF'
+          import json, os, sys, datetime
+          tag, apk, notes = sys.argv[1], sys.argv[2], sys.argv[3]
+          size = os.path.getsize(apk)
+          data = {
+              "latest": tag,
+              "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "download_base": "https://download.arlearning.my.id/downloads/",
+              "files": [{
+                  "tag": tag,
+                  "file": os.path.basename(apk),
+                  "url": "https://download.arlearning.my.id/downloads/" + os.path.basename(apk),
+                  "size_bytes": size,
+                  "size_mb": round(size / 1048576, 1),
+                  "notes": notes,
+              }],
+          }
+          out = "build/app/outputs/flutter-apk/versions.json"
+          with open(out, "w") as f:
+              json.dump(data, f)
+          print("versions.json written for", tag)
+          PYEOF
+
+      - name: Upload APK to landing server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "frontend/build/app/outputs/flutter-apk/ar-mobile-learning-*.apk,frontend/build/app/outputs/flutter-apk/versions.json"
+          target: "/var/www/ar-mobile-learning/landing/downloads/"
+          strip_components: 5
+
+      - name: Prune old APKs (keep 3)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/ar-mobile-learning/landing/downloads
+            ls -t ar-mobile-learning-*.apk 2>/dev/null | tail -n +4 | xargs -r rm -f
+            ls -la

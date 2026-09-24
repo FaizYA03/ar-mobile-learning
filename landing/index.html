@@ -47,30 +47,51 @@
     const notes = document.getElementById('notes');
     const qr = document.getElementById('qr');
 
-    fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
-      .then(r => { if (!r.ok) throw 0; return r.json(); })
-      .then(rel => {
-        const apk = (rel.assets || []).find(a => a.name.endsWith('.apk'));
-        ver.textContent = rel.tag_name || rel.name || 'Versi terbaru';
-        if (apk) {
-          btn.href = apk.browser_download_url;
-          btn.textContent = '⬇ Download APK (' + (apk.size / 1048576).toFixed(1) + ' MB)';
+    function render(tag, url, sizeMb, body, dateStr) {
+      ver.textContent = tag;
+      btn.href = url;
+      btn.textContent = sizeMb
+        ? '⬇ Download APK (' + sizeMb + ' MB)'
+        : '⬇ Download APK';
+      btn.classList.remove('disabled');
+      if (dateStr) meta.textContent = 'Dirilis ' + dateStr;
+      if (body) { notes.textContent = body; notes.style.display = 'block'; }
+      qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(url);
+      qr.style.display = 'block';
+      qr.onerror = () => qr.style.display = 'none';
+    }
+
+    function fallbackToGitHub() {
+      fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
+        .then(r => { if (!r.ok) throw 0; return r.json(); })
+        .then(rel => {
+          const apk = (rel.assets || []).find(a => a.name.endsWith('.apk'));
+          if (!apk) throw 0;
+          render(
+            rel.tag_name || rel.name || 'Versi terbaru',
+            apk.browser_download_url,
+            (apk.size / 1048576).toFixed(1),
+            rel.body || '',
+            new Date(rel.published_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})
+          );
+        })
+        .catch(() => {
+          ver.textContent = 'Lihat semua versi';
+          btn.href = 'https://github.com/' + REPO + '/releases';
+          btn.textContent = 'Buka halaman rilis';
           btn.classList.remove('disabled');
-          meta.textContent = 'Dirilis ' + new Date(rel.published_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
-          qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(apk.browser_download_url);
-          qr.style.display = 'block';
-          qr.onerror = () => qr.style.display = 'none';
-        } else {
-          throw 0;
-        }
-        if (rel.body) { notes.textContent = rel.body; notes.style.display = 'block'; }
+        });
+    }
+
+    // Sumber utama: file lokal di server ini (diisi otomatis tiap rilis).
+    fetch('downloads/versions.json', {cache: 'no-store'})
+      .then(r => { if (!r.ok) throw 0; return r.json(); })
+      .then(v => {
+        const f = (v.files || [])[0];
+        if (!f || !f.url) throw 0;
+        render(v.latest || f.tag, f.url, f.size_mb, f.notes || '', '');
       })
-      .catch(() => {
-        ver.textContent = 'Lihat semua versi';
-        btn.href = 'https://github.com/' + REPO + '/releases';
-        btn.textContent = 'Buka halaman rilis';
-        btn.classList.remove('disabled');
-      });
+      .catch(fallbackToGitHub);
   </script>
 </body>
 </html>
