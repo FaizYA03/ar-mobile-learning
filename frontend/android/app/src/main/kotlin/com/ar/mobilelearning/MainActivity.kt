@@ -1,8 +1,8 @@
-package com.example.frontend
+package com.ar.mobilelearning
 
 import android.os.Build
-import com.example.frontend.ar_engine.ArEngineView
-import com.example.frontend.ar_engine.ArEngineViewFactory
+import com.ar.mobilelearning.ar_engine.ArEngineView
+import com.ar.mobilelearning.ar_engine.ArEngineViewFactory
 import com.google.ar.core.ArCoreApk
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
