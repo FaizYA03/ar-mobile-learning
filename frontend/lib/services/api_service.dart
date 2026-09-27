@@ -25,6 +25,7 @@ class ApiService {
 
   static Future<void> clearToken() async {
     _token = null;
+    ApiClient.clearToken();
     await SecureStorageService.clearAll();
   }
 

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models/models.dart';
 import 'services/secure_storage_service.dart';
 import 'services/api_client.dart';
+import 'services/api_service.dart';
 import 'services/server_config_service.dart';
 import 'services/content_sync_service.dart';
 import 'services/app_config_service.dart';
@@ -92,7 +93,13 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
         // jangan arahkan ke route yang tidak ada.
         if (role == 'siswa' || role == 'guru' || role == 'admin') {
           _userRole = role;
+          // WAJIB isi token di KEDUA HTTP client: Dio (ApiClient, dipakai
+          // config/sync) dan package:http (ApiService, dipakai semua
+          // dashboard). Tanpa ini request dashboard tanpa Authorization
+          // -> 401 -> auto-logout menghapus sesi (bug: tiap buka ulang
+          // aplikasi diminta login lagi).
           ApiClient.setToken(token);
+          await ApiService.setToken(token);
         } else {
           _userRole = null;
         }

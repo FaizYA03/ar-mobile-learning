@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'config/api_config.dart';
 import 'services/api_service.dart';
 import 'services/secure_storage_service.dart';
 import 'services/api_client.dart';
@@ -105,20 +104,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Spacer(),
-                    IconButton(
-                      tooltip: 'Pengaturan server',
-                      icon: const Icon(Icons.dns_outlined,
-                          color: Color(0xFF637080)),
-                      onPressed: () async {
-                        await ServerSettingsDialog.show(context);
-                        if (mounted) setState(() {});
-                      },
-                    ),
-                  ],
-                ),
                 Center(
                   child: Container(
                     width: 72,
@@ -422,14 +407,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Center(
-                  child: Text(
-                    'Server: ${ApiConfig.baseUrl}',
-                    style:
-                        const TextStyle(fontSize: 12, color: Color(0xFF637080)),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
                 const SizedBox(height: 40),
               ],
             ),

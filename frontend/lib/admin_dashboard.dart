@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
+import 'widgets/server_settings_dialog.dart';
 import 'screens/admin_tp_atp_screen.dart';
 import 'screens/admin_materi_screen.dart';
 import 'screens/admin_quiz_management_screen.dart';
@@ -864,6 +865,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
             onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const InfoScreen.about()),
                 )),
+        // Hanya admin yang boleh ubah URL server (disembunyikan dari
+        // layar Login/Register agar tidak diutak-atik siswa).
+        _buildProfileOption(
+            icon: Icons.dns_outlined,
+            title: 'Pengaturan Server',
+            onTap: () async {
+              await ServerSettingsDialog.show(context);
+              if (mounted) setState(() {});
+            }),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
