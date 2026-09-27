@@ -22,6 +22,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _totalSiswa = 0;
   int _totalQuizzes = 0;
   bool _isLoading = true;
+  String? _errorMessage;
   List<dynamic> _users = [];
   String? _userRoleFilter;
   bool _isLoadingUsers = false;
@@ -44,24 +45,56 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _loadData() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       final results = await Future.wait(
-          [ApiService.getDashboard(), ApiService.adminGetUsers()]);
+          [ApiService.getDashboard(), ApiService.adminGetUsers()]).timeout(
+        const Duration(seconds: 30),
+      );
+      if (!mounted) return;
       final dashResult = results[0];
       final usersResult = results[1];
-      if (dashResult['success'] == true && mounted) {
-        final stats = dashResult['data']['stats'];
+      if (dashResult['unauthorized'] == true ||
+          usersResult['unauthorized'] == true) {
+        await ApiService.clearToken();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+      if (dashResult['success'] == true) {
+        final data = dashResult['data'];
+        final stats = (data is Map ? data['stats'] : null) as Map? ?? {};
+        final udata = usersResult['data'];
         setState(() {
-          _totalUsers = stats['total_users'] ?? 0;
-          _totalGuru = stats['total_guru'] ?? 0;
-          _totalSiswa = stats['total_siswa'] ?? 0;
-          _totalQuizzes = stats['total_quizzes'] ?? 0;
-          _users = usersResult['data'] ?? [];
+          _totalUsers = (stats['total_users'] as num?)?.toInt() ?? 0;
+          _totalGuru = (stats['total_guru'] as num?)?.toInt() ?? 0;
+          _totalSiswa = (stats['total_siswa'] as num?)?.toInt() ?? 0;
+          _totalQuizzes = (stats['total_quizzes'] as num?)?.toInt() ?? 0;
+          _users = udata is List ? udata : [];
           _isLoading = false;
+        });
+      } else {
+        final udata = usersResult['data'];
+        setState(() {
+          _users = udata is List ? udata : [];
+          _isLoading = false;
+          _errorMessage =
+              (dashResult['message'] as String?) ?? 'Gagal memuat dashboard.';
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Gagal terhubung ke server. Periksa koneksi lalu coba lagi.';
+        });
+      }
     }
     _fetchArContentStats();
   }
@@ -430,6 +463,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    }
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined,
+                  size: 48, color: Color(0xFFB0B8C1)),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF637080)),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Coba Lagi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A8477),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),

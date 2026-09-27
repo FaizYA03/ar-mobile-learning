@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+import '../config/api_config.dart';
 import '../services/api_service.dart';
 import '../services/ar_service.dart';
 import '../services/ar_content_resolver.dart';
 import '../services/content_sync_service.dart';
+import '../services/marker_download_service.dart';
 import 'ar_diagnostic_screen.dart';
 import 'ar_scanner_screen.dart';
 import 'ar_uco_scanner_screen.dart';
@@ -25,6 +28,7 @@ class _ArHubScreenState extends State<ArHubScreen> {
   bool _isSyncing = false;
   String _syncStatus = '';
   bool _arcoreEnabled = true;
+  String? _downloadingMarkerId;
 
   bool get _isAR =>
       _arcoreEnabled && _availability == ArCoreAvailability.supportedInstalled;
@@ -142,7 +146,7 @@ class _ArHubScreenState extends State<ArHubScreen> {
   }
 
   String _resolveModelUrl(ArContentItem model) {
-    final base = ApiService.baseUrl.replaceFirst('/api', '');
+    final base = ApiConfig.baseHost;
     if (model.glbUrl != null && model.glbUrl!.isNotEmpty) {
       final url = model.glbUrl!;
       if (url.startsWith('http')) return url;
@@ -156,7 +160,7 @@ class _ArHubScreenState extends State<ArHubScreen> {
   }
 
   String _resolveImageUrl(ArContentItem model) {
-    final base = ApiService.baseUrl.replaceFirst('/api', '');
+    final base = ApiConfig.baseHost;
     if (model.thumbnailUrl != null && model.thumbnailUrl!.isNotEmpty) {
       final url = model.thumbnailUrl!;
       if (url.startsWith('http')) return url;
@@ -647,13 +651,59 @@ class _ArHubScreenState extends State<ArHubScreen> {
     );
   }
 
+  /// Sumber gambar marker (URL absolut atau path relatif server).
+  String _markerImageSource(Map<String, dynamic> marker) {
+    final imageUrl = (marker['image_url'] as String?) ?? '';
+    if (imageUrl.isNotEmpty) return imageUrl;
+    return (marker['image_path'] as String?) ?? '';
+  }
+
+  /// Download marker -> share sheet (simpan ke Download/galeri/cetak).
+  Future<void> _downloadMarker(Map<String, dynamic> marker) async {
+    final markerId = (marker['marker_id'] as String?) ?? 'marker';
+    final source = _markerImageSource(marker);
+    if (source.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gambar marker tidak tersedia.')),
+      );
+      return;
+    }
+    setState(() => _downloadingMarkerId = markerId);
+    try {
+      final result = await MarkerDownloadService.downloadMarker(
+        imageUrlOrPath: source,
+        markerId: markerId,
+      );
+      if (!mounted) return;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(result.file.path)],
+          text: 'Marker AR $markerId — cetak lalu pindai dengan aplikasi.',
+        ),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Marker $markerId diunduh, pilih tujuan simpan.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengunduh marker: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _downloadingMarkerId = null);
+    }
+  }
+
   Widget _buildMarkerCard(Map<String, dynamic> marker) {
     final markerId = marker['marker_id'] ?? '';
     final arUcoId = marker['ar_uco_id'];
     final modelName = marker['model_name'] ?? 'Model 3D';
     final imageUrl = marker['image_url'] ?? '';
     final imagePath = marker['image_path'] ?? '';
-    final base = ApiService.baseUrl.replaceFirst('/api', '');
+    final base = ApiConfig.baseHost;
     final fullImageUrl = imageUrl.isNotEmpty
         ? (imageUrl.startsWith('http') ? imageUrl : '$base$imageUrl')
         : (imagePath.isNotEmpty ? '$base/storage/$imagePath' : '');
@@ -707,17 +757,34 @@ class _ArHubScreenState extends State<ArHubScreen> {
                 color: Color(0xFF0A8477), size: 20),
             onPressed: () {
               if (fullImageUrl.isNotEmpty) {
-                _showMarkerPreview(fullImageUrl, markerId);
+                _showMarkerPreview(fullImageUrl, markerId, marker);
               }
             },
             tooltip: 'Lihat Marker',
           ),
+          if (_downloadingMarkerId == markerId)
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.download,
+                  color: Color(0xFF0A8477), size: 20),
+              onPressed: () => _downloadMarker(marker),
+              tooltip: 'Download Marker',
+            ),
         ],
       ),
     );
   }
 
-  void _showMarkerPreview(String imageUrl, String markerId) {
+  void _showMarkerPreview(
+      String imageUrl, String markerId, Map<String, dynamic> marker) {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -757,12 +824,32 @@ class _ArHubScreenState extends State<ArHubScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Screenshot atau download gambar ini, lalu cetak untuk digunakan sebagai marker AR.',
+                'Unduh lalu cetak marker ini, kemudian pindai dengan scanner AR.',
                 style: TextStyle(fontSize: 12, color: Color(0xFF637080)),
                 textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _downloadMarker(marker);
+                  },
+                  icon: const Icon(Icons.download, size: 18),
+                  label: const Text('Download Marker'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A8477),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

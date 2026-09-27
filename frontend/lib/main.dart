@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models/models.dart';
 import 'services/secure_storage_service.dart';
 import 'services/api_client.dart';
+import 'services/server_config_service.dart';
 import 'services/content_sync_service.dart';
 import 'services/app_config_service.dart';
 import 'services/ar_content_resolver.dart';
@@ -44,24 +45,71 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
   /// layar pertama tampil <= ~1 detik + splash 2 detik, bukan menunggu
   /// download GLB yang bisa puluhan detik di jaringan lambat.
   Future<void> _loadInitialState() async {
-    final prefs = await SharedPreferences.getInstance();
-    _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+    // Startup tidak boleh macet: kegagalan storage/config apa pun
+    // harus tetap membuka login/dashboard (fallback lokal), bukan
+    // spinner selamanya (bug: layar putih mutar setelah app di-kill).
+    try {
+      // Terapkan override IP LAN (HP fisik) sebelum request jaringan pertama.
+      // Dibatasi timeout agar HP offline tidak menahan startup.
+      try {
+        await ServerConfigService.loadAndApply().timeout(
+          const Duration(seconds: 5),
+        );
+      } catch (_) {}
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 5),
+      );
+      _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
 
-    // Config CMS: pakai cache dulu agar splash/onboarding dinamis
-    // meski offline; penyegaran dari server jalan di background.
-    _appConfig = await AppConfigService.loadCached();
+      // Config CMS: pakai cache dulu agar splash/onboarding dinamis
+      // meski offline; penyegaran dari server jalan di background.
+      try {
+        _appConfig = await AppConfigService.loadCached().timeout(
+          const Duration(seconds: 5),
+        );
+      } catch (_) {
+        _appConfig = null;
+      }
 
-    final token = await SecureStorageService.getToken();
-    if (token != null) {
-      _userRole = await SecureStorageService.getUserRole();
-      ApiClient.setToken(token);
+      String? token;
+      try {
+        token = await SecureStorageService.getToken().timeout(
+          const Duration(seconds: 5),
+        );
+      } catch (_) {
+        token = null;
+      }
+      if (token != null && token.isNotEmpty) {
+        String? role;
+        try {
+          role = await SecureStorageService.getUserRole().timeout(
+            const Duration(seconds: 5),
+          );
+        } catch (_) {
+          role = null;
+        }
+        // Role tidak dikenal (cache korup) -> anggap belum login,
+        // jangan arahkan ke route yang tidak ada.
+        if (role == 'siswa' || role == 'guru' || role == 'admin') {
+          _userRole = role;
+          ApiClient.setToken(token);
+        } else {
+          _userRole = null;
+        }
+      }
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+
+      unawaited(_backgroundRefresh(token != null && _userRole != null));
+    } catch (_) {
+      // Fallback terakhir: tampilkan login, jangan spinner selamanya.
+      _userRole = null;
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
-
-    unawaited(_backgroundRefresh(token != null));
   }
 
   /// Refresh jaringan tanpa memblokir UI. Gagal = diam (pakai cache).
@@ -109,6 +157,8 @@ class _ARMobileLearningAppState extends State<ARMobileLearningApp> {
     return MaterialApp(
       title: 'AR Mobile Learning',
       debugShowCheckedModeBanner: false,
+      // Wajib untuk auto-logout global Dio (401 -> /login otomatis).
+      navigatorKey: ApiClient.navigatorKey,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: const ColorScheme.light(

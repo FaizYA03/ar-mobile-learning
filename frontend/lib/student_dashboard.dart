@@ -25,6 +25,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
   int _totalArModels = 0;
   int _quizzesPassed = 0;
   bool _isLoading = true;
+  String? _errorMessage;
   String _lastSyncText = 'Belum pernah sync';
   int _cachedModelCount = 0;
 
@@ -35,39 +36,80 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Future<void> _loadData() async {
-    _userName = await SecureStorageService.getUserName() ?? 'Siswa';
-
-    final prefs = await SharedPreferences.getInstance();
-    final lastSyncMs = prefs.getInt('content_last_sync');
-    if (lastSyncMs != null) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(lastSyncMs);
-      final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) {
-        _lastSyncText = 'Baru saja';
-      } else if (diff.inHours < 1) {
-        _lastSyncText = '${diff.inMinutes} menit lalu';
-      } else if (diff.inDays < 1) {
-        _lastSyncText = '${diff.inHours} jam lalu';
-      } else {
-        _lastSyncText = '${diff.inDays} hari lalu';
-      }
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
     }
-    _cachedModelCount = prefs.getInt('cached_ar_model_count') ?? 0;
-
     try {
-      final result = await ApiService.getDashboard();
-      if (result['success'] == true && mounted) {
-        final stats = result['data']['stats'] ?? {};
+      try {
+        _userName = await SecureStorageService.getUserName().timeout(
+              const Duration(seconds: 5),
+            ) ??
+            'Siswa';
+      } catch (_) {
+        _userName = 'Siswa';
+      }
+
+      try {
+        final prefs = await SharedPreferences.getInstance().timeout(
+          const Duration(seconds: 5),
+        );
+        final lastSyncMs = prefs.getInt('content_last_sync');
+        if (lastSyncMs != null) {
+          final dt = DateTime.fromMillisecondsSinceEpoch(lastSyncMs);
+          final diff = DateTime.now().difference(dt);
+          if (diff.inMinutes < 1) {
+            _lastSyncText = 'Baru saja';
+          } else if (diff.inHours < 1) {
+            _lastSyncText = '${diff.inMinutes} menit lalu';
+          } else if (diff.inDays < 1) {
+            _lastSyncText = '${diff.inHours} jam lalu';
+          } else {
+            _lastSyncText = '${diff.inDays} hari lalu';
+          }
+        }
+        _cachedModelCount = prefs.getInt('cached_ar_model_count') ?? 0;
+      } catch (_) {}
+
+      final result = await ApiService.getDashboard().timeout(
+        const Duration(seconds: 20),
+      );
+      if (!mounted) return;
+      // Token kedaluwarsa/dihapus dari server -> paksa login ulang,
+      // jangan spinner selamanya di layar putih.
+      if (result['unauthorized'] == true) {
+        await ApiService.clearToken();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+      if (result['success'] == true) {
+        final data = result['data'];
+        final stats = (data is Map ? data['stats'] : null) as Map? ?? {};
         setState(() {
-          _totalQuizzes = stats['total_quizzes'] ?? 0;
-          _totalMateri = stats['total_materi'] ?? 0;
-          _totalArModels = stats['total_ar_models'] ?? 0;
-          _quizzesPassed = stats['quizzes_passed'] ?? 0;
+          _totalQuizzes = (stats['total_quizzes'] as num?)?.toInt() ?? 0;
+          _totalMateri = (stats['total_materi'] as num?)?.toInt() ?? 0;
+          _totalArModels = (stats['total_ar_models'] as num?)?.toInt() ?? 0;
+          _quizzesPassed = (stats['quizzes_passed'] as num?)?.toInt() ?? 0;
           _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              (result['message'] as String?) ?? 'Gagal memuat dashboard.';
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Gagal terhubung ke server. Periksa koneksi lalu coba lagi.';
+        });
+      }
     }
   }
 
@@ -160,6 +202,40 @@ class _StudentDashboardState extends State<StudentDashboard> {
     if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    }
+    // Gagal koneksi/backend: tampilkan pesan + tombol retry,
+    // jangan halaman kosong.
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined,
+                  size: 48, color: Color(0xFFB0B8C1)),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF637080)),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Coba Lagi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A8477),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),

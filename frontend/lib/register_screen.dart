@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'config/api_config.dart';
 import 'services/api_service.dart';
 import 'services/secure_storage_service.dart';
 import 'services/api_client.dart';
+import 'services/server_config_service.dart';
+import 'widgets/server_settings_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +23,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureText = true;
   bool _obscureConfirmText = true;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    ServerConfigService.loadAndApply().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
@@ -65,7 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Gagal terhubung ke server. Pastikan server berjalan.';
+        _errorMessage = ServerSettingsDialog.friendlyConnectionError(e);
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -93,7 +104,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 32),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Spacer(),
+                    IconButton(
+                      tooltip: 'Pengaturan server',
+                      icon: const Icon(Icons.dns_outlined,
+                          color: Color(0xFF637080)),
+                      onPressed: () async {
+                        await ServerSettingsDialog.show(context);
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                  ],
+                ),
                 Center(
                   child: Container(
                     width: 72,
@@ -395,6 +420,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    'Server: ${ApiConfig.baseUrl}',
+                    style:
+                        const TextStyle(fontSize: 12, color: Color(0xFF637080)),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 const SizedBox(height: 40),
               ],

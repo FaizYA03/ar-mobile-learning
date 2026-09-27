@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'config/api_config.dart';
 import 'services/api_service.dart';
 import 'services/secure_storage_service.dart';
 import 'services/api_client.dart';
+import 'services/server_config_service.dart';
+import 'widgets/server_settings_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +20,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscureText = true;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Terapkan override IP LAN tersimpan (HP fisik) sebelum login pertama.
+    ServerConfigService.loadAndApply().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -60,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Gagal terhubung ke server. Pastikan server berjalan.';
+        _errorMessage = ServerSettingsDialog.friendlyConnectionError(e);
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -86,7 +98,21 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 48),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Spacer(),
+                    IconButton(
+                      tooltip: 'Pengaturan server',
+                      icon: const Icon(Icons.dns_outlined,
+                          color: Color(0xFF637080)),
+                      onPressed: () async {
+                        await ServerSettingsDialog.show(context);
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                  ],
+                ),
                 Center(
                   child: Container(
                     width: 72,
@@ -301,6 +327,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 24),
+                Center(
+                  child: Text(
+                    'Server: ${ApiConfig.baseUrl}',
+                    style:
+                        const TextStyle(fontSize: 12, color: Color(0xFF637080)),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 const SizedBox(height: 48),
               ],

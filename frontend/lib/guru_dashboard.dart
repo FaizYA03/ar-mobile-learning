@@ -26,6 +26,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
   int _totalMateri = 0;
   int _totalAr = 0;
   bool _isLoading = true;
+  String? _errorMessage;
   List<dynamic> _quizzes = [];
   String _lastSyncText = 'Belum pernah sync';
   int _cachedModelCount = 0;
@@ -37,39 +38,98 @@ class _GuruDashboardState extends State<GuruDashboard> {
   }
 
   Future<void> _loadData() async {
-    _userName = await SecureStorageService.getUserName() ?? 'Guru';
-
-    final prefs = await SharedPreferences.getInstance();
-    final lastSyncMs = prefs.getInt('content_last_sync');
-    if (lastSyncMs != null) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(lastSyncMs);
-      final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) {
-        _lastSyncText = 'Baru saja';
-      } else if (diff.inHours < 1) {
-        _lastSyncText = '${diff.inMinutes} menit lalu';
-      } else if (diff.inDays < 1) {
-        _lastSyncText = '${diff.inHours} jam lalu';
-      } else {
-        _lastSyncText = '${diff.inDays} hari lalu';
-      }
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
     }
-    _cachedModelCount = prefs.getInt('cached_ar_model_count') ?? 0;
-
     try {
-      final dashResult = await ApiService.getDashboard();
-      final quizResult = await ApiService.guruGetQuizzes();
-      if (mounted) {
+      try {
+        _userName = await SecureStorageService.getUserName().timeout(
+              const Duration(seconds: 5),
+            ) ??
+            'Guru';
+      } catch (_) {
+        _userName = 'Guru';
+      }
+
+      try {
+        final prefs = await SharedPreferences.getInstance().timeout(
+          const Duration(seconds: 5),
+        );
+        final lastSyncMs = prefs.getInt('content_last_sync');
+        if (lastSyncMs != null) {
+          final dt = DateTime.fromMillisecondsSinceEpoch(lastSyncMs);
+          final diff = DateTime.now().difference(dt);
+          if (diff.inMinutes < 1) {
+            _lastSyncText = 'Baru saja';
+          } else if (diff.inHours < 1) {
+            _lastSyncText = '${diff.inMinutes} menit lalu';
+          } else if (diff.inDays < 1) {
+            _lastSyncText = '${diff.inHours} jam lalu';
+          } else {
+            _lastSyncText = '${diff.inDays} hari lalu';
+          }
+        }
+        _cachedModelCount = prefs.getInt('cached_ar_model_count') ?? 0;
+      } catch (_) {}
+
+      final dashResult = await ApiService.getDashboard().timeout(
+        const Duration(seconds: 20),
+      );
+      if (!mounted) return;
+      if (dashResult['unauthorized'] == true) {
+        await ApiService.clearToken();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+      // Quiz gagal tidak boleh menahan dashboard: tampilkan stats,
+      // quiz menyusul (kosong bila offline).
+      List<dynamic> quizzes = [];
+      try {
+        final quizResult = await ApiService.guruGetQuizzes().timeout(
+          const Duration(seconds: 20),
+        );
+        if (quizResult['unauthorized'] == true) {
+          await ApiService.clearToken();
+          if (!mounted) return;
+          Navigator.of(context).pushReplacementNamed('/login');
+          return;
+        }
+        final qd = quizResult['data'];
+        if (qd is List) quizzes = qd;
+      } catch (_) {
+        quizzes = [];
+      }
+      if (!mounted) return;
+      if (dashResult['success'] == true) {
+        final data = dashResult['data'];
+        final stats = (data is Map ? data['stats'] : null) as Map? ?? {};
         setState(() {
-          _totalQuizzes = dashResult['data']['stats']['total_quizzes'] ?? 0;
-          _totalMateri = dashResult['data']['stats']['total_materi'] ?? 0;
-          _totalAr = dashResult['data']['stats']['total_ar_models'] ?? 0;
-          _quizzes = quizResult['data'] ?? [];
+          _totalQuizzes = (stats['total_quizzes'] as num?)?.toInt() ?? 0;
+          _totalMateri = (stats['total_materi'] as num?)?.toInt() ?? 0;
+          _totalAr = (stats['total_ar_models'] as num?)?.toInt() ?? 0;
+          _quizzes = quizzes;
           _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _quizzes = quizzes;
+          _isLoading = false;
+          _errorMessage =
+              (dashResult['message'] as String?) ?? 'Gagal memuat dashboard.';
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Gagal terhubung ke server. Periksa koneksi lalu coba lagi.';
+        });
+      }
     }
   }
 
@@ -491,6 +551,38 @@ class _GuruDashboardState extends State<GuruDashboard> {
     if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF0A8477)));
+    }
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined,
+                  size: 48, color: Color(0xFFB0B8C1)),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF637080)),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Coba Lagi'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A8477),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import 'api_client.dart';
 import 'secure_storage_service.dart';
 
 class ApiService {
@@ -37,40 +39,90 @@ class ApiService {
     return headers;
   }
 
+  static Map<String, dynamic> _decodeResponse(
+    int statusCode,
+    String body,
+    String path,
+  ) {
+    // Backend mati/proxy HTML (502/404/maintenance) -> jangan lempar
+    // FormatException mentah; kembalikan map agar UI bisa tampil + retry.
+    Map<String, dynamic>? json;
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) json = decoded;
+    } catch (_) {
+      json = null;
+    }
+    final unauthorized = statusCode == 401 || statusCode == 419;
+    if (unauthorized &&
+        ApiClient.shouldAutoLogout(path: path, statusCode: statusCode)) {
+      // Auto-logout global (sama seperti interceptor Dio): token basi
+      // langsung dibuang + ke /login tanpa perlu logout manual.
+      // Fire-and-forget agar decode tetap sinkron; pemanggil yang
+      // sadar-auth (dashboard) juga menavigasi sendiri (di-throttle).
+      unawaited(ApiClient.forceLogout(path: path));
+    }
+    if (json != null) {
+      if (unauthorized) {
+        json['unauthorized'] = true;
+      }
+      return json;
+    }
+    if (unauthorized) {
+      return {
+        'success': false,
+        'message': 'Sesi berakhir, silakan login kembali.',
+        'unauthorized': true,
+      };
+    }
+    return {
+      'success': false,
+      'message': 'Server mengembalikan respons tidak valid (HTTP $statusCode).',
+    };
+  }
+
   static Future<Map<String, dynamic>> _get(String path) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-    );
-    return jsonDecode(response.body);
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl$path'),
+          headers: _headers(),
+        )
+        .timeout(ApiConfig.connectionTimeout);
+    return _decodeResponse(response.statusCode, response.body, path);
   }
 
   static Future<Map<String, dynamic>> _post(
       String path, Map<String, dynamic> body) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-      body: jsonEncode(body),
-    );
-    return jsonDecode(response.body);
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl$path'),
+          headers: _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(ApiConfig.connectionTimeout);
+    return _decodeResponse(response.statusCode, response.body, path);
   }
 
   static Future<Map<String, dynamic>> _put(
       String path, Map<String, dynamic> body) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-      body: jsonEncode(body),
-    );
-    return jsonDecode(response.body);
+    final response = await http
+        .put(
+          Uri.parse('$baseUrl$path'),
+          headers: _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(ApiConfig.connectionTimeout);
+    return _decodeResponse(response.statusCode, response.body, path);
   }
 
   static Future<Map<String, dynamic>> _delete(String path) async {
-    final response = await http.delete(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-    );
-    return jsonDecode(response.body);
+    final response = await http
+        .delete(
+          Uri.parse('$baseUrl$path'),
+          headers: _headers(),
+        )
+        .timeout(ApiConfig.connectionTimeout);
+    return _decodeResponse(response.statusCode, response.body, path);
   }
 
   // Auth
@@ -299,9 +351,10 @@ class ApiService {
       request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
     }
 
-    final streamedResponse = await request.send();
+    final streamedResponse =
+        await request.send().timeout(ApiConfig.connectionTimeout);
     final responseBody = await streamedResponse.stream.bytesToString();
-    return jsonDecode(responseBody);
+    return _decodeResponse(streamedResponse.statusCode, responseBody, path);
   }
 
   // ========== V1 API METHODS ==========
@@ -316,11 +369,13 @@ class ApiService {
   static Future<Map<String, dynamic>> v1GetMarkers() => _getV1('/ar/markers');
 
   static Future<Map<String, dynamic>> _v1Get(String path) async {
-    final response = await http.get(
-      Uri.parse('$v1BaseUrl$path'),
-      headers: _headers(),
-    );
-    return jsonDecode(response.body);
+    final response = await http
+        .get(
+          Uri.parse('$v1BaseUrl$path'),
+          headers: _headers(),
+        )
+        .timeout(ApiConfig.connectionTimeout);
+    return _decodeResponse(response.statusCode, response.body, path);
   }
 
   static Future<Map<String, dynamic>> _getV1(String path) => _v1Get(path);

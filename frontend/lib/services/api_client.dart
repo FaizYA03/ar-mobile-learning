@@ -1,10 +1,19 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 import 'secure_storage_service.dart';
 
 class ApiClient {
   static Dio? _dio;
   static String? _token;
+
+  /// Navigator global untuk auto-logout (dipakai interceptor Dio).
+  /// Dipasang di MaterialApp via `navigatorKey: ApiClient.navigatorKey`.
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
+  /// Throttle agar 401 beruntun (multi request paralel) hanya logout sekali.
+  static DateTime? _lastForceLogout;
 
   static Dio get instance {
     _dio ??= _createDio();
@@ -30,12 +39,78 @@ class ApiClient {
         }
         handler.next(options);
       },
-      onError: (error, handler) {
+      // Auto-logout global: token basi/dicabut dari server (401/419)
+      // langsung buang sesi + lempar ke /login, dari request mana pun.
+      // Tanpa ini user stuck di spinner (bug: harus logout manual
+      // lalu login lagi agar normal).
+      onError: (error, handler) async {
+        final code = error.response?.statusCode;
+        if (code == 401 || code == 419) {
+          await forceLogout(path: error.requestOptions.path);
+        }
         handler.next(error);
       },
     ));
 
     return dio;
+  }
+
+  /// Murni & testable: kapan 401 boleh memicu auto-logout.
+  /// Login/register yang 401 (salah password) TIDAK boleh logout.
+  static bool shouldAutoLogout(
+      {required String path, required int? statusCode}) {
+    if (statusCode != 401 && statusCode != 419) return false;
+    final p = path.toLowerCase();
+    if (p == '/login' ||
+        p == '/register' ||
+        p.endsWith('/login') ||
+        p.endsWith('/register')) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Buang sesi + navigasi ke /login. Aman dipanggil berulang
+  /// (throttle 3 detik) dan aman saat navigator belum siap.
+  static Future<void> forceLogout({String? path}) async {
+    if (path != null) {
+      // Path auth tidak relevan di sini, tapi dijaga konsistensinya.
+      final p = path.toLowerCase();
+      if (p == '/login' ||
+          p == '/register' ||
+          p.endsWith('/login') ||
+          p.endsWith('/register')) {
+        return;
+      }
+    }
+    final now = DateTime.now();
+    if (_lastForceLogout != null &&
+        now.difference(_lastForceLogout!) < const Duration(seconds: 3)) {
+      return;
+    }
+    _lastForceLogout = now;
+    _token = null;
+    // Semua akses BuildContext SEBELUM async gap pertama.
+    final nav = navigatorKey.currentState;
+    String? current;
+    try {
+      final ctx = navigatorKey.currentContext;
+      if (ctx != null) {
+        current = ModalRoute.of(ctx)?.settings.name;
+      }
+    } catch (_) {
+      current = null;
+    }
+    try {
+      await SecureStorageService.clearAll();
+    } catch (_) {}
+    if (nav == null) return;
+    if (current == '/login') return;
+    nav.pushNamedAndRemoveUntil('/login', (_) => false);
+  }
+
+  static void resetLogoutThrottleForTest() {
+    _lastForceLogout = null;
   }
 
   static String get v1BaseUrl => ApiConfig.v1BaseUrl;
