@@ -25,6 +25,24 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Build native (dartcv4/OpenCV) + Gradle memakan belasan GB.
+      # Tanpa ini step SCP gagal: `gzip: No space left on device`
+      # saat drone-scp men-tar APK di /tmp (kasus v1.0.4).
+      # Catatan: JANGAN hapus /usr/local/lib/android (Android SDK)
+      # dan /opt/hostedtoolcache (Flutter/Java/Node) — dibutuhkan build.
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/lib/node_modules
+          sudo docker image prune --all --force || true
+          sudo apt-get clean || true
+          mkdir -p "$GITHUB_WORKSPACE/tmp-scp"
+          df -h
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -98,6 +116,10 @@ jobs:
 
       - name: Upload APK to landing server
         uses: appleboy/scp-action@v1
+        env:
+          # drone-scp men-tar file di os.TempDir(); arahkan ke workspace
+          # agar tidak memakai /tmp yang sempit saat disk penuh.
+          TMPDIR: ${{ github.workspace }}/tmp-scp
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
