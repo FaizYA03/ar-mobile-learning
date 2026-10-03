@@ -1,0 +1,45 @@
+# Normalisasi line ending untuk SELURUH repositori.
+#
+# Latar belakang: mesin ini memakai core.autocrlf=true, tetapi .gitattributes
+# hanya ada di backend/. Akibatnya file di frontend/ dan root ter-checkout
+# menjadi CRLF, sedangkan file yang ditulis tooling lain menjadi LF. campuran
+# ini memicu konflik "Failed to save: the content of the file is newer" di editor.
+#
+# Backend/.gitattributes tetap berlaku untuk subtree backend (aturan paling
+# dekat dengan berkas yang selalu menang), dan isinya konsisten dengan aturan
+# di bawah ini.
+* text=auto eol=lf
+
+# Syntax highlighting pada git diff / git blame
+*.blade.php diff=html
+*.css       diff=css
+*.dart      diff=dart
+*.html      diff=html
+*.js        diff=javascript
+*.kt        diff=java
+*.kt.kts    diff=java
+*.md        diff=markdown
+*.php       diff=php
+*.py        diff=python
+*.swift     diff=swift
+*.xml       diff=xml
+*.yaml      diff=yaml
+*.yml       diff=yaml
+
+# Berkas biner: jangan pernah dinormalisasi (binary = -diff -merge -text)
+*.gif       binary
+*.glb       binary
+*.ico       binary
+*.jks       binary
+*.jpg       binary
+*.jpeg      binary
+*.keystore  binary
+*.otf       binary
+*.pdf       binary
+*.png       binary
+*.so        binary
+*.ttf       binary
+*.zip       binary
+
+# Wrapper JAR milik Gradle (dibutuhkan build Android)
+gradle-wrapper.jar binary
