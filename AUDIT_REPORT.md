@@ -1,322 +1,277 @@
-# AR Mobile Learning — Project Audit Report
+# AR Mobile Learning — AUDIT REPORT
 
-**Date:** 20 September 2026  
-**Auditor:** OpenCode Agent  
-**Scope:** Full backend (Laravel) & frontend (Flutter) codebase audit
-
----
-
-## 1. Executive Summary
-
-The AR Mobile Learning application is a **mature, feature-complete** project spanning Milestone 1–12 (foundation through release). Both frontend and backend are well-architected with clear separation of concerns, proper authentication, and a functional AR pipeline. However, several critical and medium-severity issues were identified that require attention before final release.
-
-**Overall Assessment:** 78/100 — Feature-complete but has critical security gaps and architectural debt.
+> **Audit terakhir:** 3 Oktober 2026 (commit `5d2d3b5`, rilis `v1.0.6`)
+> **Metode:** pembacaan kode langsung + uji empiris terhadap validasi Laravel
+> **Tidak ada file yang diubah tanpa persetujuan pengguna**
 
 ---
 
-## 2. Backend Audit (Laravel/PHP)
+## 0. Catatan tentang laporan sebelumnya
 
-### 2.1 Architecture & Structure ✅
+Laporan bertanggal 20 September 2026 (versi sebelumnya dari file ini) memuat beberapa klaim
+yang **tidak sesuai dengan kode**. Klaim berikut terbukti salah:
 
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| MVC Pattern | ✅ Good | Models, Controllers, Requests, Resources properly separated |
-| Route Organization | ✅ Good | `api.php`, `api_v1.php`, `admin.php`, `web.php` properly segmented |
-| Middleware | ✅ Good | `CorsMiddleware`, `RoleMiddleware` implemented |
-| Form Requests | ✅ Good | 6 request classes with validation rules and custom messages |
-| API Resources | ✅ Good | 8 resource classes for consistent JSON output |
-| Service Layer | ⚠️ Minimal | Only `ActivityLogger.php` exists; no dedicated service classes for business logic |
+| Klaim lama | Kenyataan |
+|---|---|
+| `api_v1.php` route tidak terdaftar | **Terdaftar** di `bootstrap/app.php:14-18` (prefix `api/v1`, `throttle:60,1`) |
+| `augen` hilang → AR tidak bisa jalan | **`augen` memang tidak pernah dipakai.** AR berjalan lewat ARCore + SceneView native: `arsceneview:4.32.0` + `com.google.ar:core:1.54.0`, dengan 4 file Kotlin di `android/app/src/main/kotlin/com/ar/mobilelearning/` |
+| Native AR engine tidak ada | **Ada**: `MainActivity.kt`, `ArEngineView.kt`, `ArEngineViewFactory.kt`, `FlutterArPermissions.kt` |
+| Riverpod ada di `pubspec.yaml` tapi tidak dipakai | **Riverpod tidak ada di `pubspec.yaml`** sama sekali |
+| API URL hardcoded `10.42.37.181` | Tidak ada. Konfigurasi via `--dart-define` + fallback emulator |
+| 0 backend Feature test | **133** test di 20 file (kini 148 setelah perbaikan ini) |
+| 5 test file frontend / ~47 test | 12 file / 120 test (kini 13 file / 131 test) |
 
-### 2.2 Models (14 models) ✅
-
-All models follow Laravel conventions with proper fillable fields, casts, and relationships:
-- **User** — HasApiTokens, role-based access methods (`isAdmin()`, `isGuru()`, `isSiswa()`)
-- **Materi**, **Quiz**, **Question**, **QuestionOption**, **TpAtp** — Core learning models
-- **ArModel**, **ArMarker**, **ArHotspot**, **ArMarker3dMapping** — AR data models
-- **AppSetting**, **AppVersion**, **ActivityLog** — System management models
-
-**✅ No issues found in model definitions.**
-
-### 2.3 Controllers (10 controllers) ⚠️
-
-| Controller | Lines | Issues |
-|-----------|-------|--------|
-| `AuthController` | 106 | ✅ Clean |
-| `ArController` | 476 | ⚠️ **Too large** — combines Models, Markers, Hotspots, and Mappings CRUD into one file |
-| `MateriController` | 128 | ✅ Clean |
-| `QuizController` | 199 | ✅ Clean but `guruDestroy` doesn't delete questions first |
-| `TpAtpController` | 103 | ✅ Clean |
-| `AdminController` | 109 | ✅ Clean |
-| `DashboardController` | 80 | ⚠️ Uses `match()` expression — good |
-| `Controller` (base) | 10 | ✅ Clean |
-
-**Critical Issue:** `ArController` at 476 lines violates single responsibility principle. Should be split into `ArModelController`, `ArMarkerController`, `ArHotspotController`.
-
-### 2.4 Routes ⚠️
-
-**`api.php` (87 lines):**
-- Public routes (register, login, public AR models) properly defined
-- Sanctum-protected routes grouped correctly
-- Role-based middleware (`role:admin`, `role:guru,admin`) properly applied
-- **Issue:** `api_v1.php` routes are NOT included in `api.php` — the v1 endpoints (`/app/config`, `/content/version`, `/ar/content`) are defined but never loaded. Need `require __DIR__.'/api_v1.php'` or route registration.
-
-**`admin.php` (56 lines):**
-- Admin CMS routes with session auth + role middleware
-- Resource routes for users, tp-atp, materi, quiz, AR models/markers/hotspots/mappings
-- **Issue:** `ArController` methods are duplicated — some routes in `api.php` also defined in `admin.php` but pointing to different controller namespaces.
-
-### 2.5 Security 🔴 CRITICAL
-
-| Issue | Severity | Details |
-|-------|----------|---------|
-| **Hardcoded `.env` credentials** | 🔴 HIGH | `.env` contains `DB_PASSWORD=` (empty), `APP_KEY` exposed, `APP_DEBUG=true` in production |
-| **No CSRF protection on API** | 🔴 HIGH | API routes lack CSRF middleware; `CorsMiddleware` allows `*` origins by default |
-| **Role not enforced on client-side** | 🟡 MEDIUM | `User` model stores role in `$fillable` — role can be manipulated during registration |
-| **Register always assigns `siswa` role** | 🟡 MEDIUM | `AuthController::register()` hardcodes `'role' => 'siswa'` — no admin can register as guru/admin |
-| **No rate limiting** | 🟡 MEDIUM | No throttling on login/register endpoints |
-| **`CorsMiddleware` allows all origins** | 🟡 MEDIUM | Default `CORS_ALLOWED_ORIGINS='*'` allows any origin |
-| **ActivityLogger uses `request()` helper** | 🟢 LOW | Tight coupling to global request, not injectable |
-
-### 2.6 Database & Migrations ✅
-
-- **22 migrations** covering all tables with proper timestamps
-- **1 seeder** (`DatabaseSeeder.php`) with comprehensive demo data
-- **1 factory** (`UserFactory.php`)
-- Default connection is SQLite (`database.sqlite` exists)
-- MySQL configured in `.env` but not active
-
-**✅ Migrations look solid.** Cross-table relationships properly defined.
-
-### 2.7 Configuration ⚠️
-
-- **`.env`** has `APP_DEBUG=true` — should be `false` in production
-- **`config/database.php`** has unused imports (`Pdo\Mysql`)
-- **`config/services.php`** not inspected but likely needs CORS config update
-- **No `.env.example` validation** in the repo
+ Kesimpulan: laporan lama harus dianggap tidak valid.Laporan ini menggantikannya.
 
 ---
 
-## 3. Frontend Audit (Flutter/Dart)
+## 1. Ringkasan
 
-### 3.1 Architecture & Structure ✅
-
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| Feature-based organization | ✅ Good | `screens/`, `services/`, `models/`, `widgets/`, `config/` |
-| State management | ✅ Good | Uses `setState` for local state; Riverpod available in dependencies |
-| Separation of concerns | ✅ Good | Services separate from UI, models separate from both |
-| Debug/logging | ✅ Good | `ArDebugLog` with configurable buffer |
-
-### 3.2 Core Services ✅
-
-| Service | Lines | Status |
-|---------|-------|--------|
-| `api_client.dart` | 90 | ✅ Dio-based HTTP client with interceptors |
-| `api_service.dart` | 299 | ✅ Comprehensive API methods for all endpoints |
-| `ar_service.dart` | 112 | ✅ ARCore availability checking via MethodChannel |
-| `ar_engine_controller.dart` | 102 | ✅ Native engine communication |
-| `ar_content_resolver.dart` | 120 | ✅ Content resolution logic |
-| `content_sync_service.dart` | 484 | ✅ Offline-first sync with manifest |
-| `secure_storage_service.dart` | 64 | ✅ FlutterSecureStorage for tokens |
-| `app_config_service.dart` | 59 | ✅ App configuration with version checking |
-| `ar_diagnostics_service.dart` | 117 | ✅ Comprehensive diagnostics |
-
-### 3.3 Models (353 lines) ✅
-
-All models have proper `fromJson`/`toJson` factories:
-- `AppUser`, `LoginResponse`, `AppConfigData`, `ContentVersionData`
-- `ArContentItem`, `ArMarkerData`, `ArHotspotData`
-- `QuizItem`, `QuizQuestion`, `QuizOption`, `QuizAttemptResult`
-
-**✅ All models pass their unit tests (188 test assertions).**
-
-### 3.4 Screens ✅
-
-18 screen files covering all features:
-- Auth: `login_screen.dart`, `register_screen.dart`, `onboarding_screen.dart`, `splash_screen.dart`
-- Dashboards: `student_dashboard.dart`, `guru_dashboard.dart`, `admin_dashboard.dart`
-- AR: `ar_scanner_screen.dart` (801 lines), `ar_hub_screen.dart` (567 lines), `ar_diagnostic_screen.dart` (436 lines), `model_viewer_screen.dart` (551 lines)
-- Learning: `materi_list_screen.dart`, `materi_detail_screen.dart`, `quiz_list_screen.dart`, `quiz_take_screen.dart` (557 lines), `quiz_result_screen.dart`
-- Management: Various admin/guru management screens
-
-**⚠️ `ar_scanner_screen.dart` at 801 lines is too large** — should be split into smaller widgets.
-
-### 3.5 Networking 🔴 CRITICAL
-
-| Issue | Severity | Details |
-|-------|----------|---------|
-| **Hardcoded API URLs** | 🔴 HIGH | `api_config.dart` and `api_client.dart` hardcode `127.0.0.1:8000` and `10.42.37.181:8000` — violates AGENTS.md rule |
-| **`api_service.dart` duplicates `api_client.dart`** | 🟡 MEDIUM | Both handle HTTP but `api_service.dart` uses `http` package while `api_client.dart` uses `dio` — redundant |
-| **`api_service.dart` has unused `v1BaseUrl`** | 🟢 LOW | Defined but `v1GetAppConfig` etc. don't use it properly |
-
-### 3.6 AR Implementation 🔴 CRITICAL
-
-| Issue | Severity | Details |
-|-------|----------|---------|
-| **`augen` dependency listed but not in `pubspec.yaml`** | 🔴 HIGH | `README.md` and `AGENTS.md` reference `augen` for AR, but `pubspec.yaml` has NO `augen` package |
-| **AR engine uses MethodChannel** | 🟡 MEDIUM | `ArEngineController` uses `MethodChannel('com.example.frontend/ar_engine')` — requires native Android code that doesn't exist in the repo |
-| **`ArEngineView` uses `AndroidView`** | 🟡 MEDIUM | Only supports Android; no iOS/web fallback |
-| **No `augen` package implementation** | 🔴 HIGH | Marker detection/tracking relies on native code via MethodChannel but no `augen` or equivalent package is declared |
-
-### 3.7 State Management ⚠️
-
-- **Riverpod** is in `pubspec.yaml` dependencies but **NOT USED ANYWHERE** in the codebase
-- All state management uses raw `setState()` in StatefulWidgets
-- This violates the AGENTS.md rule: "Riverpod for state management"
-- Large dashboard files (700+ lines) are difficult to maintain without proper state management
-
-### 3.8 Testing ✅
-
-- **5 test files** with ~47 tests total
-- `models_test.dart` (16 tests) — all pass
-- `content_sync_test.dart` (12 tests) — all pass
-- `ar_content_resolver_test.dart` (11 tests) — all pass
-- `app_config_service_test.dart` (8 tests) — all pass
-- `widget_test.dart` (1 test) — splash screen rendering
-
-**✅ Test coverage is good for models and services, but lacks:**
-- Widget tests for critical screens
-- Integration tests
-- No backend tests were audited
-
-### 3.9 Dependencies Analysis ⚠️
-
-| Package | Used? | Notes |
-|---------|-------|-------|
-| `dio` | ✅ Yes | HTTP client in `api_client.dart` |
-| `http` | ✅ Yes | HTTP client in `api_service.dart` (redundant with dio) |
-| `flutter_secure_storage` | ✅ Yes | Token storage |
-| `shared_preferences` | ✅ Yes | Local preferences, sync metadata |
-| `model_viewer_plus` | ✅ Yes | 3D model rendering |
-| `permission_handler` | ✅ Yes | Camera permission |
-| `image_picker` | ⚠️ Declared but not used in audited code | |
-| `file_picker` | ⚠️ Declared but not used in audited code | |
-| `path_provider` | ✅ Yes | File paths for cache |
-| `cupertino_icons` | ✅ Yes | Icons |
-| **Riverpod** | ❌ NOT USED | Listed in dependencies but zero usage |
-| **augen** | ❌ MISSING | Referenced in README/AGENTS.md but not in pubspec |
-
-### 3.10 Code Quality ⚠️
-
-- **`analyze_err.txt`** exists in frontend root — suggests past analysis errors
-- No `AGENTS.md` compliance check was done for the frontend specifically
-- `dart format` and `flutter analyze` results not available
-- `pubspec.yaml` references Flutter 3.47+ but environment requires SDK `^3.6.2`
+| Aspek | Nilai |
+|-------|-------|
+| Kualitas arsitektur | Baik — backend/frontend terpisah bersih, AR nyata, test kuat |
+| Keamanan | **Perlu perbaikan** — sudah banyak yang diperbaiki di `v1.0.6`, sisanya terbuka |
+| Kesesuaian dokumentasi | **Diperbaiki di `v1.0.6`** |
+| Skor keseluruhan | **~82/100** (naik dari ~72 sebelum perbaikan `v1.0.6`) |
 
 ---
 
-## 4. AGENTS.md Compliance Check
+## 2. Temuan yang SUDAH DIPERBAIKI (rilis v1.0.6)
 
-| Rule | Backend | Frontend | Status |
-|------|---------|----------|--------|
-| Never hardcode secrets | ✅ `.env` has empty password | ⚠️ API URLs hardcoded | ⚠️ Partial |
-| Never hardcode 127.0.0.1 | N/A | 🔴 `127.0.0.1` in `api_config.dart`, `api_client.dart` | 🔴 FAIL |
-| Use Riverpod for state mgmt | N/A | ❌ Not used | 🔴 FAIL |
-| Use Dio for HTTP | N/A | ✅ Used in `api_client.dart` | ✅ PASS |
-| Validate incoming requests | ✅ Form Requests | N/A | ✅ PASS |
-| Never trust client role | ✅ `RoleMiddleware` | ⚠️ Role in `User` fillable | ⚠️ Partial |
-| AR must be real (no fake) | ✅ Backend supports AR | ⚠️ AR depends on missing `augen` | ⚠️ Partial |
-| Marker should NOT be manually entered | ✅ `ArMarker` has `marker_id` | ✅ Scanner auto-detects | ✅ PASS |
-| API responses consistent | ✅ `ApiResponse` trait | ✅ Consistent parsing | ✅ PASS |
-| Auth = token-based | ✅ Laravel Sanctum | ✅ FlutterSecureStorage | ✅ PASS |
-| No unnecessary varchar(255) | ✅ Proper column sizes | N/A | ✅ PASS |
-| Use migrations as source of truth | ✅ 22 migrations | N/A | ✅ PASS |
-| Test after changes | ✅ `php artisan test` documented | ✅ `flutter test` documented | ✅ PASS |
+### K-1 · Nilai quiz bisa dimanipulasi klien — ✅ DIPERBAIKI
+
+**Sebelum:** `answers.*.question_id` tanpa `distinct`; `QuizController` menghitung setiap
+jawaban yang dikirim. Kirim 1 jawaban benar ×100 pada quiz 3 soal → `score = 3333`, `passed = true`.
+Ini melanggar aturan `AGENTS.md`: "Backend is the source of truth for quiz scoring".
+
+**Perbaikan:**
+- `app/Http/Requests/QuizSubmitRequest.php` — `distinct`, `integer`, `max:200`
+- `app/Http/Controllers/QuizController.php:84-114` — penskoran iterasi **soal milik quiz**
+  (bukan jawaban kiriman), `min(100, ...)` sebagai pengaman
+- Bonus: N+1 hilang (41 → 2 query per submit)
+- Test: `tests/Feature/QuizScoreIntegrityTest.php` (7 test)
+
+### K-2 · Unggah file tanpa validasi tipe — ✅ DIPERBAIKI
+
+**Sebelum:** `gambar_cover` = `nullable` tanpa filter; `glb_path` tanpa rule `file:` sehingga
+**string biasa** pun lolos dan tersimpan sebagai path; 6 rule `image_path` kehilangan rule `image`.
+
+**Perbaikan** (10 titik):
+
+| Rule | Lokasi |
+|------|--------|
+| `file\|extensions:glb,gltf\|max:102400` | `ArController.php:48,90` · `Admin/ArModelController.php:38,84` |
+| `nullable\|image\|mimes:jpg,jpeg,png,webp\|max:5120` | `MateriStoreRequest.php:25` · `MateriUpdateRequest.php:25` |
+| `sometimes\|image\|mimes:jpg,jpeg,png,webp` | `ArController.php:236,356` · `Admin/ArMarkerController.php:139` · `Admin/ArHotspotController.php:77` |
+
+> **Keputusan penting — jangan ganti `extensions:` dengan `mimes:` untuk GLB.**
+> Sudah diuji empiris terhadap file GLB asli di repo:
+>
+> | File | `mimes:glb,gltf` | `extensions:glb,gltf` |
+> |------|------------------|----------------------|
+> | `real_model.glb` (GLB asli) | ❌ **DITOLAK** | ✅ diterima |
+> | `crafted.glb` (magic `glTF`) | ❌ **DITOLAK** | ✅ diterima |
+> | `shell.php` | ❌ ditolak | ❌ ditolak |
+> | `double.glb.php` | ❌ ditolak | ❌ ditolak |
+> | `xss.svg` | ❌ ditolak | ❌ ditolak |
+>
+> Sebab: rule `mimes` memakai `UploadedFile::guessExtension()` (deteksi **isi file** via `finfo`).
+> GLB dilaporkan sebagai `application/octet-stream` → `guessExtension()` mengembalikan `bin`,
+> bukan `glb`. Rule `extensions:` memakai `getClientOriginalExtension()` plus
+> `shouldBlockPhpUpload()` sebagai lapisan kedua.
+> Sumber: `vendor/.../Validation/Concerns/ValidatesAttributes.php:1725` (`validateMimes`)
+> dan `:1237` (`validateExtensions`).
+
+- Test: `tests/Feature/UploadValidationTest.php` (8 test)
+
+### K-3 · Tombol marker-ID manual aktif di release — ✅ DIPERBAIKI
+
+`AGENTS.md` §AR RULES melarang layar AR yang hanya berisi "manually typed marker IDs".
+
+**Sebelum:** `ar_uco_scanner_screen.dart:750` menampilkan tombol `_showManualIdInput` tanpa gate,
+padahal tombol debug tepat di bawahnya (`761`) sudah memakai `if (kDebugMode)` — indikasi
+kelalaian, bukan keputusan desain.
+
+**Perbaikan:** tombol dibungkus `if (kDebugMode)` (`ar_uco_scanner_screen.dart:749`).
+Diverifikasi `_showManualInput = true` hanya terjadi di `_showManualIdInput()` (`:422`) yang kini
+hanya terjangkau dari tombol debug-gated.
+
+### K-4 · Dokumen bertentangan dengan kode — ✅ DIPERBAIKI
+
+`README.md` pernah mengklaim **Riverpod**, **Augen**, dan **GoRouter** — ketiganya tidak ada
+di proyek. `AGENTS.md` juga mewajibkan Riverpod + GoRouter sebagai aturan, padahal tidak ada
+di `pubspec.yaml`.
+
+**Perbaikan:** `README.md` ditulis ulang sesuai kode nyata; `frontend/README.md` dan
+`backend/README.md` diperbarui (dependensi + jumlah test); `AGENTS.md` diberi penanda
+"ARSITEKTUR TARGET — BELUM DIIMPLEMENTASI" agar tidak menyesatkan.
+
+### H-5 · `replaceFirst('/api','')` merusak URL produksi — ✅ DIPERBAIKI
+
+`replaceFirst('/api', '')` menghapus kemunculan **pertama**, sehingga host yang subdomainnya
+dimulai `api` ikut rusak:
+
+| baseUrl | `replaceFirst('/api','')` | `stripApiSuffix` |
+|---------|---------------------------|------------------|
+| `https://api.domain.com/api` | `https:/.domain.com` ❌ | `https://api.domain.com` ✅ |
+| `https://api.sekolah.sch.id/api` | `https:/.sekolah.sch.id` ❌ | `https://api.sekolah.sch.id` ✅ |
+| `https://apiclient.myapi.co.id/api` | `https:/client.myapi.co.id` ❌ | `https://apiclient.myapi.co.id` ✅ |
+| `http://10.0.2.2:8000/api` | `http://10.0.2.2:8000` ✅ | sama ✅ |
+
+Helper benar `ApiConfig.stripApiSuffix()` sudah ada sejak awal tapi hanya dipakai 2×.
+**9 situs** masih memakai pola rusak.
+
+**Perbaikan:** 9 situs diganti ke `ApiConfig.baseHost` / `ApiConfig.stripApiSuffix()`:
+`admin_ar_management_screen.dart:66` · `guru_ar_management_screen.dart:65` ·
+`app_config_service.dart:55` · `ar_content_resolver.dart:135,156` ·
+`materi_detail_screen.dart:160,352` · `profile_screen.dart:27` · `model_viewer_screen.dart:307`
+
+**Test:** test lama hanya memakai `10.0.2.2:8000/api` — satu-satunya bentuk yang **menyembunyikan**
+bug ini. Sekarang ada `api_config_test.dart` (7 test) + kasus `api.domain.com` di
+`ui_content_test.dart` dan `profile_screen_test.dart`.
+
+### H-4 · `usesCleartextTraffic="true"` di manifest utama — ✅ DIPERBAIKI
+
+Setiap APK release mengizinkan HTTP plaintext ke host mana pun, sementara header
+`Authorization: Bearer <token>` dikirim pada setiap request.
+
+**Perbaikan:** main manifest → `android:usesCleartextTraffic="false"`;
+izin cleartext dipindah ke `android/app/src/debug/AndroidManifest.xml` sehingga
+`flutter run` tetap berfungsi.
+
+### BUG BARU · `ar_models.description` NOT NULL → HTTP 500 — ✅ DIPERBAIKI
+
+Ditemukan saat menulis test P0-2. Kolom `description` dan `category` NOT NULL tanpa default,
+padahal API menetapkannya `nullable`.
+
+Pemicu nyata: Flutter mengirim `'description': descCtrl.text`; string kosong
+`''` → middleware `ConvertEmptyStringsToNull` → `null` → melanggar NOT NULL → **HTTP 500**.
+Artinya admin/guru yang mengunggah GLB tanpa mengisi deskripsi mendapat error.
+
+**Perbaikan:** `2026_10_03_120000_make_description_and_category_nullable_in_ar_models_table.php`.
+
+**Validasi di MariaDB 10.4** (DB scratch terpisah, DB developer tidak disentuh):
+`SHOW COLUMNS` → `description`/`category` = `NULL: YES` · insert tanpa deskripsi berhasil ·
+`migrate:rollback` mengembalikan `NO` · re-migrate kembali `YES`.
 
 ---
 
-## 5. Critical Issues Summary (Priority Order)
+## 3. Temuan yang MASIH TERBUKA
 
-### 🔴 Critical (Must Fix Before Release)
+### 🔴 TINGGI
 
-1. **Hardcoded API URLs in production code** (`api_config.dart`, `api_client.dart`, `api_service.dart`) — violates networking rules; use environment/config instead
-2. **`augen` AR package missing from `pubspec.yaml`** — AR system cannot function without the marker detection library
-3. **`.env` has `APP_DEBUG=true`** — exposes stack traces in production
-4. **No native AR engine implementation** — `MethodChannel` calls to `com.example.frontend/ar_engine` have no corresponding native code
-5. **Riverpod declared but not used** — violates project architecture rules
-6. **`api_v1.php` routes not registered** — public AR content endpoints are dead code
+#### H-1 · Tidak ada Policy/Gate sama sekali
 
-### 🟡 Medium (Should Fix)
+`app/Policies/` **tidak ada**. `AppServiceProvider::boot()` kosong. Otorisasi seluruhnya
+string matching di `RoleMiddleware.php:14`.
 
-7. **`ArController` is 476 lines** — violates single responsibility; split into separate controllers
-8. **`ar_scanner_screen.dart` is 801 lines** — too large; extract into smaller widgets
-9. **`dio` and `http` packages both used redundantly** — consolidate to one HTTP client
-10. **No rate limiting on auth endpoints** — vulnerable to brute force
-11. **CORS allows all origins by default** — should restrict to app origins
-12. **No CSRF protection on API routes** — add token-based CSRF handling
-13. **Role can be manipulated during registration** — server must determine role, not client
-14. **`ImagePicker` and `FilePicker` declared but unused** — remove or implement
+Konsekuensi: setiap endpoint `PUT/DELETE /api/guru/*/{id}` mempercayai parameter URL.
+Guru dapat menghapus soal/materi/quiz milik guru lain.
 
-### 🟢 Low (Nice to Have)
+Endpoint terdampak: `QuizController` (`guruUpdate`, `guruDestroy`, `deleteQuestion`) ·
+`MateriController::update/destroy` · `TpAtpController::update/destroy` ·
+`ArController` (model/marker/hotspot/mapping update & destroy).
 
-15. Add pagination to list endpoints (currently returns all records)
-16. Add input validation for `ArHotspot` latitude/longitude ranges
-17. Add proper error handling middleware
-18. Add backend feature tests (currently 0 Feature tests found)
-19. Add widget tests for critical screens
-20. Add integration tests for end-to-end AR flow
+**Catatan:** tidak ada kolom kepemilikan (`created_by`) di `quizzes`, `materi`, `tp_atp`,
+sehingga perbaikan memerlukan pekerjaan schema, bukan hanya Policy. Jadwalkan, jangan dipaksakan.
 
----
+#### H-2 · Tidak ada route guard di Flutter
 
-## 6. File Inventory Summary
+`MaterialApp` memakai map `routes:` statis tanpa `redirect` (`main.dart:184-200`).
+`Navigator.pushNamed(context, '/admin')` dari layar mana pun membuka `AdminDashboard`
+tanpa cek role/token. Satu-satunya cek role berjalan sekali di `_buildInitialRoute()`.
 
-### Backend
-- **Models:** 14 files
-- **Controllers:** 10 files (including subdirectory)
-- **Middleware:** 2 files
-- **Requests:** 6 files
-- **Resources:** 8 files
-- **Routes:** 5 files
-- **Migrations:** 22 files
-- **Seeders:** 1 file
-- **Factories:** 1 file
-- **Services:** 1 file
-- **Config:** 11 files
-- **Total PHP files:** ~70+
+**Mitigasi sudah ada:** server tetap mengkap lewat `RoleMiddleware` dan register memaksa
+`role = 'siswa'` (`AuthController.php:28`). Jadi siswa yang nyasar ke `/admin` melihat shell
+admin yang seluruh panelnya gagal 403 — masalah UX + defense-in-depth, bukan kebocoran data.
 
-### Frontend
-- **Screens:** 18 `.dart` files
-- **Services:** 9 `.dart` files
-- **Models:** 1 `.dart` file (353 lines)
-- **Widgets:** 1 `.dart` file
-- **Config:** 1 `.dart` file
-- **Core/Debug:** 1 `.dart` file
-- **Dashboards:** 3 `.dart` files
-- **Auth:** 4 `.dart` files
-- **Tests:** 5 `.dart` files
-- **Total Dart files:** ~50+
+#### H-3 · HTTP 403 tidak dibedakan dari 401
 
----
+`api_service.dart:57-82` hanya menandai 401/419. 403 jatuh ke
+"Server mengembalikan respons tidak valid (HTTP 403)" — pesan menyesatkan untuk kegagalan izin,
+dan pengguna tidak diarahkan keluar.
 
-## 7. Recommendations
+#### H-7 · `POST /admin/login` tanpa rate limiting
 
-### Immediate Actions
-1. Replace hardcoded API URLs with environment-based configuration
-2. Add `augen` package to `pubspec.yaml` or replace with documented AR solution
-3. Set `APP_DEBUG=false` in `.env` and add `.env` to `.gitignore`
-4. Create native Android AR engine plugin code or use a documented Flutter AR package
-5. Begin using Riverpod for state management in large screens
-6. Register `api_v1.php` routes in `api.php`
+API login sudah ada `throttle:10,1` (`routes/api.php:13`), tetapi `routes/admin.php:20`
+tidak. Admin panel terbuka untuk credential stuffing.
 
-### Short-term
-7. Refactor `ArController` into separate controllers
-8. Split `ar_scanner_screen.dart` into smaller widgets
-9. Consolidate HTTP clients (dio vs http)
-10. Add rate limiting and proper CORS configuration
-11. Remove `ImagePicker` and `FilePicker` if unused, or implement their functionality
+### 🟡 SEDANG
 
-### Long-term
-12. Add backend Feature tests with Pest/PHPUnit
-13. Add Flutter widget and integration tests
-14. Implement proper pagination on all list endpoints
-15. Add CI/CD pipeline with automated testing
+| # | Temuan | Lokasi |
+|---|--------|--------|
+| M-1 | 2 HTTP client (`dio` + `package:http`) dengan `_token` masing-masing; `main.dart:101-102` harus sync manual + komentar 8 barihindah memperingatkannya | `api_client.dart:8`, `api_service.dart:13` |
+| M-2 | 21 query di `GET /api/v1/app/config` — satu SELECT per key, tanpa cache. Request pertama tiap cold start | `AppConfigController.php:16-64`, `AppSetting::getValue()` |
+| M-3 | N+1 di hot path AR: `models.hotspots` di-eager-load tanpa filter, lalu diakses lazy | `Api/V1/ArContentController.php:95-147` |
+| M-4 | `questions.text` varchar(255) divalidasi `max:1000` → **HTTP 500** di MySQL strict mode | migration `2026_09_17_051731` vs `QuestionStoreRequest.php:20` |
+| M-5 | Uniqueness hanya dijaga PHP, tanpa unique index di DB → race condition | `2026_09_17_052941` (`ar_markers.marker_id`) |
+| M-6 | Admin bisa menghapus/demote akun sendiri atau admin terakhir → sistem tidak bisa dikelola | `AdminController.php:121`, `Admin/UserController.php:92` |
+| M-7 | Ganti password tidak mencabut token lama yang sudah terbit | `ProfileController.php:54` |
+| M-8 | ~19 endpoint mengembalikan raw Eloquent model, bukan Resource | `ArController.php`, `TpAtpController.php`, `Admin/ArHotspotApiController.php` |
+| M-9 | `bootstrap/app.php:30-32` `withExceptions()` kosong → error tidak konsisten dengan format `{success, message, errors}` | `bootstrap/app.php` |
+| M-10 | Root database tiap scan tidak punya indeks komposit | `ar_markers(aruco_dictionary, ar_uco_id)` |
+| M-11 | `IndexedStack` memicu ≥5 request network di frame pertama dashboard | `student_dashboard.dart:154` |
+| M-12 | `TextEditingController` dibuat di dalam `build()`, tidak di-dispose → alokasi tiap frame (~30 fps) | `ar_uco_scanner_screen.dart:1049` |
+| M-13 | `setState` pada setiap frame deteksi AR → rebuild seluruh `Stack` termasuk subtree `ModelViewer` | `ar_uco_scanner_screen.dart:222` |
+| M-14 | `ArDiagnosticScreen` (fingerprint perangkat) terbuka untuk siswa dari app-bar | `ar_hub_screen.dart:222` |
+| M-15 | 895 literal `Color(0x…)`, 252 di antaranya warna brand `0xFF0A8477` yang sama; tidak ada `app_colors.dart` | seluruh `frontend/lib` |
+| M-16 | ~1.800 LOC duplikat: `_buildProfileOption` ×13, `_buildQuickAction` ×12, `_buildBody` ×10; `admin_tp_atp_screen.dart` vs `guru_...` 47% identik | `frontend/lib/screens` |
+| M-17 | 5 test tautologis (`expect(15 == 15, true)`) yang tidak memanggil `shouldDownloadMarker` | `test/content_sync_test.dart:125-220` |
+| M-18 | `widget_test.dart` melakukan real network I/O → rawan hang di CI | `test/widget_test.dart:13` |
+
+### 🟢 RENDAH
+
+| # | Temuan | Lokasi |
+|---|--------|--------|
+| L-1 | `assets/markers/default_marker.png` hanya **67 byte** — dipakai sebagai target ARCore saat cache miss, pasti gagal dilacak | `ar_scanner_screen.dart:167` |
+| L-2 | 10 asset marker mati (`marker_0..9.png`) tidak direferensikan | `assets/markers/` |
+| L-3 | 2 script dev di root backend yang menjalankan `DB::table()->update()` tanpa konfirmasi | `backend/fix_paths.php`, `create_placeholders.php` |
+| L-4 | Import tidak terpakai di `QuizController.php:19` (`AnonymousResourceCollection`) | `QuizController.php:19` |
+| L-5 | Formatting: `vendor/bin/pint --test` gagal pada 5 file **sudah gagal sebelum perubahan ini** (utang format bawaan, tidak saya perbaiki agar diff tetap ringkas, dan tidak diabaikan CI) | `QuizController.php`, `ArController.php`, `Admin/Ar*Controller.php` |
 
 ---
 
-## 8. Conclusion
+## 4. Yang sudah bagus — jangan dirusak
 
-The AR Mobile Learning project is a **well-organized, feature-complete application** that demonstrates strong understanding of Laravel and Flutter architecture. The codebase follows good MVC patterns, has proper authentication, and implements a functional AR content pipeline. The main concerns are **security hardening** (hardcoded URLs, debug mode), **AR package dependency gaps** (missing `augen`), and **state management compliance** (Riverpod unused). Addressing the critical issues will bring this project to a production-ready state.
+- **Pipeline ARCore nyata** (bukan fake): `ArEngineView.kt:234` `AugmentedImageDatabase`,
+  `:244` `addImage(...)`, `:326` `AugmentedImageNode` + Filament. MemENUHI pipeline wajib `AGENTS.md`.
+- **Deteksi OpenCV ArUco yang matang**: async di native thread, detector di-reuse, fast-path
+  plane Y, `Mat`/`Vec*` di-dispose di `finally`, mapping orientasi sensor aware. 30 unit test.
+- **Keamanan kredensial benar**: token di `flutter_secure_storage`; tidak ada PII/kredensial di
+  `SharedPreferences`.
+- **Zero kebocoran log**: 14 `print` semuanya di balik `if (kDebugMode)`; `ArDebugLog` juga gated.
+- **Konfigurasi API compliant**: `--dart-define` + fallback emulator. Tidak ada `127.0.0.1`
+  di jalur request produksi.
+- **Server-side RBAC tetap mengkap** meski belum ada Policy.
+- **Test backend abnormality baik**: 148 test, termasuk cakupan security yang tidak biasa
+  (`QuizSecurityTest`, `MarkerArucoParityTest`, `AuthorizationTest`).
 
 ---
 
-*Report generated from comprehensive source code analysis of all backend and frontend files.*
+## 5. Rekomendasi
+
+### Sudah dikerjakan (v1.0.6)
+K-1 integritas skor · K-2 validasi upload · K-3 gate marker-ID manual ·
+K-4 konsistensi dokumen · H-5 URL aset produksi · H-4 cleartext traffic · bug `ar_models` NOT NULL
+
+### Berikutnya (P1)
+1. `network_security_config.xml` + certificate pinning host produksi
+2. Gabung `ApiClient` + `ApiService` menjadi satu client Dio
+3. Route guard + bedakan 403 vs 401
+4. Hoist `TextEditingController`, `ValueListenableBuilder` + `RepaintBoundary` untuk overlay AR
+5. Lazy tabs di dashboard
+6. Widen `questions.text` + `question_options.text` ke `text`
+7. `throttle` pada `POST /admin/login`
+8. Ganti `default_marker.png` dengan placeholder ≥512×512
+
+### Jangka panjang (P2)
+9. `app/Policies/` + kolom `created_by` (butuh kerja schema)
+10. Ekstrak ~1.800 LOC duplikat + `AppColors`
+11. Jalankan test backend juga di MySQL di CI (sudah pernah diverifikasi lokal: 148/148 hijau)
+12. Pecah `ArController` (550 LOC) dan `models.dart` (697 LOC)
+13. Tentukan: migrasi ke struktur `app/ core/ features/ shared/` **atau** amend `AGENTS.md` lagi
+
+---
+
+*Laporan ini menggantikan audit 20 September 2026 yang memuat klaim tidak sesuai kode.
+Seluruh temuan di atas diverifikasi terhadap kode pada commit `5d2d3b5`.*

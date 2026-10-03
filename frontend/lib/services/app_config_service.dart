@@ -52,7 +52,7 @@ class AppConfigService {
     if (urlOrPath.startsWith('http')) return urlOrPath;
     var path = urlOrPath.startsWith('/') ? urlOrPath.substring(1) : urlOrPath;
     if (!path.startsWith('storage/')) path = 'storage/$path';
-    return '${baseUrl.replaceFirst('/api', '')}/$path';
+    return '${ApiConfig.stripApiSuffix(baseUrl)}/$path';
   }
 
   static String? resolveLogoUrl(AppConfigData config) =>

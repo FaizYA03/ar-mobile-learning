@@ -24,7 +24,7 @@ class ProfileScreen extends StatefulWidget {
     var normalized = path.startsWith('storage/') ? path.substring(8) : path;
     normalized =
         normalized.startsWith('/') ? normalized.substring(1) : normalized;
-    final base = baseUrl.replaceFirst('/api', '');
+    final base = ApiConfig.stripApiSuffix(baseUrl);
     return '$base/storage/$normalized';
   }
 

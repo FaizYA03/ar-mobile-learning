@@ -110,5 +110,35 @@ void main() {
         'http://10.0.2.2:8000/storage/branding/logo.png',
       );
     });
+
+    test('keeps host intact when subdomain starts with "api"', () {
+      expect(
+        AppConfigService.resolveAssetUrl(
+            'https://api.domain.com/api', '/storage/branding/logo.png'),
+        'https://api.domain.com/storage/branding/logo.png',
+      );
+      expect(
+        AppConfigService.resolveAssetUrl(
+            'https://api.sekolah.sch.id/api', 'branding/logo.png'),
+        'https://api.sekolah.sch.id/storage/branding/logo.png',
+      );
+      expect(
+        AppConfigService.resolveAssetUrl(
+            'https://apiclient.myapi.co.id/api', '/logo.png'),
+        'https://apiclient.myapi.co.id/storage/logo.png',
+      );
+    });
+
+    test('handles trailing slash and base without /api suffix', () {
+      expect(
+        AppConfigService.resolveAssetUrl(
+            'https://api.domain.com/api/', '/logo.png'),
+        'https://api.domain.com/storage/logo.png',
+      );
+      expect(
+        AppConfigService.resolveAssetUrl('https://api.domain.com', '/logo.png'),
+        'https://api.domain.com/storage/logo.png',
+      );
+    });
   });
 }

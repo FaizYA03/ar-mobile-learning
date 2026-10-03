@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../models/models.dart';
-import '../services/api_service.dart';
+import '../config/api_config.dart';
 
 class ModelViewerScreen extends StatefulWidget {
   final int? arModelId;
@@ -304,7 +304,7 @@ class _ModelViewerScreenState extends State<ModelViewerScreen> {
     if (glbPath.startsWith('file:///')) return glbPath;
     if (glbPath.startsWith('/')) return 'file://$glbPath';
     if (RegExp(r'^[A-Za-z]:\\').hasMatch(glbPath)) return 'file:///$glbPath';
-    final base = ApiService.baseUrl.replaceFirst('/api', '');
+    final base = ApiConfig.baseHost;
     if (glbPath.startsWith('storage/')) {
       return '${base.endsWith('/') ? base : '$base/'}$glbPath';
     }

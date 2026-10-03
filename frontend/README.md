@@ -96,21 +96,29 @@ frontend/
 
 | Package | Purpose |
 |---------|---------|
-| `dio` | HTTP client |
+| `dio` | HTTP client (API v1) |
+| `http` | HTTP client (CRUD & multipart upload) |
 | `flutter_secure_storage` | Secure token storage |
 | `shared_preferences` | Local preferences |
 | `path_provider` | File paths |
 | `model_viewer_plus` | 3D model viewer (GLB) |
-| `augen` | AR marker detection/tracking |
+| `webview_flutter` | Backend for `model_viewer_plus` |
+| `camera` | Kamera + image stream untuk deteksi ArUco |
+| `dartcv4` | OpenCV ArUco detection (`include_modules: [aruco]`) |
+| `permission_handler` | Izin kamera |
 | `image_picker` | Camera/gallery |
 | `file_picker` | File selection |
+| `url_launcher`, `share_plus` | Kontak bantuan / bagikan |
+
+> AR 3D rendering memakai **ARCore + SceneView native** (`io.github.sceneview:arsceneview:4.32.0`,
+> `com.google.ar:core:1.54.0`) lewat `PlatformChannel` — bukan paket `augen`.
 
 ## Testing
 
 ```bash
-flutter test                  # Run all 47 tests
-dart analyze lib/             # Lint check
-dart format --set-exit-if-changed .  # Format check
+flutter test                  # 131 test
+flutter analyze               # Static analysis
+dart format --set-exit-if-changed .
 ```
 
 ## Key Architecture Decisions

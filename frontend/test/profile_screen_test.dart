@@ -38,4 +38,35 @@ void main() {
       'https://cdn.example.com/a.png',
     );
   });
+
+  test('keeps host intact when subdomain starts with "api"', () {
+    expect(
+      ProfileScreen.resolveAvatarUrl(
+          'https://api.domain.com/api', {'avatar': 'avatars/a.png'}),
+      'https://api.domain.com/storage/avatars/a.png',
+    );
+    expect(
+      ProfileScreen.resolveAvatarUrl(
+          'https://api.sekolah.sch.id/api', {'avatar': '/avatars/a.png'}),
+      'https://api.sekolah.sch.id/storage/avatars/a.png',
+    );
+    expect(
+      ProfileScreen.resolveAvatarUrl(
+          'https://apiclient.myapi.co.id/api', {'avatar': 'a.png'}),
+      'https://apiclient.myapi.co.id/storage/a.png',
+    );
+  });
+
+  test('handles trailing slash and base without /api suffix', () {
+    expect(
+      ProfileScreen.resolveAvatarUrl(
+          'https://api.domain.com/api/', {'avatar': 'a.png'}),
+      'https://api.domain.com/storage/a.png',
+    );
+    expect(
+      ProfileScreen.resolveAvatarUrl(
+          'https://api.domain.com', {'avatar': 'a.png'}),
+      'https://api.domain.com/storage/a.png',
+    );
+  });
 }

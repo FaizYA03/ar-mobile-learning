@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Hanya untuk build debug: izinkan HTTP cleartext supaya backend lokal
+         (http://10.0.2.2:8000 atau http://<LAN_IP>:8000) bisa dipakai saat
+         pengembangan. Build release/production TIDAK memakai ini. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

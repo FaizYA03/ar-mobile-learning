@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import '../config/api_config.dart';
 import '../services/api_service.dart';
 import '../services/content_sync_service.dart';
 import 'model_viewer_screen.dart';
@@ -62,7 +63,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
     if (path == null || path.isEmpty) return '';
     final normalized =
         path.startsWith('storage/') ? path.substring('storage/'.length) : path;
-    return '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$normalized';
+    return '${ApiConfig.baseHost}/storage/$normalized';
   }
 
   @override

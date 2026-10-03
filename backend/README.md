@@ -180,7 +180,7 @@ backend/
 ## Testing
 
 ```bash
-php artisan test              # Run all 71 tests
+php artisan test              # 148 test
 php artisan test --filter=Quiz   # Filter by name
 ```
 

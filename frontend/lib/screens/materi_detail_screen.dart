@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../models/models.dart';
+import '../config/api_config.dart';
 import '../services/api_service.dart';
 import 'ar_scanner_screen.dart';
 import 'quiz_take_screen.dart';
@@ -157,7 +158,7 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
               child: Image.network(
                 gambarCover.startsWith('http')
                     ? gambarCover
-                    : '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$gambarCover',
+                    : '${ApiConfig.baseHost}/storage/$gambarCover',
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const Center(
                   child: Icon(Icons.menu_book_outlined,
@@ -348,8 +349,7 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
       if (glbPath.startsWith('http')) {
         modelUrl = glbPath;
       } else {
-        modelUrl =
-            '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$glbPath';
+        modelUrl = '${ApiConfig.baseHost}/storage/$glbPath';
       }
     }
 

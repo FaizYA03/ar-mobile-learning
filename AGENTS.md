@@ -92,15 +92,23 @@ Use:
 
 \- Material 3
 
-\- Dio for HTTP
-
-\- Riverpod for state management
-
-\- GoRouter for routing
+\- Dio for HTTP (`api_client.dart`) + `package:http` (`api_service.dart`) — saat ini masih dua HTTP client; konsolidasi tercatat di `PROJECT_STATUS_REPORT.md`
 
 \- Flutter Secure Storage for sensitive authentication data
 
 \- SharedPreferences for non-sensitive local preferences when needed
+
+**ARSITEKTUR TARGET — BELUM DIIMPLEMENTASI (jangan dianggap sudah ada):**
+
+\- **Riverpod** untuk state management. Saat ini proyek memakai `StatefulWidget` + `setState`, dan `flutter_riverpod` **tidak ada** di `pubspec.yaml`.
+
+\- **GoRouter** untuk routing. Saat ini memakai `Navigator` + map `routes:` pada `MaterialApp`, dan `go_router` **tidak ada** di `pubspec.yaml`.
+
+\- Struktur `app/ core/ features/ shared/`. Saat ini `screens/ services/ models/ widgets/ config/ core/debug/`.
+
+Sebelum menulis kode baru, periksa `pubspec.yaml`. Jangan memakai API Riverpod/GoRouter
+kecuali dependensi itu benar-benar ditambahkan. Jika hanya membuat perubahan kecil,
+ikuti pola yang sudah dipakai file surroundings agar tidak menambah CAMPURAN gaya.
 
 
 

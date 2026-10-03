@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../config/api_config.dart';
 import '../models/models.dart';
 import '../services/content_sync_service.dart';
 import '../services/api_client.dart';
@@ -132,7 +133,7 @@ class ArContentResolver {
     if (item?.glbUrl != null) return item!.glbUrl;
     if (item?.glbPath != null) {
       final base = ApiClient.instance.options.baseUrl;
-      return '${base.replaceFirst('/api', '')}/storage/${item!.glbPath}';
+      return '${ApiConfig.stripApiSuffix(base)}/storage/${item!.glbPath}';
     }
 
     return null;
@@ -153,7 +154,7 @@ class ArContentResolver {
         if (marker.first.imageUrl != null) return marker.first.imageUrl;
         if (marker.first.imagePath != null) {
           final base = ApiClient.instance.options.baseUrl;
-          return '${base.replaceFirst('/api', '')}/storage/${marker.first.imagePath}';
+          return '${ApiConfig.stripApiSuffix(base)}/storage/${marker.first.imagePath}';
         }
       }
     }

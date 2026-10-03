@@ -1,7 +1,7 @@
 # AR MOBILE LEARNING — PROJECT STATUS REPORT
 
 > **Terakhir diperbarui:** 3 Oktober 2026
-> **Versi aplikasi:** `1.0.6+7` (`frontend/pubspec.yaml:19`) · rilis `v1.0.6`
+> **Versi aplikasi:** `1.0.7+8` (`frontend/pubspec.yaml:19`) · rilis `v1.0.7`
 > **Commit terakhir:** `b5310b3` — 28 Sep 2026
 > **Stack aktual:** Laravel 12 (backend + Blade CMS) + Flutter 3.47 (Android) + ARCore/SceneView + OpenCV (dartcv4)
 > **Database:** SQLite (dev & test) / MySQL (production)
@@ -458,6 +458,23 @@ homography, atau 6DoF. `ar: false` di `ar_uco_scanner_screen.dart:1152`. Data po
    `nullable` → upload GLB tanpa deskripsi = HTTP 500. Diperbaiki migrasi
    `2026_10_03_120000_make_description_and_category_nullable_in_ar_models_table`.
 5. ✅ Backend 133 → **148 test** (683 assertions), `flutter analyze` bersih, `flutter test` 120/120.
+
+### P0-4 → P0-6 — SELESAI (rilis `v1.0.7`, 3 Okt 2026)
+6. ✅ 9× `replaceFirst('/api','')` → `ApiConfig.baseHost` / `stripApiSuffix()`. Test lama hanya memakai
+   `10.0.2.2` (satu-satunya bentuk yang menyembunyikan bug); kini ada `api_config_test.dart` + kasus
+   `api.domain.com`. Flutter 120 → **131 test**.
+7. ✅ `usesCleartextTraffic` dipindah ke `src/debug`. Produksi diverifikasi memakai HTTPS:
+   `https://api.arlearning.my.id` → 200 (sertifikat valid), HTTP → 301 ke HTTPS.
+8. ✅ `README.md`, `AGENTS.md`, `frontend/README.md`, `backend/README.md`, `AUDIT_REPORT.md` ditulis
+   ulang agar sesuai kode (Riverpod/Augen/GoRouter tidak pernah dipakai; 148 + 131 test).
+9. ✅ Migrasi `ar_models` divalidasi di **MariaDB 10.4** dan 148 test backend dijalankan di MySQL
+   (sebelumnya hanya SQLite), memakai database scratch terpisah.
+
+### Catatan rilis
+- `v1.0.6` masih berjalan saat `v1.0.7`/tag dibuat. Karena `landing/index.html` memakai
+  `downloads/versions.json` yang **ditimpa** tiap rilis, job yang selesai **terakhir** menang.
+- AppVersion di CMS masih `1.0.4` / build `5` → siswa tidak akan prompted update
+  sampai diubah lewat **Admin CMS → System → Versions** ke `1.0.7` / build `8`.
 
 ### P0 — Selesai hari ini (~2 jam)
 1. Ganti 9× `replaceFirst('/api','')` → `ApiConfig.stripApiSuffix(...)`; tambah test `https://api.domain.com/api`
