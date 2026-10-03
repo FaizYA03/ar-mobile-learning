@@ -1,7 +1,7 @@
 # AR MOBILE LEARNING — PROJECT STATUS REPORT
 
 > **Terakhir diperbarui:** 3 Oktober 2026
-> **Versi aplikasi:** `1.0.7+8` (`frontend/pubspec.yaml:19`) · rilis `v1.0.7`
+> **Versi aplikasi:** `1.0.8+9` (`frontend/pubspec.yaml:19`) · rilis `v1.0.8`
 > **Commit terakhir:** `b5310b3` — 28 Sep 2026
 > **Stack aktual:** Laravel 12 (backend + Blade CMS) + Flutter 3.47 (Android) + ARCore/SceneView + OpenCV (dartcv4)
 > **Database:** SQLite (dev & test) / MySQL (production)

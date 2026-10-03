@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:dartcv4/dartcv.dart' as cv;
 import 'package:flutter/foundation.dart';
@@ -124,8 +126,12 @@ class ArUcoService {
 
     _sensorOrientation = backCamera.sensorOrientation;
 
-    await _controller!.setExposureMode(ExposureMode.locked);
-    await _controller!.setFocusMode(FocusMode.locked);
+    // Catatan exposure: JANGAN mengunci exposure di sini. Auto-exposure
+    // membutuhkan beberapa frame untuk converges; mengunci-nya sebelum itu
+    // membuat exposure terkunci pada nilai yang belum benar. Gejalanya preview
+    // kamera menjadi putih terang dan deteksi marker selalu gagal di device
+    // tertentu. Pen Stabilanannya dilakukan setelah streaming berjalan
+    // (lihat _stabilizeCamera).
 
     _nativeLibraryReady = await _probeNativeLibrary();
     if (kDebugMode) {
@@ -207,7 +213,34 @@ class ArUcoService {
     _pendingGray = null;
     _isProcessing = false;
     _controller!.startImageStream(_onCameraFrame);
+    unawaited(_stabilizeCamera());
     if (kDebugMode) debugPrint('Scanning started');
+  }
+
+  /// Menstabilkan kamera setelah auto-exposure sempat converged.
+  ///
+  /// Eksposure sengaja TIDAK dikunci agar pencahayaan tetap adaptsi terhadap
+  /// kondisi ruangan - itu justru membantu deteksi saat cahaya berubah.
+  /// Fokus dikunci saja (dan hanya setelah jeda), karena fokus tidak memengaruhi
+  /// kecerahan tetapi membuat gambar lebih stabil untuk OpenCV.
+  Future<void> _stabilizeCamera() async {
+    final controller = _controller;
+    if (controller == null) return;
+
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+
+    if (_disposeRequested || _controller != controller) return;
+
+    try {
+      await controller.setFocusMode(FocusMode.locked);
+    } catch (_) {
+      try {
+        await controller.setFocusMode(FocusMode.auto);
+      } catch (_) {
+// Sebagian device tidak mendukung penguncian fokus pada format ini.
+// Biarkan saja, deteksi tetap berjalan dengan fokus otomatis.
+      }
+    }
   }
 
   void stopScanning() {

@@ -5,8 +5,10 @@
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Hanya untuk build debug: izinkan HTTP cleartext supaya backend lokal
-         (http://10.0.2.2:8000 atau http://<LAN_IP>:8000) bisa dipakai saat
-         pengembangan. Build release/production TIDAK memakai ini. -->
+    <!-- HTTP cleartext untuk build debug ditangani oleh
+         src/debug/res/xml/network_security_config.xml (base-config
+         cleartextTrafficPermitted="true"). Atribut
+         android:usesCleartextTraffic diabaikan Android 7.0+ selama
+         Android Network Security Config tersedia. -->
     <application android:usesCleartextTraffic="true" />
 </manifest>

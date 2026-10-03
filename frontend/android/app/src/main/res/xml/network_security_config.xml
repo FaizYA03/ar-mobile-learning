@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Default: tolak HTTP cleartext untuk semua host.
+        Data API dan aset 3D produksi berjalan di HTTPS
+        (https://api.arlearning.my.id), jadi ini aman.
+
+        Pengecualian HANYA untuk loopback, karena package model_viewer_plus
+        menjalankan proxy HTTP lokal di dalam aplikasi:
+          lib/src/model_viewer_plus_mobile.dart
+            HttpServer.bind(InternetAddress.loopbackIPv4, 0)  -> port acak
+            webViewController.loadRequest('http://127.0.0.1:<port>/')
+        Tanpa pengecualian ini, WebView menampilkan halaman error
+        "halaman web di http://127.0.0.1:<port> tidak dapat dimuat"
+        dan objek 3D tidak pernah muncul - meskipun URL model-nya HTTPS.
+    -->
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

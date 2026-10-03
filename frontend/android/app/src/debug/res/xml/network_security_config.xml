@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        KHUSUS build debug (flutter run / app-debug.apk).
+
+        Saat Android Network Security Config ada, atribut
+        android:usesCleartextTraffic di AndroidManifest DIABAIKAN
+        (Android 7.0+). Karena itu backend lokal yang memakai HTTP
+        (http://10.0.2.2:8000/api untuk emulator, http://<LAN_IP>:8000
+        untuk perangkat fisik) hanya bisa diakses karena allowance di
+        bawah ini.
+
+        File ini TIDAK dipakai build release - release memakai
+        src/main/res/xml/network_security_config.xml yang menolak
+        cleartext untuk semua host kecuali loopback.
+    -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
