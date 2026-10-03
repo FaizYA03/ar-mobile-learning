@@ -22,7 +22,7 @@ class MateriStoreRequest extends FormRequest
             'estimasi_menit' => 'nullable|integer|min:1|max:180',
             'order' => 'nullable|integer|min:0',
             'is_published' => 'nullable|boolean',
-            'gambar_cover' => 'nullable',
+            'gambar_cover' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ];
     }
 
@@ -36,6 +36,9 @@ class MateriStoreRequest extends FormRequest
             'konten.required' => 'Konten materi wajib diisi',
             'estimasi_menit.integer' => 'Estimasi waktu harus berupa angka',
             'estimasi_menit.min' => 'Estimasi waktu minimal 1 menit',
+            'gambar_cover.image' => 'Gambar cover harus berupa file gambar',
+            'gambar_cover.mimes' => 'Gambar cover harus berformat JPG, PNG, atau WEBP',
+            'gambar_cover.max' => 'Ukuran gambar cover maksimal 5 MB',
         ];
     }
 }

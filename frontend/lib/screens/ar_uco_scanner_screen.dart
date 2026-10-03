@@ -746,12 +746,13 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
             tooltip: 'Kembali',
           ),
           const Spacer(),
-          _circleIconBtn(
-            Icons.tag,
-            20,
-            _showManualIdInput,
-            tooltip: 'Marker ID manual',
-          ),
+          if (kDebugMode)
+            _circleIconBtn(
+              Icons.tag,
+              20,
+              _showManualIdInput,
+              tooltip: 'Marker ID manual',
+            ),
           _circleIconBtn(
             _isScanning ? Icons.videocam_off : Icons.videocam,
             20,

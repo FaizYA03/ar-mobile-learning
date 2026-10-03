@@ -136,7 +136,7 @@ class ArMarkerController extends Controller
         $validated = $request->validate([
             'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,' . $marker->id,
             'marker_type' => 'sometimes|required|string|in:pattern,image',
-            'image_path' => 'sometimes|max:10240',
+            'image_path' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:10240',
             'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
             'ar_uco_id' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',

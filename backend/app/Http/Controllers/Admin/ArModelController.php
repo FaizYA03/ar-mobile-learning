@@ -35,7 +35,7 @@ class ArModelController extends Controller
     {
         $validated = $request->validate([
             'model_name' => 'required|string|max:255',
-            'glb_path' => 'required|max:102400',
+            'glb_path' => 'required|file|extensions:glb,gltf|max:102400',
             'thumbnail_path' => 'nullable|image|max:5120',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
@@ -81,7 +81,7 @@ class ArModelController extends Controller
     {
         $validated = $request->validate([
             'model_name' => 'sometimes|required|string|max:255',
-            'glb_path' => 'sometimes|max:102400',
+            'glb_path' => 'sometimes|file|extensions:glb,gltf|max:102400',
             'thumbnail_path' => 'sometimes|image|max:5120',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',

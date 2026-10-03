@@ -14,9 +14,9 @@ class QuizSubmitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'answers' => 'required|array|min:1',
-            'answers.*.question_id' => 'required|exists:questions,id',
-            'answers.*.option_id' => 'required|exists:question_options,id',
+            'answers' => ['required', 'array', 'min:1', 'max:200'],
+            'answers.*.question_id' => ['required', 'integer', 'distinct', 'exists:questions,id'],
+            'answers.*.option_id' => ['required', 'integer', 'exists:question_options,id'],
         ];
     }
 
@@ -25,7 +25,9 @@ class QuizSubmitRequest extends FormRequest
         return [
             'answers.required' => 'Jawaban wajib diisi',
             'answers.min' => 'Minimal 1 jawaban harus diisi',
+            'answers.max' => 'Jumlah jawaban melebihi batas yang diperbolehkan',
             'answers.*.question_id.required' => 'ID soal wajib diisi',
+            'answers.*.question_id.distinct' => 'Soal hanya boleh dijawab satu kali',
             'answers.*.question_id.exists' => 'Soal tidak ditemukan',
             'answers.*.option_id.required' => 'ID opsi wajib diisi',
             'answers.*.option_id.exists' => 'Opsi jawaban tidak ditemukan',

@@ -74,7 +74,7 @@ class ArHotspotController extends Controller
             'description' => 'nullable|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'image_path' => 'sometimes|max:5120',
+            'image_path' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:5120',
             'is_active' => 'nullable|boolean',
         ]);
 

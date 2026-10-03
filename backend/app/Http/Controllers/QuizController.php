@@ -81,17 +81,36 @@ class QuizController extends Controller
             }
         }
 
-        $correctCount = 0;
-        $totalCount = $quiz->questions()->count();
+        $quizQuestions = $quiz->questions()
+            ->with(['options' => fn ($query) => $query->select('id', 'question_id', 'is_correct')])
+            ->get(['questions.id']);
 
-        foreach ($validated['answers'] as $answer) {
-            $option = QuestionOption::find($answer['option_id']);
-            if ($option && $option->is_correct) {
+        $submittedOptions = collect($validated['answers'])
+            ->mapWithKeys(fn (array $answer) => [$answer['question_id'] => $answer['option_id']]);
+
+        $totalCount = $quizQuestions->count();
+        $correctCount = 0;
+
+        foreach ($quizQuestions as $question) {
+            $chosenOptionId = $submittedOptions->get((int) $question->id);
+
+            if ($chosenOptionId === null) {
+                continue;
+            }
+
+            $isCorrect = $question->options->contains(
+                fn ($option) => (int) $option->id === (int) $chosenOptionId && (bool) $option->is_correct
+            );
+
+            if ($isCorrect) {
                 $correctCount++;
             }
         }
 
-        $score = $totalCount > 0 ? round(($correctCount / $totalCount) * 100) : 0;
+        $score = $totalCount > 0
+            ? min(100, (int) round(($correctCount / $totalCount) * 100))
+            : 0;
+
         $passed = $score >= ($quiz->passing_score ?? 70);
 
         $attempt = QuizAttempt::create([

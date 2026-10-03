@@ -45,7 +45,7 @@ class ArController extends Controller
     {
         $validated = $request->validate([
             'model_name' => 'required|string|max:255',
-            'glb_path' => 'required|max:102400',
+            'glb_path' => 'required|file|extensions:glb,gltf|max:102400',
             'thumbnail_path' => 'nullable|image|max:5120',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
@@ -87,7 +87,7 @@ class ArController extends Controller
     {
         $validated = $request->validate([
             'model_name' => 'sometimes|required|string|max:255',
-            'glb_path' => 'sometimes|max:102400',
+            'glb_path' => 'sometimes|file|extensions:glb,gltf|max:102400',
             'thumbnail_path' => 'sometimes|image|max:5120',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
@@ -233,7 +233,7 @@ class ArController extends Controller
             'ar_uco_id' => 'nullable|integer|min:0',
             'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(\App\Services\ArMarkerGenerator::DICTIONARIES)),
             'marker_type' => 'sometimes|required|string|in:pattern,image',
-            'image_path' => 'sometimes|max:10240',
+            'image_path' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:10240',
             'status' => 'nullable|string|in:active,inactive',
         ]);
 
@@ -353,7 +353,7 @@ class ArController extends Controller
             'description' => 'nullable|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'image_path' => 'sometimes|max:5120',
+            'image_path' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:5120',
             'is_active' => 'nullable|boolean',
         ]);
 
