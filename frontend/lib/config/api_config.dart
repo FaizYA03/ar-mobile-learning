@@ -105,4 +105,9 @@ class ApiConfig {
 
   static const Duration connectionTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
+
+  /// Budget waktu untuk request multipart (upload avatar, cover materi, GLB).
+  /// Lebih besar dari [connectionTimeout] karena satu timeout ini mencakup
+  /// seluruh proses kirim body + menunggu header respons.
+  static const Duration uploadTimeout = Duration(seconds: 60);
 }

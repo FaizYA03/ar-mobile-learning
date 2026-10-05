@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
+import 'services/secure_storage_service.dart';
 import 'widgets/server_settings_dialog.dart';
 import 'screens/admin_tp_atp_screen.dart';
 import 'screens/admin_materi_screen.dart';
@@ -18,6 +19,7 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   int _currentIndex = 0;
+  String? _avatarUrl;
   int _totalUsers = 0;
   int _totalGuru = 0;
   int _totalSiswa = 0;
@@ -53,6 +55,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       });
     }
     try {
+      try {
+        _avatarUrl = await SecureStorageService.getUserAvatar().timeout(
+          const Duration(seconds: 5),
+        );
+      } catch (_) {
+        _avatarUrl = null;
+      }
+
       final results = await Future.wait(
           [ApiService.getDashboard(), ApiService.adminGetUsers()]).timeout(
         const Duration(seconds: 30),
@@ -122,9 +132,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _openProfile() async {
-    await Navigator.of(context).push(
+    final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const ProfileScreen()),
     );
+    if (changed == true && mounted) {
+      final avatar = await SecureStorageService.getUserAvatar();
+      setState(() => _avatarUrl = avatar);
+    }
   }
 
   Future<void> _fetchUsers() async {
@@ -837,8 +851,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         CircleAvatar(
             radius: 48,
             backgroundColor: const Color(0xFFC62828).withValues(alpha: 0.1),
-            child: const Icon(Icons.admin_panel_settings,
-                size: 48, color: Color(0xFFC62828))),
+            backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                ? NetworkImage(_avatarUrl!)
+                : null,
+            child: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                ? null
+                : const Icon(Icons.admin_panel_settings,
+                    size: 48, color: Color(0xFFC62828))),
         const SizedBox(height: 16),
         const Text('Admin',
             style: TextStyle(

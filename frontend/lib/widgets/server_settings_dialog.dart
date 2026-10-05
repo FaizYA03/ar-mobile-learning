@@ -166,6 +166,12 @@ class ServerSettingsDialog {
     if (e is TimeoutException) {
       return 'Timeout ke $base. Jika VPS: cek koneksi internet HP. Jika lokal: pastikan `php artisan serve --host=0.0.0.0 --port=8000` berjalan dan HP satu WiFi dengan laptop.';
     }
+    if (e is FileSystemException) {
+      // File hasil image_picker/file_picker ada di cache app. Kalau hilang,
+      // jaringan tidak pernah tersentuh - jangan arahkan user cek server.
+      return 'File tidak ditemukan di perangkat (${e.path}). '
+          'Cache gambar dibersihkan sistem - coba pilih ulang foto.';
+    }
     if (e is SocketException) {
       // App debug tanpa --dart-define mengarah ke emulator/loopback.
       if (base.contains('10.0.2.2') || base.contains('127.0.0.1')) {

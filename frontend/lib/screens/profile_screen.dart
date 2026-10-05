@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import '../services/api_service.dart';
 import '../services/secure_storage_service.dart';
+import '../widgets/server_settings_dialog.dart';
 
 /// Layar profil dipakai semua role (siswa/guru/admin).
 /// - Lihat + ubah nama
@@ -74,24 +78,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final res = await ApiService.getProfile();
       if (res['success'] == true && mounted) {
         final data = Map<String, dynamic>.from(res['data'] ?? {});
+        final resolvedAvatarUrl =
+            ProfileScreen.resolveAvatarUrl(ApiConfig.baseUrl, data);
         setState(() {
           _name = '${data['name'] ?? ''}';
           _email = '${data['email'] ?? ''}';
           _role = '${data['role'] ?? ''}';
-          _avatarUrl = ProfileScreen.resolveAvatarUrl(ApiConfig.baseUrl, data);
+          _avatarUrl = resolvedAvatarUrl;
           _nameCtrl.text = _name;
           _isLoading = false;
         });
+        // Cache avatar ke secure storage agar dashboard dapat menampilkannya
+        // tanpa harus memanggil API sendiri.
+        unawaited(SecureStorageService.saveUserAvatar(resolvedAvatarUrl));
       } else if (mounted) {
         setState(() {
           _errorMessage = '${res['message'] ?? 'Gagal memuat profil'}';
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Gagal terhubung ke server.';
+          _errorMessage = ServerSettingsDialog.friendlyConnectionError(e);
           _isLoading = false;
         });
       }
@@ -130,9 +139,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) setState(() => _isSavingName = false);
         _snack('${res['message'] ?? 'Gagal menyimpan profil'}', error: true);
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() => _isSavingName = false);
-      _snack('Gagal terhubung ke server.', error: true);
+      _snack(ServerSettingsDialog.friendlyConnectionError(e), error: true);
     }
   }
 
@@ -166,9 +175,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : '${res['message'] ?? 'Gagal mengubah password'}';
         _snack(detail, error: true);
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() => _isSavingPassword = false);
-      _snack('Gagal terhubung ke server.', error: true);
+      _snack(ServerSettingsDialog.friendlyConnectionError(e), error: true);
     }
   }
 
@@ -184,18 +193,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final res = await ApiService.uploadAvatar(filePath: picked.path);
       if (res['success'] == true && mounted) {
         final data = Map<String, dynamic>.from(res['data'] ?? {});
+        final resolvedAvatarUrl =
+            ProfileScreen.resolveAvatarUrl(ApiConfig.baseUrl, data);
         setState(() {
-          _avatarUrl = ProfileScreen.resolveAvatarUrl(ApiConfig.baseUrl, data);
+          _avatarUrl = resolvedAvatarUrl;
           _isUploadingAvatar = false;
         });
+        // Cache agar dashboard menampilkan avatar baru tanpa buka profil.
+        unawaited(SecureStorageService.saveUserAvatar(resolvedAvatarUrl));
+        _changed = true;
         _snack('Avatar berhasil diperbarui');
       } else {
         if (mounted) setState(() => _isUploadingAvatar = false);
         _snack('${res['message'] ?? 'Gagal mengunggah avatar'}', error: true);
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() => _isUploadingAvatar = false);
-      _snack('Gagal terhubung ke server.', error: true);
+      // Jangan pakai pesan generik: upload avatar adalah request multipart,
+      // dan penyebab gagalnya bisa apa saja (file hilang, timeout, TLS, socket).
+      // Helper yang sama sudah dipakai login/register agar pesannya konsisten.
+      if (kDebugMode) debugPrint('uploadAvatar failed: $e');
+      _snack(ServerSettingsDialog.friendlyConnectionError(e), error: true);
     }
   }
 

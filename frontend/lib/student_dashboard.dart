@@ -20,6 +20,7 @@ class StudentDashboard extends StatefulWidget {
 class _StudentDashboardState extends State<StudentDashboard> {
   int _currentIndex = 0;
   String _userName = 'Siswa';
+  String? _avatarUrl;
   int _totalQuizzes = 0;
   int _totalMateri = 0;
   int _totalArModels = 0;
@@ -50,6 +51,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
             'Siswa';
       } catch (_) {
         _userName = 'Siswa';
+      }
+
+      try {
+        _avatarUrl = await SecureStorageService.getUserAvatar().timeout(
+          const Duration(seconds: 5),
+        );
+      } catch (_) {
+        _avatarUrl = null;
       }
 
       try {
@@ -119,7 +128,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
     if (changed == true && mounted) {
       final name = await SecureStorageService.getUserName() ?? 'Siswa';
-      setState(() => _userName = name);
+      final avatar = await SecureStorageService.getUserAvatar();
+      setState(() {
+        _userName = name;
+        _avatarUrl = avatar;
+      });
     }
   }
 
@@ -453,7 +466,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
           CircleAvatar(
             radius: 48,
             backgroundColor: const Color(0xFF0A8477).withValues(alpha: 0.1),
-            child: const Icon(Icons.person, size: 48, color: Color(0xFF0A8477)),
+            backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                ? NetworkImage(_avatarUrl!)
+                : null,
+            child: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                ? null
+                : const Icon(Icons.person, size: 48, color: Color(0xFF0A8477)),
           ),
           const SizedBox(height: 16),
           Text(_userName,

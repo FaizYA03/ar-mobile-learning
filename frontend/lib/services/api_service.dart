@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show File, FileSystemException;
+
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'api_client.dart';
@@ -349,11 +351,27 @@ class ApiService {
 
     // Add file if provided
     if (filePath != null) {
+      // File dari image_picker/file_picker ada di cache app. Kalau sudah hilang
+      // (cache dibersihkan OS, atau picker mengembalikan path yang tidak bisa
+      // dibuka), MultipartFile.fromPath melempar FileSystemException yang
+      // sebelumnya tertangkap sebagai "Gagal terhubung ke server" — pesan yang
+      // menyesatkan karena jaringan sebenarnya baik-baik saja.
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        throw FileSystemException(
+          'File tidak ditemukan di perangkat',
+          filePath,
+        );
+      }
       request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
     }
 
+    // Upload perlu budget waktu lebih besar daripada GET/JSON biasa: yang
+    // di-timeout adalah seluruh proses kirim body + tunggu header respons.
+    // 15 detik (connectionTimeout) terlalu sempit untuk upload di jaringan
+    // seluler dan memicu TimeoutException palsu.
     final streamedResponse =
-        await request.send().timeout(ApiConfig.connectionTimeout);
+        await request.send().timeout(ApiConfig.uploadTimeout);
     final responseBody = await streamedResponse.stream.bytesToString();
     return _decodeResponse(streamedResponse.statusCode, responseBody, path);
   }
