@@ -126,10 +126,18 @@ cd frontend && flutter test
 
 # Static analysis
 cd frontend && flutter analyze
-cd backend  && vendor/bin/pint --test app database routes tests
+cd frontend && dart format --output=none --set-exit-if-changed .
+cd backend  && vendor/bin/pint --test
 ```
 
-> Backend test saat ini berjalan di SQLite. Skema produksi (MySQL) bisa berbeda,
+> ⚠️ `vendor/bin/pint --test` saat ini **gagal pada 73 file** (utang format bawaan).
+> `pint` belum dijalankan di CI — lihat `AUDIT_REPORT.md` §A-2.
+> `dart format` dan `flutter analyze` **bersih**.
+>
+> ⚠️ `flutter test` butuh build native `dartcv4`. Di Windows sering gagal
+> (`gflags`/`glog` tidak terpasang) — jalankan di Android/CI.
+>
+> Backend test berjalan di SQLite. Skema produksi (MySQL) bisa berbeda,
 > jadi migrasi baru tetap perlu diverifikasi manual dengan `php artisan migrate` di MySQL.
 
 ## Project Status
@@ -145,10 +153,14 @@ cd backend  && vendor/bin/pint --test app database routes tests
 | 9-11. Integration, Dashboard | Done |
 | 12-13. Bug fixes, Code quality | Done |
 | 14. Documentation | Done |
-| 15. Final testing & release | In progress (`v1.0.6`) |
+| 15. Final testing & release | In progress (`v1.0.8`) |
 
-Rilis: `git tag v1.1.0 && git push origin v1.1.0` → workflow `release-apk.yml`
+Rilis: `git tag v1.0.9 && git push origin v1.0.9` → workflow `release-apk.yml`
 build APK signed, mengarsipkan GitHub Release, dan mirror ke server unduhan + `versions.json`.
+
+> ⚠️ **Release butuh secret `PROD_API_URL`.** Kalau kosong, app jatuh ke fallback
+> `http://10.0.2.2:8000/api` yang ditolak Network Security Config di release → app mati total.
+> Pastikan secret itu ter-set di **Settings → Secrets and variables → Actions**.
 
 ## License
 
