@@ -7,6 +7,7 @@ use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\Quiz;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class QuizController extends Controller
 {
@@ -82,11 +83,24 @@ class QuizController extends Controller
     public function storeQuestion(Request $request, Quiz $quiz)
     {
         $validated = $request->validate([
-            'text' => 'required|string',
-            'options' => 'required|array|min:2',
-            'options.*.text' => 'required|string',
+            'text' => 'required|string|max:1000',
+            'options' => 'required|array|min:2|max:10',
+            'options.*.text' => 'required|string|max:500',
             'options.*.is_correct' => 'required|boolean',
+        ], [
+            'options.max' => 'Maksimal 10 opsi jawaban',
+            'options.*.text.max' => 'Teks opsi maksimal 500 karakter',
         ]);
+
+        $correctCount = collect($validated['options'])
+            ->filter(fn (array $option) => (bool) ($option['is_correct'] ?? false))
+            ->count();
+
+        if ($correctCount !== 1) {
+            throw ValidationException::withMessages([
+                'options' => 'Pilih tepat satu opsi sebagai jawaban benar.',
+            ]);
+        }
 
         $maxOrder = $quiz->questions()->max('order') ?? 0;
 

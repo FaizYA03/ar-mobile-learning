@@ -73,6 +73,10 @@
             </main>
         </div>
     </div>
+    {{-- Stack untuk script halaman. Harus didefinisikan SEBELUM Alpine
+         (deferred) agar fungsi x-data seperti questionForm() sudah ada
+         saat Alpine menginisialisasi komponen. --}}
+    @stack('scripts')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @include('shared._delete-confirm-modal')
 </body>

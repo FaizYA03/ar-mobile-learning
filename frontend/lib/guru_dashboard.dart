@@ -221,17 +221,112 @@ class _GuruDashboardState extends State<GuruDashboard> {
               onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
-              if (titleCtrl.text.isEmpty) return;
-              await ApiService.guruCreateQuiz({
-                'title': titleCtrl.text,
-                'description': descCtrl.text,
-                'time_limit': int.tryParse(timeCtrl.text) ?? 10,
-                'passing_score': int.tryParse(scoreCtrl.text) ?? 70,
-              });
-              if (ctx.mounted) Navigator.pop(ctx);
-              _loadData();
+              if (titleCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Judul quiz wajib diisi')),
+                );
+                return;
+              }
+              try {
+                await ApiService.guruCreateQuiz({
+                  'title': titleCtrl.text.trim(),
+                  'description': descCtrl.text.trim(),
+                  'time_limit': int.tryParse(timeCtrl.text) ?? 10,
+                  'passing_score': int.tryParse(scoreCtrl.text) ?? 70,
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+                _loadData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Quiz berhasil dibuat')),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Gagal membuat quiz')),
+                  );
+                }
+              }
             },
             child: const Text('Buat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditQuizDialog(Map<String, dynamic> quiz) {
+    final titleCtrl = TextEditingController(text: quiz['title'] ?? '');
+    final descCtrl = TextEditingController(text: quiz['description'] ?? '');
+    final timeCtrl = TextEditingController(text: '${quiz['time_limit'] ?? 10}');
+    final scoreCtrl =
+        TextEditingController(text: '${quiz['passing_score'] ?? 70}');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Quiz'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Judul Quiz')),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(labelText: 'Deskripsi'),
+                  maxLines: 2),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: timeCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Batas Waktu (menit)'),
+                  keyboardType: TextInputType.number),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: scoreCtrl,
+                  decoration: const InputDecoration(labelText: 'Passing Score'),
+                  keyboardType: TextInputType.number),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Judul quiz wajib diisi')),
+                );
+                return;
+              }
+              try {
+                await ApiService.guruUpdateQuiz(quiz['id'], {
+                  'title': titleCtrl.text.trim(),
+                  'description': descCtrl.text.trim(),
+                  'time_limit': int.tryParse(timeCtrl.text) ?? 10,
+                  'passing_score': int.tryParse(scoreCtrl.text) ?? 70,
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+                _loadData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Quiz berhasil diperbarui')),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Gagal memperbarui quiz')),
+                  );
+                }
+              }
+            },
+            child: const Text('Simpan'),
           ),
         ],
       ),
@@ -323,8 +418,10 @@ class _GuruDashboardState extends State<GuruDashboard> {
                   await ApiService.guruAddQuestion(quiz.id, {
                     'text': questionCtrl.text.trim(),
                     'options': options
-                        .map((o) =>
-                            {'text': o['text'], 'is_correct': o['is_correct']})
+                        .map((o) => {
+                              'text': (o['text'] as String).trim(),
+                              'is_correct': o['is_correct']
+                            })
                         .toList(),
                   });
                   if (ctx.mounted) Navigator.pop(ctx);
@@ -848,6 +945,14 @@ class _GuruDashboardState extends State<GuruDashboard> {
                                               color: Color(0xFF637080))),
                                     ],
                                   ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined,
+                                      size: 20, color: Color(0xFF0A8477)),
+                                  onPressed: () => _showEditQuizDialog(quiz),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                      minWidth: 36, minHeight: 36),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline,

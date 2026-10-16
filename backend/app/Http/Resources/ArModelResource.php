@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class ArModelResource extends JsonResource
 {
@@ -15,6 +16,9 @@ class ArModelResource extends JsonResource
             'description' => $this->description,
             'category' => $this->category,
             'glb_path' => $this->glb_path,
+            // URL absolut agar client tidak perlu menyusun URL dari host
+            // lokalnya (konsisten dengan ArContentController).
+            'glb_url' => $this->glb_path ? url(Storage::url($this->glb_path)) : null,
             'thumbnail_path' => $this->thumbnail_path,
             'version' => $this->version,
             'is_active' => $this->is_active,

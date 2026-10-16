@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../models/models.dart';
 import '../config/api_config.dart';
 import '../services/api_service.dart';
-import 'ar_scanner_screen.dart';
+import '../services/ar_content_resolver.dart';
+import '../services/content_sync_service.dart';
+import 'ar_uco_scanner_screen.dart';
 import 'quiz_take_screen.dart';
 
 class MateriDetailScreen extends StatefulWidget {
@@ -320,38 +324,122 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
                     color: Colors.white, fontSize: 12, height: 1.3)),
           ],
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                _showArPreviewDialog(arModel);
-              },
-              icon: const Icon(Icons.visibility_outlined, size: 18),
-              label: const Text('Preview Model 3D'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF4353A4),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    _showArPreviewDialog(arModel);
+                  },
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: const Text('Preview 3D'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF4353A4),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    _openArUcoScanner(arModel);
+                  },
+                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                  label: const Text('Scan Marker'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A1A2E),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  void _showArPreviewDialog(Map<String, dynamic> arModel) {
-    final glbPath = arModel['glb_path'] ?? '';
-    String modelUrl = '';
-    if (glbPath.isNotEmpty) {
-      if (glbPath.startsWith('http')) {
-        modelUrl = glbPath;
-      } else {
-        modelUrl = '${ApiConfig.baseHost}/storage/$glbPath';
-      }
+  /// Membuka scanner ArUco yang ditargetkan ke model 3D materi ini:
+  /// hanya marker milik materi yang diterima.
+  void _openArUcoScanner(Map<String, dynamic> arModel) {
+    final rawId = arModel['id'];
+    final modelId = rawId is int ? rawId : int.tryParse('$rawId');
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ArUcoScannerScreen(preferredModelId: modelId),
+      ),
+    );
+  }
+
+  /// Sumber model 3D untuk preview, diurutkan dari yang paling andal:
+  /// 1) file GLB yang sudah diunduh (tetap tampil saat offline),
+  /// 2) `glb_url` absolut dari payload materi,
+  /// 3) konten AR (/v1/ar/content), 4) path relatif dari payload materi.
+  /// Mengembalikan null bila model memang belum tersedia.
+  Future<String?> _resolveModelSource(Map<String, dynamic> arModel) async {
+    final rawId = arModel['id'];
+    final modelId = rawId is int ? rawId : int.tryParse('$rawId');
+    final glbPath = arModel['glb_path']?.toString() ?? '';
+
+    if (modelId != null) {
+      try {
+        final cachedPath = await ContentSyncService.getCachedModelPath(modelId);
+        if (cachedPath != null && await File(cachedPath).exists()) {
+          return _toViewerUrl(cachedPath);
+        }
+      } catch (_) {}
     }
+
+    // URL absolut dari backend: tidak bergantung pada konfigurasi host klien.
+    final directUrl = arModel['glb_url']?.toString() ?? '';
+    if (directUrl.isNotEmpty) return directUrl;
+
+    if (modelId != null) {
+      try {
+        await ArContentResolver.refreshIfNeeded();
+        final item = ArContentResolver.resolveByModelId(modelId);
+        final glbUrl = item?.glbUrl;
+        if (glbUrl != null && glbUrl.isNotEmpty) return glbUrl;
+        final contentPath = item?.glbPath;
+        if (contentPath != null && contentPath.isNotEmpty) {
+          return _toViewerUrl(contentPath);
+        }
+      } catch (_) {}
+    }
+
+    if (glbPath.isEmpty) return null;
+    return _toViewerUrl(glbPath);
+  }
+
+  /// Menyeragamkan penanganan URL/path GLB dengan layar AR lain
+  /// (lihat ModelViewerScreen._resolveModelUrl).
+  String _toViewerUrl(String value) {
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+    if (value.startsWith('file:///')) return value;
+    if (value.startsWith('/')) return 'file://$value';
+    if (RegExp(r'^[A-Za-z]:\\').hasMatch(value)) return 'file:///$value';
+
+    final base = ApiConfig.baseHost;
+    final normalizedBase = base.endsWith('/') ? base : '$base/';
+    return value.startsWith('storage/')
+        ? '$normalizedBase$value'
+        : '${normalizedBase}storage/$value';
+  }
+
+  void _showArPreviewDialog(Map<String, dynamic> arModel) {
+    // Dihitung sekali agar FutureBuilder tidak memulai request ulang tiap rebuild.
+    final modelSource = _resolveModelSource(arModel);
 
     showDialog(
       context: context,
@@ -379,8 +467,19 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
             ),
             SizedBox(
               height: 300,
-              child: modelUrl.isEmpty
-                  ? const Center(
+              child: FutureBuilder<String?>(
+                future: modelSource,
+                builder: (ctx, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Center(
+                      child:
+                          CircularProgressIndicator(color: Color(0xFF5B6ABF)),
+                    );
+                  }
+
+                  final modelUrl = snapshot.data;
+                  if (modelUrl == null || modelUrl.isEmpty) {
+                    return const Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -394,12 +493,16 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
                           ),
                         ],
                       ),
-                    )
-                  : ModelViewer(
-                      src: modelUrl,
-                      autoRotate: true,
-                      cameraControls: true,
-                    ),
+                    );
+                  }
+
+                  return ModelViewer(
+                    src: modelUrl,
+                    autoRotate: true,
+                    cameraControls: true,
+                  );
+                },
+              ),
             ),
             if (arModel['description'] != null &&
                 (arModel['description'] as String).isNotEmpty)
@@ -420,17 +523,10 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ArScannerScreen(
-                              preferredModelId: arModel['id'],
-                            ),
-                          ),
-                        );
+                        _openArUcoScanner(arModel);
                       },
-                      icon: const Icon(Icons.view_in_ar, size: 16),
-                      label: const Text('Buka AR'),
+                      icon: const Icon(Icons.qr_code_scanner, size: 16),
+                      label: const Text('Scan Marker ArUco'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF5B6ABF),
                         side: const BorderSide(color: Color(0xFF5B6ABF)),

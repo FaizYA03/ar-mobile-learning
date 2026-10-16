@@ -168,4 +168,33 @@ class MateriTest extends TestCase
                 ],
             ]);
     }
+
+    public function test_materi_detail_includes_glb_url_for_3d_preview(): void
+    {
+        $user = User::where('role', 'siswa')->first();
+        $materi = Materi::whereNotNull('ar_model_id')->first();
+
+        if ($materi === null) {
+            $this->markTestSkipped('Seed tidak menyediakan materi dengan model 3D.');
+        }
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/materi/' . $materi->id);
+
+        $response->assertStatus(200);
+        $arModel = $response->json('data.ar_model');
+
+        $this->assertIsArray($arModel, 'Payload materi harus menyertakan ar_model.');
+        $this->assertArrayHasKey('glb_url', $arModel);
+
+        $glbPath = $arModel['glb_path'] ?? null;
+        if ($glbPath !== null && $glbPath !== '') {
+            $this->assertSame(
+                url('storage/' . $glbPath),
+                $arModel['glb_url'],
+                'glb_url harus URL absolut agar preview 3D tidak bergantung pada host klien.'
+            );
+        }
+    }
 }

@@ -19,7 +19,11 @@ import '../services/content_sync_service.dart';
 import '../widgets/ar_hotspot_speech_bubble.dart';
 
 class ArUcoScannerScreen extends StatefulWidget {
-  const ArUcoScannerScreen({super.key});
+  /// Jika diisi (mis. dibuka dari screen materi), scanner hanya menerima
+  /// marker yang terpetakan ke model 3D tersebut. Marker lain ditolak.
+  final int? preferredModelId;
+
+  const ArUcoScannerScreen({super.key, this.preferredModelId});
 
   @override
   State<ArUcoScannerScreen> createState() => _ArUcoScannerScreenState();
@@ -494,7 +498,36 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     await _downloadAndNavigate(fallbackResult);
   }
 
+  /// true bila hasil resolve sesuai model yang diminta pemanggil.
+  /// Saat dibuka dari screen materi, marker milik materi lain ditolak
+  /// dengan pesan, bukan dimuat sebagai model 3D.
+  bool _matchesPreferredModel(ArResolveResult result) {
+    final preferred = widget.preferredModelId;
+    if (preferred == null || result.model.id == preferred) {
+      return true;
+    }
+
+    ArDebugLog.log(
+        'Tolak marker model ${result.model.id}: diharapkan model $preferred');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Marker ini bukan untuk materi yang sedang dibuka.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+    return false;
+  }
+
   Future<void> _enterArModeAfterResolve(ArResolveResult resolveResult) async {
+    if (!_matchesPreferredModel(resolveResult)) {
+      if (mounted) {
+        setState(() => _isResolving = false);
+      }
+      return;
+    }
+
     if (mounted) {
       setState(() => _isResolving = true);
     }
@@ -615,6 +648,13 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
   }
 
   Future<void> _downloadAndNavigate(ArResolveResult resolveResult) async {
+    if (!_matchesPreferredModel(resolveResult)) {
+      if (mounted) {
+        setState(() => _isResolving = false);
+      }
+      return;
+    }
+
     final result = resolveResult;
 
     final displayPath = await _prepareModelSrc(result);
@@ -690,6 +730,15 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
                           children: [
                             _buildTopBar(),
                             const SizedBox(height: 6),
+                            if (widget.preferredModelId != null &&
+                                _arResolve == null)
+                              Center(
+                                child: _buildPill(
+                                  _materiModeLabel(),
+                                  icon: Icons.center_focus_strong,
+                                  color: Colors.amberAccent,
+                                ),
+                              ),
                             if (_arResolve == null)
                               Center(child: _buildScanStatusPill())
                             else ...[
@@ -829,6 +878,22 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         ],
       ),
     );
+  }
+
+  /// Label untuk mode "dibuka dari materi": menyebut nama model 3D target
+  /// scan (bila tersedia di konten AR) agar siswa tahu marker mana yang
+  /// harus dipindai.
+  String _materiModeLabel() {
+    final modelId = widget.preferredModelId;
+    final modelName = modelId == null
+        ? null
+        : ArContentResolver.resolveByModelId(modelId)?.modelName;
+
+    if (modelName == null || modelName.isEmpty) {
+      return 'Scan marker materi ini';
+    }
+
+    return 'Scan marker: $modelName';
   }
 
   Widget _buildScanStatusPill() {

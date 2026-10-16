@@ -130,8 +130,8 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
               }
               try {
                 await ApiService.guruCreateQuiz({
-                  'title': titleCtrl.text,
-                  'description': descCtrl.text,
+                  'title': titleCtrl.text.trim(),
+                  'description': descCtrl.text.trim(),
                   'time_limit': int.tryParse(timeCtrl.text) ?? 10,
                   'passing_score': int.tryParse(scoreCtrl.text) ?? 70,
                 });
@@ -227,11 +227,16 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                   borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () async {
-              if (titleCtrl.text.isEmpty) return;
+              if (titleCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Judul quiz wajib diisi')),
+                );
+                return;
+              }
               try {
                 await ApiService.guruUpdateQuiz(quiz.id, {
-                  'title': titleCtrl.text,
-                  'description': descCtrl.text,
+                  'title': titleCtrl.text.trim(),
+                  'description': descCtrl.text.trim(),
                   'time_limit': int.tryParse(timeCtrl.text) ?? 10,
                   'passing_score': int.tryParse(scoreCtrl.text) ?? 70,
                 });
@@ -355,9 +360,17 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                     borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () async {
-                if (questionCtrl.text.isEmpty) {
+                if (questionCtrl.text.trim().isEmpty) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(content: Text('Soal wajib diisi')),
+                  );
+                  return;
+                }
+                final hasEmpty =
+                    options.any((o) => (o['text'] as String).trim().isEmpty);
+                if (hasEmpty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Semua opsi wajib diisi')),
                   );
                   return;
                 }
@@ -370,20 +383,14 @@ class _AdminQuizManagementScreenState extends State<AdminQuizManagementScreen> {
                   );
                   return;
                 }
-                final hasEmpty =
-                    options.any((o) => (o['text'] as String).isEmpty);
-                if (hasEmpty) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Semua opsi wajib diisi')),
-                  );
-                  return;
-                }
                 try {
                   await ApiService.guruAddQuestion(quiz.id, {
-                    'text': questionCtrl.text,
+                    'text': questionCtrl.text.trim(),
                     'options': options
-                        .map((o) =>
-                            {'text': o['text'], 'is_correct': o['is_correct']})
+                        .map((o) => {
+                              'text': (o['text'] as String).trim(),
+                              'is_correct': o['is_correct']
+                            })
                         .toList(),
                   });
                   if (ctx.mounted) Navigator.pop(ctx);

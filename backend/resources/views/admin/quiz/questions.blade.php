@@ -78,16 +78,23 @@
                     </div>
                     <template x-for="(option, index) in options" :key="index">
                         <div class="flex items-center gap-2 mb-2">
-                            <input type="checkbox" :name="'options[' + index + '][is_correct]'" :value="1" x-model="option.is_correct" class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Benar?">
+                            {{-- Hidden input: radio yang tidak dipilih tidak ikut
+                                 terkirim, sedangkan validasi butuh is_correct di
+                                 SEMUA opsi. Nilai = 1 hanya untuk opsi terpilih. --}}
+                            <input type="hidden" :name="'options[' + index + '][is_correct]'" :value="option.is_correct ? 1 : 0">
+                            <input type="radio" name="correct_option" :value="index" :checked="option.is_correct" @change="markCorrect(index)" class="h-4 w-4 border-gray-300 text-emerald-600 focus:ring-emerald-500" title="Jawaban benar">
                             <input type="text" :name="'options[' + index + '][text]'" x-model="option.text" required placeholder="Pilihan jawaban..." class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                             <button type="button" @click="removeOption(index)" x-show="options.length > 2" class="text-red-400 hover:text-red-500">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
                     </template>
-                    <p class="text-xs text-gray-400 mt-1">Centang checkbox untuk menandai jawaban benar.</p>
+                    <p class="text-xs mt-1" :class="hasCorrect() ? 'text-gray-400' : 'text-red-500'"
+                       x-text="hasCorrect() ? 'Pilih tepat satu opsi sebagai jawaban benar.' : 'Belum ada jawaban yang ditandai benar.'"></p>
                 </div>
-                <button type="submit" class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Simpan Soal</button>
+                <button type="submit" :disabled="!hasCorrect() || !text.trim()"
+                        class="w-full rounded-lg px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed"
+                        :class="hasCorrect() && text.trim() ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-400'">Simpan Soal</button>
             </form>
         </div>
     </div>
@@ -106,7 +113,22 @@ function questionForm() {
             this.options.push({ text: '', is_correct: false });
         },
         removeOption(index) {
+            const wasCorrect = this.options[index].is_correct;
             this.options.splice(index, 1);
+            // Kalau opsi terpilih yang dihapus, pindahkan tanda benar ke opsi pertama
+            // agar soal tidak pernah tersimpan tanpa kunci jawaban.
+            if (wasCorrect && this.options.length > 0) {
+                this.options[0].is_correct = true;
+            }
+        },
+        // Penanda jawaban benar bersifat tunggal (radio): satu opsi = satu kunci.
+        markCorrect(index) {
+            this.options.forEach((option, i) => {
+                option.is_correct = i === index;
+            });
+        },
+        hasCorrect() {
+            return this.options.some((option) => option.is_correct);
         }
     }
 }
