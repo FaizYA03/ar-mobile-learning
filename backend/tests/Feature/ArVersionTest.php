@@ -35,7 +35,7 @@ class ArVersionTest extends TestCase
         $originalVersion = $model->version;
 
         $response = $this->putJson("/api/ar/models/{$model->id}", [
-            'model_name' => $model->model_name . ' Updated',
+            'model_name' => $model->model_name.' Updated',
         ]);
 
         $response->assertStatus(200);

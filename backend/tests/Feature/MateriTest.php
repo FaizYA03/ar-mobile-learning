@@ -44,7 +44,7 @@ class MateriTest extends TestCase
         $materi = Materi::first();
         Sanctum::actingAs($user);
 
-        $response = $this->getJson('/api/materi/' . $materi->id);
+        $response = $this->getJson('/api/materi/'.$materi->id);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -78,7 +78,7 @@ class MateriTest extends TestCase
 
         $createdId = $createResponse->json('data.id');
 
-        $updateResponse = $this->putJson('/api/guru/materi/' . $createdId, [
+        $updateResponse = $this->putJson('/api/guru/materi/'.$createdId, [
             'judul' => 'Materi Uji Coba Guru Updated',
         ]);
 
@@ -90,7 +90,7 @@ class MateriTest extends TestCase
                 ],
             ]);
 
-        $deleteResponse = $this->deleteJson('/api/guru/materi/' . $createdId);
+        $deleteResponse = $this->deleteJson('/api/guru/materi/'.$createdId);
         $deleteResponse->assertStatus(200);
     }
 
@@ -158,7 +158,7 @@ class MateriTest extends TestCase
         $materi = Materi::first();
         Sanctum::actingAs($user);
 
-        $response = $this->getJson('/api/materi/' . $materi->id);
+        $response = $this->getJson('/api/materi/'.$materi->id);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -180,7 +180,7 @@ class MateriTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $response = $this->getJson('/api/materi/' . $materi->id);
+        $response = $this->getJson('/api/materi/'.$materi->id);
 
         $response->assertStatus(200);
         $arModel = $response->json('data.ar_model');
@@ -191,7 +191,7 @@ class MateriTest extends TestCase
         $glbPath = $arModel['glb_path'] ?? null;
         if ($glbPath !== null && $glbPath !== '') {
             $this->assertSame(
-                url('storage/' . $glbPath),
+                url('storage/'.$glbPath),
                 $arModel['glb_url'],
                 'glb_url harus URL absolut agar preview 3D tidak bergantung pada host klien.'
             );

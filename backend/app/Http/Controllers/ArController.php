@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ArModel;
-use App\Models\ArMarker;
 use App\Models\ArHotspot;
+use App\Models\ArMarker;
 use App\Models\ArMarker3dMapping;
+use App\Models\ArModel;
 use App\Services\ActivityLogger;
+use App\Services\ArMarkerGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -34,6 +35,7 @@ class ArController extends Controller
     public function modelShow(ArModel $arModel): JsonResponse
     {
         $arModel->load(['hotspots', 'markers', 'materi']);
+
         return response()->json([
             'success' => true,
             'message' => 'Detail AR model berhasil diambil',
@@ -43,6 +45,8 @@ class ArController extends Controller
 
     public function modelStore(Request $request): JsonResponse
     {
+        $this->authorize('create', ArModel::class);
+
         $validated = $request->validate([
             'model_name' => 'required|string|max:255',
             'glb_path' => 'required|file|extensions:glb,gltf|max:102400',
@@ -56,7 +60,7 @@ class ArController extends Controller
             $glbFile = $request->file('glb_path');
             $stored = $glbFile->storeAs(
                 'models',
-                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$glbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['glb_path'] = $stored ? $stored : '';
@@ -66,12 +70,13 @@ class ArController extends Controller
             $thumbFile = $request->file('thumbnail_path');
             $stored = $thumbFile->storeAs(
                 'thumbnails',
-                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$thumbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['thumbnail_path'] = $stored ? $stored : '';
         }
 
+        $validated['created_by'] = $request->user()->id;
         $model = ArModel::create($validated);
 
         ActivityLogger::created('ar_model', $model->id, "AR model '{$model->model_name}' created");
@@ -85,6 +90,8 @@ class ArController extends Controller
 
     public function modelUpdate(Request $request, ArModel $arModel): JsonResponse
     {
+        $this->authorize('update', $arModel);
+
         $validated = $request->validate([
             'model_name' => 'sometimes|required|string|max:255',
             'glb_path' => 'sometimes|file|extensions:glb,gltf|max:102400',
@@ -104,7 +111,7 @@ class ArController extends Controller
             $glbFile = $request->file('glb_path');
             $stored = $glbFile->storeAs(
                 'models',
-                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$glbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['glb_path'] = $stored ? $stored : '';
@@ -121,7 +128,7 @@ class ArController extends Controller
             $thumbFile = $request->file('thumbnail_path');
             $stored = $thumbFile->storeAs(
                 'thumbnails',
-                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$thumbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['thumbnail_path'] = $stored ? $stored : '';
@@ -142,6 +149,8 @@ class ArController extends Controller
 
     public function modelDestroy(ArModel $arModel): JsonResponse
     {
+        $this->authorize('delete', $arModel);
+
         if ($arModel->glb_path) {
             $path = str_replace('storage/', '', $arModel->glb_path);
             if (Storage::disk('public')->exists($path)) {
@@ -159,6 +168,7 @@ class ArController extends Controller
         ActivityLogger::deleted('ar_model', $arModel->id, "AR model '{$arModel->model_name}' deleted");
 
         $arModel->delete();
+
         return response()->json([
             'success' => true,
             'message' => 'AR model berhasil dihapus',
@@ -170,6 +180,7 @@ class ArController extends Controller
     public function markerIndex(): JsonResponse
     {
         $markers = ArMarker::withCount('models')->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Data AR markers berhasil diambil',
@@ -180,6 +191,7 @@ class ArController extends Controller
     public function markerShow(ArMarker $arMarker): JsonResponse
     {
         $arMarker->load('models');
+
         return response()->json([
             'success' => true,
             'message' => 'Detail AR marker berhasil diambil',
@@ -189,19 +201,21 @@ class ArController extends Controller
 
     public function markerStore(Request $request): JsonResponse
     {
+        $this->authorize('create', ArMarker::class);
+
         $validated = $request->validate([
             'marker_id' => 'required|string|max:100|unique:ar_markers,marker_id',
             'ar_uco_id' => 'nullable|integer|min:0',
-            'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(\App\Services\ArMarkerGenerator::DICTIONARIES)),
+            'aruco_dictionary' => 'nullable|string|in:'.implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
             'marker_type' => 'required|string|in:pattern,image',
             'image_path' => 'required|image|max:10240',
             'status' => 'nullable|string|in:active,inactive',
         ]);
 
-        if ($error = \App\Services\ArMarkerGenerator::pairError($validated['aruco_dictionary'] ?? null, $validated['ar_uco_id'] ?? null)) {
+        if ($error = ArMarkerGenerator::pairError($validated['aruco_dictionary'] ?? null, $validated['ar_uco_id'] ?? null)) {
             return response()->json(['success' => false, 'message' => $error], 422);
         }
-        if (!empty($validated['aruco_dictionary']) && \App\Services\ArMarkerGenerator::comboExists($validated['aruco_dictionary'], (int) $validated['ar_uco_id'])) {
+        if (! empty($validated['aruco_dictionary']) && ArMarkerGenerator::comboExists($validated['aruco_dictionary'], (int) $validated['ar_uco_id'])) {
             return response()->json(['success' => false, 'message' => "ID {$validated['ar_uco_id']} pada {$validated['aruco_dictionary']} sudah dipakai marker lain."], 422);
         }
 
@@ -209,12 +223,13 @@ class ArController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'markers',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';
         }
 
+        $validated['created_by'] = $request->user()->id;
         $marker = ArMarker::create($validated);
 
         ActivityLogger::created('ar_marker', $marker->id, "AR marker '{$marker->marker_id}' created");
@@ -228,10 +243,12 @@ class ArController extends Controller
 
     public function markerUpdate(Request $request, ArMarker $arMarker): JsonResponse
     {
+        $this->authorize('update', $arMarker);
+
         $validated = $request->validate([
-            'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,' . $arMarker->id,
+            'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,'.$arMarker->id,
             'ar_uco_id' => 'nullable|integer|min:0',
-            'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(\App\Services\ArMarkerGenerator::DICTIONARIES)),
+            'aruco_dictionary' => 'nullable|string|in:'.implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
             'marker_type' => 'sometimes|required|string|in:pattern,image',
             'image_path' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:10240',
             'status' => 'nullable|string|in:active,inactive',
@@ -239,10 +256,10 @@ class ArController extends Controller
 
         $dictionary = array_key_exists('aruco_dictionary', $validated) ? $validated['aruco_dictionary'] : $arMarker->aruco_dictionary;
         $arucoId = array_key_exists('ar_uco_id', $validated) ? $validated['ar_uco_id'] : $arMarker->ar_uco_id;
-        if ($error = \App\Services\ArMarkerGenerator::pairError($dictionary, $arucoId)) {
+        if ($error = ArMarkerGenerator::pairError($dictionary, $arucoId)) {
             return response()->json(['success' => false, 'message' => $error], 422);
         }
-        if (!empty($dictionary) && \App\Services\ArMarkerGenerator::comboExists($dictionary, (int) $arucoId, $arMarker->id)) {
+        if (! empty($dictionary) && ArMarkerGenerator::comboExists($dictionary, (int) $arucoId, $arMarker->id)) {
             return response()->json(['success' => false, 'message' => "ID {$arucoId} pada {$dictionary} sudah dipakai marker lain."], 422);
         }
 
@@ -256,7 +273,7 @@ class ArController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'markers',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';
@@ -275,6 +292,8 @@ class ArController extends Controller
 
     public function markerDestroy(ArMarker $arMarker): JsonResponse
     {
+        $this->authorize('delete', $arMarker);
+
         if ($arMarker->image_path) {
             $path = str_replace('storage/', '', $arMarker->image_path);
             if (Storage::disk('public')->exists($path)) {
@@ -286,6 +305,7 @@ class ArController extends Controller
         ActivityLogger::deleted('ar_marker', $arMarker->id, "AR marker '{$arMarker->marker_id}' deleted");
 
         $arMarker->delete();
+
         return response()->json([
             'success' => true,
             'message' => 'AR marker berhasil dihapus',
@@ -297,6 +317,7 @@ class ArController extends Controller
     public function hotspotIndex(): JsonResponse
     {
         $hotspots = ArHotspot::with('arModel:id,model_name')->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Data AR hotspots berhasil diambil',
@@ -307,6 +328,7 @@ class ArController extends Controller
     public function hotspotShow(ArHotspot $arHotspot): JsonResponse
     {
         $arHotspot->load('arModel');
+
         return response()->json([
             'success' => true,
             'message' => 'Detail AR hotspot berhasil diambil',
@@ -326,14 +348,16 @@ class ArController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
+        $this->authorize('update', ArModel::findOrFail($validated['ar_model_id']));
+
         if ($request->hasFile('image_path')) {
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'hotspots',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
-            $validated['image_path'] = $stored ? 'storage/' . $stored : '';
+            $validated['image_path'] = $stored ? 'storage/'.$stored : '';
         }
 
         $hotspot = ArHotspot::create($validated);
@@ -347,6 +371,8 @@ class ArController extends Controller
 
     public function hotspotUpdate(Request $request, ArHotspot $arHotspot): JsonResponse
     {
+        $this->authorize('update', $arHotspot);
+
         $validated = $request->validate([
             'ar_model_id' => 'sometimes|required|exists:ar_models,id',
             'title' => 'sometimes|required|string|max:255',
@@ -357,6 +383,11 @@ class ArController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
+        if (isset($validated['ar_model_id'])
+            && (int) $validated['ar_model_id'] !== $arHotspot->ar_model_id) {
+            $this->authorize('update', ArModel::findOrFail($validated['ar_model_id']));
+        }
+
         if ($request->hasFile('image_path')) {
             if ($arHotspot->image_path && str_starts_with($arHotspot->image_path, 'storage/')) {
                 Storage::disk('public')->delete(str_replace('storage/', '', $arHotspot->image_path));
@@ -364,10 +395,10 @@ class ArController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'hotspots',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
-            $validated['image_path'] = $stored ? 'storage/' . $stored : '';
+            $validated['image_path'] = $stored ? 'storage/'.$stored : '';
         }
 
         $arHotspot->update($validated);
@@ -381,10 +412,13 @@ class ArController extends Controller
 
     public function hotspotDestroy(ArHotspot $arHotspot): JsonResponse
     {
+        $this->authorize('delete', $arHotspot);
+
         if ($arHotspot->image_path && str_starts_with($arHotspot->image_path, 'storage/')) {
             Storage::disk('public')->delete(str_replace('storage/', '', $arHotspot->image_path));
         }
         $arHotspot->delete();
+
         return response()->json([
             'success' => true,
             'message' => 'AR hotspot berhasil dihapus',
@@ -396,6 +430,7 @@ class ArController extends Controller
     public function getMarkerModels(ArMarker $arMarker): JsonResponse
     {
         $arMarker->load('models');
+
         return response()->json([
             'success' => true,
             'message' => 'Model untuk marker berhasil diambil',
@@ -408,6 +443,9 @@ class ArController extends Controller
         $validated = $request->validate([
             'ar_model_id' => 'required|exists:ar_models,id',
         ]);
+
+        $this->authorize('update', $arMarker);
+        $this->authorize('update', ArModel::findOrFail($validated['ar_model_id']));
 
         $exists = $arMarker->models()->where('ar_model_id', $validated['ar_model_id'])->exists();
         if ($exists) {
@@ -428,7 +466,11 @@ class ArController extends Controller
 
     public function detachModel(ArMarker $arMarker, ArModel $arModel): JsonResponse
     {
+        $this->authorize('update', $arMarker);
+        $this->authorize('update', $arModel);
+
         $arMarker->models()->detach($arModel->id);
+
         return response()->json([
             'success' => true,
             'message' => 'Model berhasil dipisahkan dari marker',
@@ -439,6 +481,7 @@ class ArController extends Controller
     {
         $markers = ArMarker::with(['models', 'mappings'])->get();
         $models = ArModel::withCount('markers')->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Semua mapping marker-model berhasil diambil',
@@ -454,6 +497,7 @@ class ArController extends Controller
                         'status' => $marker->status,
                         'models' => $marker->models->map(function ($model) use ($marker) {
                             $mapping = $marker->mappings->firstWhere('ar_model_id', $model->id);
+
                             return [
                                 'id' => $model->id,
                                 'model_name' => $model->model_name,
@@ -481,6 +525,11 @@ class ArController extends Controller
             'mapping_notes' => 'nullable|string',
         ]);
 
+        $marker = ArMarker::findOrFail($validated['ar_marker_id']);
+        $model = ArModel::findOrFail($validated['ar_model_id']);
+        $this->authorize('update', $marker);
+        $this->authorize('update', $model);
+
         $mapping = ArMarker3dMapping::create($validated);
         ArMarker3dMapping::syncPivot($mapping->ar_marker_id, $mapping->ar_model_id);
 
@@ -493,6 +542,9 @@ class ArController extends Controller
 
     public function arUpdateMapping(Request $request, ArMarker3dMapping $arMarker3dMapping): JsonResponse
     {
+        $this->authorize('update', $arMarker3dMapping->arMarker);
+        $this->authorize('update', $arMarker3dMapping->arModel);
+
         $validated = $request->validate([
             'mapping_method' => 'sometimes|required|string|in:image_tracking,marker_id',
             'mapping_status' => 'sometimes|required|string|in:pending,mapped,failed',
@@ -531,6 +583,7 @@ class ArController extends Controller
     public function publicModelShow(ArModel $arModel): JsonResponse
     {
         $arModel->load(['hotspots', 'markers']);
+
         return response()->json([
             'success' => true,
             'message' => 'Detail AR model berhasil diambil',
@@ -541,6 +594,7 @@ class ArController extends Controller
     public function markerByModel(ArModel $arModel): JsonResponse
     {
         $markers = $arModel->markers()->where('status', 'active')->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Marker untuk model berhasil diambil',

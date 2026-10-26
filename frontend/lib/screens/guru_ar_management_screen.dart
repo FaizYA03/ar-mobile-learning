@@ -672,7 +672,7 @@ class _GuruArManagementScreenState extends State<GuruArManagementScreen>
                         value: null, child: Text('Tanpa ArUco')),
                     DropdownMenuItem<String?>(
                         value: 'DICT_4X4_50',
-                        child: Text('DICT_4X4_50 (aplikasi memakai ini)')),
+                        child: Text('DICT_4X4_50 (paling kompatibel)')),
                     DropdownMenuItem<String?>(
                         value: 'DICT_5X5_100', child: Text('DICT_5X5_100')),
                     DropdownMenuItem<String?>(

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ArMarker;
+use App\Services\ActivityLogger;
 use App\Services\ArMarkerGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -20,6 +21,7 @@ class ArMarkerController extends Controller
         }
 
         $markers = $query->orderByDesc('created_at')->paginate(15)->withQueryString();
+
         return view('admin.ar.markers', compact('markers'));
     }
 
@@ -52,7 +54,7 @@ class ArMarkerController extends Controller
     {
         $validated = $request->validate([
             'marker_id' => 'required|string|max:100|unique:ar_markers,marker_id',
-            'aruco_dictionary' => 'required|string|in:' . implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
+            'aruco_dictionary' => 'required|string|in:'.implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
             'ar_uco_id' => 'required|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
@@ -84,7 +86,7 @@ class ArMarkerController extends Controller
             'status' => $validated['status'] ?? 'active',
         ]);
 
-        \App\Services\ActivityLogger::uploaded('ar_marker', $marker->id, $path, "AR marker '{$marker->marker_id}' digenerate via admin");
+        ActivityLogger::uploaded('ar_marker', $marker->id, $path, "AR marker '{$marker->marker_id}' digenerate via admin");
 
         return redirect()->route('admin.ar.markers.index')->with('success', "Marker {$marker->marker_id} berhasil digenerate.");
     }
@@ -95,7 +97,7 @@ class ArMarkerController extends Controller
             'marker_id' => 'required|string|max:100|unique:ar_markers,marker_id',
             'marker_type' => 'required|string|in:pattern,image',
             'image_path' => 'required|image|max:10240',
-            'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
+            'aruco_dictionary' => 'nullable|string|in:'.implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
             'ar_uco_id' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
@@ -103,7 +105,7 @@ class ArMarkerController extends Controller
         if ($error = ArMarkerGenerator::pairError($validated['aruco_dictionary'] ?? null, $validated['ar_uco_id'] ?? null)) {
             return back()->withErrors(['ar_uco_id' => $error])->withInput();
         }
-        if (!empty($validated['aruco_dictionary']) && ArMarkerGenerator::comboExists($validated['aruco_dictionary'], (int) $validated['ar_uco_id'])) {
+        if (! empty($validated['aruco_dictionary']) && ArMarkerGenerator::comboExists($validated['aruco_dictionary'], (int) $validated['ar_uco_id'])) {
             return back()->withErrors(['ar_uco_id' => "ID {$validated['ar_uco_id']} pada {$validated['aruco_dictionary']} sudah dipakai marker lain."])->withInput();
         }
 
@@ -111,7 +113,7 @@ class ArMarkerController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'markers',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';
@@ -121,7 +123,7 @@ class ArMarkerController extends Controller
 
         $marker = ArMarker::create($validated);
 
-        \App\Services\ActivityLogger::uploaded('ar_marker', $marker->id, $validated['image_path'] ?? '', "AR marker '{$marker->marker_id}' uploaded via admin");
+        ActivityLogger::uploaded('ar_marker', $marker->id, $validated['image_path'] ?? '', "AR marker '{$marker->marker_id}' uploaded via admin");
 
         return redirect()->route('admin.ar.markers.index')->with('success', 'AR marker berhasil ditambahkan.');
     }
@@ -134,10 +136,10 @@ class ArMarkerController extends Controller
     public function update(Request $request, ArMarker $marker)
     {
         $validated = $request->validate([
-            'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,' . $marker->id,
+            'marker_id' => 'sometimes|required|string|max:100|unique:ar_markers,marker_id,'.$marker->id,
             'marker_type' => 'sometimes|required|string|in:pattern,image',
             'image_path' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:10240',
-            'aruco_dictionary' => 'nullable|string|in:' . implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
+            'aruco_dictionary' => 'nullable|string|in:'.implode(',', array_keys(ArMarkerGenerator::DICTIONARIES)),
             'ar_uco_id' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
@@ -147,7 +149,7 @@ class ArMarkerController extends Controller
         if ($error = ArMarkerGenerator::pairError($dictionary, $arucoId)) {
             return back()->withErrors(['ar_uco_id' => $error])->withInput();
         }
-        if (!empty($dictionary) && ArMarkerGenerator::comboExists($dictionary, (int) $arucoId, $marker->id)) {
+        if (! empty($dictionary) && ArMarkerGenerator::comboExists($dictionary, (int) $arucoId, $marker->id)) {
             return back()->withErrors(['ar_uco_id' => "ID {$arucoId} pada {$dictionary} sudah dipakai marker lain."])->withInput();
         }
         $validated['aruco_dictionary'] = $dictionary;
@@ -160,7 +162,7 @@ class ArMarkerController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'markers',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';
@@ -168,7 +170,7 @@ class ArMarkerController extends Controller
 
         $marker->update($validated);
 
-        \App\Services\ActivityLogger::updated('ar_marker', $marker->id, "AR marker '{$marker->marker_id}' updated via admin");
+        ActivityLogger::updated('ar_marker', $marker->id, "AR marker '{$marker->marker_id}' updated via admin");
 
         return redirect()->route('admin.ar.markers.index')->with('success', 'AR marker berhasil diperbarui.');
     }
@@ -180,7 +182,7 @@ class ArMarkerController extends Controller
         }
         $marker->models()->detach();
 
-        \App\Services\ActivityLogger::deleted('ar_marker', $marker->id, "AR marker '{$marker->marker_id}' deleted via admin");
+        ActivityLogger::deleted('ar_marker', $marker->id, "AR marker '{$marker->marker_id}' deleted via admin");
 
         $marker->delete();
 

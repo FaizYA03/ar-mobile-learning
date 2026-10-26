@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ArModel;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -23,6 +24,7 @@ class ArModelController extends Controller
         }
 
         $models = $query->orderByDesc('created_at')->paginate(15)->withQueryString();
+
         return view('admin.ar.models', compact('models'));
     }
 
@@ -46,7 +48,7 @@ class ArModelController extends Controller
             $glbFile = $request->file('glb_path');
             $stored = $glbFile->storeAs(
                 'models',
-                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$glbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['glb_path'] = $stored ? $stored : '';
@@ -56,7 +58,7 @@ class ArModelController extends Controller
             $thumbFile = $request->file('thumbnail_path');
             $stored = $thumbFile->storeAs(
                 'thumbnails',
-                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$thumbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['thumbnail_path'] = $stored ? $stored : '';
@@ -67,7 +69,7 @@ class ArModelController extends Controller
 
         $model = ArModel::create($validated);
 
-        \App\Services\ActivityLogger::uploaded('ar_model', $model->id, $validated['glb_path'] ?? '', "AR model '{$model->model_name}' uploaded via admin");
+        ActivityLogger::uploaded('ar_model', $model->id, $validated['glb_path'] ?? '', "AR model '{$model->model_name}' uploaded via admin");
 
         return redirect()->route('admin.ar.models.index')->with('success', 'AR model berhasil ditambahkan.');
     }
@@ -95,7 +97,7 @@ class ArModelController extends Controller
             $glbFile = $request->file('glb_path');
             $stored = $glbFile->storeAs(
                 'models',
-                Str::uuid() . '.' . $glbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$glbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['glb_path'] = $stored ? $stored : '';
@@ -109,7 +111,7 @@ class ArModelController extends Controller
             $thumbFile = $request->file('thumbnail_path');
             $stored = $thumbFile->storeAs(
                 'thumbnails',
-                Str::uuid() . '.' . $thumbFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$thumbFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['thumbnail_path'] = $stored ? $stored : '';
@@ -117,7 +119,7 @@ class ArModelController extends Controller
 
         $model->update($validated);
 
-        \App\Services\ActivityLogger::updated('ar_model', $model->id, "AR model '{$model->model_name}' updated via admin (version: {$model->version})");
+        ActivityLogger::updated('ar_model', $model->id, "AR model '{$model->model_name}' updated via admin (version: {$model->version})");
 
         return redirect()->route('admin.ar.models.index')->with('success', 'AR model berhasil diperbarui.');
     }
@@ -132,7 +134,7 @@ class ArModelController extends Controller
         }
         $model->markers()->detach();
 
-        \App\Services\ActivityLogger::deleted('ar_model', $model->id, "AR model '{$model->model_name}' deleted via admin");
+        ActivityLogger::deleted('ar_model', $model->id, "AR model '{$model->model_name}' deleted via admin");
 
         $model->delete();
 

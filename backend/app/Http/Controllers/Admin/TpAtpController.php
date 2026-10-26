@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TpAtp;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 
 class TpAtpController extends Controller
@@ -16,8 +17,8 @@ class TpAtpController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('kode', 'like', "%{$search}%")
-                  ->orWhere('judul', 'like', "%{$search}%")
-                  ->orWhere('elemen', 'like', "%{$search}%");
+                    ->orWhere('judul', 'like', "%{$search}%")
+                    ->orWhere('elemen', 'like', "%{$search}%");
             });
         }
 
@@ -26,6 +27,7 @@ class TpAtpController extends Controller
         }
 
         $tpAtps = $query->orderBy('order')->paginate(15)->withQueryString();
+
         return view('admin.tp-atp.index', compact('tpAtps'));
     }
 
@@ -46,14 +48,14 @@ class TpAtpController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        if (!isset($validated['order'])) {
+        if (! isset($validated['order'])) {
             $validated['order'] = (TpAtp::max('order') ?? 0) + 1;
         }
         $validated['is_active'] = $validated['is_active'] ?? true;
 
         $tpAtp = TpAtp::create($validated);
 
-        \App\Services\ActivityLogger::created('tp_atp', $tpAtp->id, "TP/ATP '{$validated['judul']}' created via admin");
+        ActivityLogger::created('tp_atp', $tpAtp->id, "TP/ATP '{$validated['judul']}' created via admin");
 
         return redirect()->route('admin.tp-atp.index')->with('success', 'TP/ATP berhasil ditambahkan.');
     }
@@ -66,7 +68,7 @@ class TpAtpController extends Controller
     public function update(Request $request, TpAtp $tpAtp)
     {
         $validated = $request->validate([
-            'kode' => 'sometimes|string|max:50|unique:tp_atp,kode,' . $tpAtp->id,
+            'kode' => 'sometimes|string|max:50|unique:tp_atp,kode,'.$tpAtp->id,
             'fase' => 'sometimes|string|max:10',
             'elemen' => 'sometimes|string|max:100',
             'judul' => 'sometimes|string|max:255',
@@ -77,14 +79,14 @@ class TpAtpController extends Controller
 
         $tpAtp->update($validated);
 
-        \App\Services\ActivityLogger::updated('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' updated via admin");
+        ActivityLogger::updated('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' updated via admin");
 
         return redirect()->route('admin.tp-atp.index')->with('success', 'TP/ATP berhasil diperbarui.');
     }
 
     public function destroy(TpAtp $tpAtp)
     {
-        \App\Services\ActivityLogger::deleted('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' deleted via admin");
+        ActivityLogger::deleted('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' deleted via admin");
         $tpAtp->delete();
 
         return redirect()->route('admin.tp-atp.index')->with('success', 'TP/ATP berhasil dihapus.');

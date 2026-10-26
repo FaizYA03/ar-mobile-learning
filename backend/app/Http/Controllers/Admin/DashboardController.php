@@ -11,6 +11,7 @@ use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\TpAtp;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -38,7 +39,7 @@ class DashboardController extends Controller
 
         $dbOk = true;
         try {
-            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            DB::connection()->getPdo();
         } catch (\Exception $e) {
             $dbOk = false;
         }

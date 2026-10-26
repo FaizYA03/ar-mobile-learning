@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\Quiz;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +21,7 @@ class QuizController extends Controller
         }
 
         $quizzes = $query->orderByDesc('created_at')->paginate(15)->withQueryString();
+
         return view('admin.quiz.index', compact('quizzes'));
     }
 
@@ -39,7 +41,7 @@ class QuizController extends Controller
 
         $quiz = Quiz::create($validated);
 
-        \App\Services\ActivityLogger::created('quiz', $quiz->id, "Quiz '{$quiz->title}' created via admin");
+        ActivityLogger::created('quiz', $quiz->id, "Quiz '{$quiz->title}' created via admin");
 
         return redirect()->route('admin.quiz.index')->with('success', 'Quiz berhasil ditambahkan.');
     }
@@ -47,6 +49,7 @@ class QuizController extends Controller
     public function edit(Quiz $quiz)
     {
         $quiz->load('questions.options');
+
         return view('admin.quiz.edit', compact('quiz'));
     }
 
@@ -61,14 +64,14 @@ class QuizController extends Controller
 
         $quiz->update($validated);
 
-        \App\Services\ActivityLogger::updated('quiz', $quiz->id, "Quiz '{$quiz->title}' updated via admin");
+        ActivityLogger::updated('quiz', $quiz->id, "Quiz '{$quiz->title}' updated via admin");
 
         return redirect()->route('admin.quiz.index')->with('success', 'Quiz berhasil diperbarui.');
     }
 
     public function destroy(Quiz $quiz)
     {
-        \App\Services\ActivityLogger::deleted('quiz', $quiz->id, "Quiz '{$quiz->title}' deleted via admin");
+        ActivityLogger::deleted('quiz', $quiz->id, "Quiz '{$quiz->title}' deleted via admin");
         $quiz->delete();
 
         return redirect()->route('admin.quiz.index')->with('success', 'Quiz berhasil dihapus.');
@@ -77,6 +80,7 @@ class QuizController extends Controller
     public function questions(Quiz $quiz)
     {
         $quiz->load('questions.options');
+
         return view('admin.quiz.questions', compact('quiz'));
     }
 
@@ -119,7 +123,7 @@ class QuizController extends Controller
             ]);
         }
 
-        \App\Services\ActivityLogger::created('quiz_question', $question->id, "Question added to quiz '{$quiz->title}'");
+        ActivityLogger::created('quiz_question', $question->id, "Question added to quiz '{$quiz->title}'");
 
         return redirect()->route('admin.quiz.questions', $quiz)->with('success', 'Soal berhasil ditambahkan.');
     }
@@ -129,7 +133,7 @@ class QuizController extends Controller
         $quiz = $question->quiz;
         $question->delete();
 
-        \App\Services\ActivityLogger::deleted('quiz_question', $question->id, "Question deleted from quiz '{$quiz->title}'");
+        ActivityLogger::deleted('quiz_question', $question->id, "Question deleted from quiz '{$quiz->title}'");
 
         return redirect()->route('admin.quiz.questions', $quiz)->with('success', 'Soal berhasil dihapus.');
     }

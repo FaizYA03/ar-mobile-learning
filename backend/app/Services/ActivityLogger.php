@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ActivityLog;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,7 +16,7 @@ class ActivityLogger
         ?string $description = null,
         ?array $metadata = null,
         ?Request $request = null,
-        ?\App\Models\User $user = null,
+        ?User $user = null,
     ): ActivityLog {
         $user = $user ?? Auth::user();
         $request = $request ?? request();
@@ -32,12 +33,12 @@ class ActivityLogger
         ]);
     }
 
-    public static function login(?Request $request = null, ?\App\Models\User $user = null): ActivityLog
+    public static function login(?Request $request = null, ?User $user = null): ActivityLog
     {
         return static::log('login', 'user', $user?->id ?? Auth::id(), 'User logged in', request: $request, user: $user);
     }
 
-    public static function logout(?Request $request = null, ?\App\Models\User $user = null): ActivityLog
+    public static function logout(?Request $request = null, ?User $user = null): ActivityLog
     {
         return static::log('logout', 'user', $user?->id ?? Auth::id(), 'User logged out', request: $request, user: $user);
     }

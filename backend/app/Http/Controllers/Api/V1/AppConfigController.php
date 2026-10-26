@@ -10,6 +10,7 @@ use App\Models\ArMarker;
 use App\Models\ArMarker3dMapping;
 use App\Models\ArModel;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 
 class AppConfigController extends Controller
 {
@@ -40,7 +41,7 @@ class AppConfigController extends Controller
                     'app_name' => AppSetting::getValue('app_name', 'AR Mobile Learning'),
                     'app_tagline' => AppSetting::getValue('app_tagline', ''),
                     'logo_path' => $logoPath ?: null,
-                    'logo_url' => $logoPath ? \Illuminate\Support\Facades\Storage::disk('public')->url($logoPath) : null,
+                    'logo_url' => $logoPath ? Storage::disk('public')->url($logoPath) : null,
                 ],
                 'texts' => [
                     'splash_title' => AppSetting::getValue('splash_title', 'AR Mobile Learning'),

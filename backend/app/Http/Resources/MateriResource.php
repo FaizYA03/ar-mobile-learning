@@ -19,7 +19,7 @@ class MateriResource extends JsonResource
             'konten' => $this->konten,
             'gambar_cover' => $this->gambar_cover,
             'gambar_cover_url' => $this->gambar_cover
-                ? $request->getSchemeAndHttpHost() . '/storage/' . $this->gambar_cover
+                ? $request->getSchemeAndHttpHost().'/storage/'.$this->gambar_cover
                 : null,
             'estimasi_menit' => $this->estimasi_menit,
             'order' => $this->order,

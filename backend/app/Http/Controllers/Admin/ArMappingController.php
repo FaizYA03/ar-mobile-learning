@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ArMarker;
 use App\Models\ArMarker3dMapping;
 use App\Models\ArModel;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 
 class ArMappingController extends Controller
@@ -23,6 +24,7 @@ class ArMappingController extends Controller
         }
 
         $mappings = $query->orderByDesc('created_at')->paginate(15)->withQueryString();
+
         return view('admin.ar.mappings', compact('mappings'));
     }
 
@@ -30,6 +32,7 @@ class ArMappingController extends Controller
     {
         $markers = ArMarker::orderBy('marker_id')->get();
         $models = ArModel::where('is_active', true)->orderBy('model_name')->get();
+
         return view('admin.ar.create-mapping', compact('markers', 'models'));
     }
 
@@ -54,7 +57,7 @@ class ArMappingController extends Controller
         $mapping = ArMarker3dMapping::create($validated);
         ArMarker3dMapping::syncPivot($mapping->ar_marker_id, $mapping->ar_model_id);
 
-        \App\Services\ActivityLogger::created('ar_mapping', $mapping->id, "AR mapping created via admin");
+        ActivityLogger::created('ar_mapping', $mapping->id, 'AR mapping created via admin');
 
         return redirect()->route('admin.ar.mappings.index')->with('success', 'Mapping berhasil dibuat.');
     }
@@ -63,6 +66,7 @@ class ArMappingController extends Controller
     {
         $markers = ArMarker::orderBy('marker_id')->get();
         $models = ArModel::where('is_active', true)->orderBy('model_name')->get();
+
         return view('admin.ar.edit-mapping', ['mapping' => $mapping, 'markers' => $markers, 'models' => $models]);
     }
 
@@ -77,7 +81,7 @@ class ArMappingController extends Controller
         $mapping->update($validated);
         ArMarker3dMapping::syncPivot($mapping->ar_marker_id, $mapping->ar_model_id);
 
-        \App\Services\ActivityLogger::updated('ar_mapping', $mapping->id, "AR mapping updated via admin");
+        ActivityLogger::updated('ar_mapping', $mapping->id, 'AR mapping updated via admin');
 
         return redirect()->route('admin.ar.mappings.index')->with('success', 'Mapping berhasil diperbarui.');
     }
@@ -86,7 +90,7 @@ class ArMappingController extends Controller
     {
         $markerId = $mapping->ar_marker_id;
         $modelId = $mapping->ar_model_id;
-        \App\Services\ActivityLogger::deleted('ar_mapping', $mapping->id, "AR mapping deleted via admin");
+        ActivityLogger::deleted('ar_mapping', $mapping->id, 'AR mapping deleted via admin');
         $mapping->delete();
         ArMarker3dMapping::syncPivot($markerId, $modelId);
 

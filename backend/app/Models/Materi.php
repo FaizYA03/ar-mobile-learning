@@ -13,6 +13,7 @@ class Materi extends Model
     protected $table = 'materi';
 
     protected $fillable = [
+        'created_by',
         'tp_atp_id',
         'ar_model_id',
         'quiz_id',
@@ -31,6 +32,11 @@ class Materi extends Model
         'order' => 'integer',
         'is_published' => 'boolean',
     ];
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function tpAtp(): BelongsTo
     {

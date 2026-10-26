@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\ArModel;
-use App\Models\ArMarker;
-use App\Models\ArHotspot;
 use App\Models\AppSetting;
+use App\Models\ArHotspot;
+use App\Models\ArMarker;
+use App\Models\ArModel;
 use App\Models\Materi;
 use App\Models\Question;
 use App\Models\QuestionOption;
@@ -14,7 +14,6 @@ use App\Models\TpAtp;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {

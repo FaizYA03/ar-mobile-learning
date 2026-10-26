@@ -68,7 +68,27 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=${{ secrets.PROD_API_URL }}
+        env:
+          PROD_API_URL: ${{ secrets.PROD_API_URL }}
+        run: |
+          if [ -z "$PROD_API_URL" ]; then
+            echo "::error::Secret PROD_API_URL wajib diisi agar APK release tidak memakai fallback lokal."
+            exit 1
+          fi
+          case "$PROD_API_URL" in
+            https://*) ;;
+            *)
+              echo "::error::PROD_API_URL harus memakai https://."
+              exit 1
+              ;;
+          esac
+          case "$PROD_API_URL" in
+            *localhost*|*127.0.0.1*|*10.0.2.2*)
+              echo "::error::PROD_API_URL tidak boleh menunjuk ke localhost/emulator."
+              exit 1
+              ;;
+          esac
+          flutter build apk --release --dart-define=API_BASE_URL="$PROD_API_URL"
 
       - name: Rename APK with version
         run: |

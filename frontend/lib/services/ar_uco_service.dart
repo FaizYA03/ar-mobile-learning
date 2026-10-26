@@ -57,9 +57,20 @@ class ArUcoService {
   Uint8List? _pendingGray;
   Uint8List _grayBuffer = Uint8List(0);
 
-  cv.ArucoDictionary? _dictionary;
+  /// Dictionary yang didukung backend (`ArMarkerGenerator::DICTIONARIES`).
+  /// Deteksi dijalankan untuk semuanya agar marker 5x5/6x6/7x7 tidak lagi
+  /// gagal terdeteksi hanya karena scanner mengunci ke DICT_4X4_50.
+  static const Map<String, cv.PredefinedDictionaryType> supportedDictionaries =
+      {
+    'DICT_4X4_50': cv.PredefinedDictionaryType.DICT_4X4_50,
+    'DICT_5X5_100': cv.PredefinedDictionaryType.DICT_5X5_100,
+    'DICT_6X6_250': cv.PredefinedDictionaryType.DICT_6X6_250,
+    'DICT_7X7_1000': cv.PredefinedDictionaryType.DICT_7X7_1000,
+  };
+
+  final Map<String, cv.ArucoDictionary> _dictionaries = {};
   cv.ArucoDetectorParameters? _detectorParams;
-  cv.ArucoDetector? _detector;
+  final Map<String, cv.ArucoDetector> _detectors = {};
 
   List<CameraDescription>? _cameras;
 
@@ -173,11 +184,33 @@ class ArUcoService {
   Future<bool> _probeNativeLibrary() async {
     _nativeLibraryError = null;
     try {
-      _dictionary = cv.ArucoDictionary.predefined(
-        cv.PredefinedDictionaryType.DICT_4X4_50,
-      );
       _detectorParams = cv.ArucoDetectorParameters.empty();
-      _detector = cv.ArucoDetector.create(_dictionary!, _detectorParams!);
+      for (final entry in supportedDictionaries.entries) {
+        cv.ArucoDictionary? dictionary;
+        try {
+          dictionary = cv.ArucoDictionary.predefined(entry.value);
+          _detectors[entry.key] = cv.ArucoDetector.create(
+            dictionary,
+            _detectorParams!,
+          );
+          _dictionaries[entry.key] = dictionary;
+        } catch (e, stack) {
+          // Satu dictionary yang tidak didukung build OpenCV tidak boleh
+          // mematikan scanner untuk dictionary lain.
+          dictionary?.dispose();
+          if (kDebugMode) {
+            debugPrint(
+              'ArUco dictionary unavailable (${entry.key}): $e',
+            );
+            debugPrint('$stack');
+          }
+        }
+      }
+
+      if (_detectors.isEmpty) {
+        throw StateError(
+            'Tidak ada ArUco dictionary yang bisa diinisialisasi.');
+      }
 
       // Smoke-test alokasi native agar status "siap" benar-benar akurat.
       final probe =
@@ -190,12 +223,7 @@ class ArUcoService {
         debugPrint('OpenCV native library probe failed: $e');
         debugPrint('$stack');
       }
-      _detector?.dispose();
-      _detector = null;
-      _detectorParams?.dispose();
-      _detectorParams = null;
-      _dictionary?.dispose();
-      _dictionary = null;
+      _disposeDetectors();
       return false;
     }
   }
@@ -269,14 +297,13 @@ class ArUcoService {
 
   Future<void> _pump() async {
     if (_isProcessing || _pendingGray == null) return;
-    final detector = _detector;
-    if (detector == null) return;
+    if (_detectors.isEmpty) return;
 
     final gray = _pendingGray!;
     _pendingGray = null;
     _isProcessing = true;
     try {
-      final results = await _detectMarkers(detector, gray);
+      final results = await _detectMarkers(gray);
       if (_disposeRequested) return;
       _resultsNotifier.value = results;
     } finally {
@@ -285,63 +312,79 @@ class ArUcoService {
     }
   }
 
-  Future<List<ArUcoResult>> _detectMarkers(
-    cv.ArucoDetector detector,
-    Uint8List gray,
-  ) async {
+  Future<List<ArUcoResult>> _detectMarkers(Uint8List gray) async {
     final w = _frameWidth;
     final h = _frameHeight;
     final stopwatch = Stopwatch()..start();
 
     final mat = cv.Mat.fromList(h, w, cv.MatType.CV_8UC1, gray);
-    cv.VecVecPoint2f? cornersVec;
-    cv.VecI32? idsVec;
-    cv.VecVecPoint2f? rejectedVec;
+    final results = <ArUcoResult>[];
     try {
-      // Deteksi berjalan di thread native (tidak memblokir UI isolate).
-      final detectResult = await detector.detectMarkersAsync(mat);
-      cornersVec = detectResult.$1;
-      idsVec = detectResult.$2;
-      rejectedVec = detectResult.$3;
+      // Jalankan tiap dictionary secara berurutan pada Mat yang sama.
+      // Deteksi tetap di thread native (tidak memblokir UI isolate).
+      for (final entry in _detectors.entries) {
+        cv.VecVecPoint2f? cornersVec;
+        cv.VecI32? idsVec;
+        cv.VecVecPoint2f? rejectedVec;
+        try {
+          final detectResult = await entry.value.detectMarkersAsync(mat);
+          cornersVec = detectResult.$1;
+          idsVec = detectResult.$2;
+          rejectedVec = detectResult.$3;
 
-      final ids = idsVec.toList().cast<int>();
-      if (ids.isEmpty) return const [];
+          final ids = idsVec.toList().cast<int>();
+          if (ids.isEmpty) continue;
 
-      final cornersList = cornersVec.toList();
-      final results = <ArUcoResult>[];
-      for (int i = 0; i < ids.length && i < cornersList.length; i++) {
-        final points = <List<double>>[];
-        for (final p in cornersList[i].toList()) {
-          points.add([p.x, p.y]);
+          final cornersList = cornersVec.toList();
+          for (int i = 0; i < ids.length && i < cornersList.length; i++) {
+            final points = <List<double>>[];
+            for (final p in cornersList[i].toList()) {
+              points.add([p.x, p.y]);
+            }
+            results.add(ArUcoResult(
+              markerId: ids[i],
+              arucoDictionary: entry.key,
+              corners: points,
+            ));
+          }
+        } catch (e, stack) {
+          // Satu dictionary gagal tidak boleh menghentikan dictionary lain.
+          if (kDebugMode) {
+            debugPrint('ArUco detection error (${entry.key}): $e');
+            debugPrint('$stack');
+          }
+        } finally {
+          cornersVec?.dispose();
+          idsVec?.dispose();
+          rejectedVec?.dispose();
         }
-        results.add(ArUcoResult(
-          markerId: ids[i],
-          arucoDictionary: 'DICT_4X4_50',
-          corners: points,
-        ));
       }
 
       _processedFrames++;
       _lastProcessMicros = stopwatch.elapsedMicroseconds;
-      if (kDebugMode) {
+      if (kDebugMode && results.isNotEmpty) {
         debugPrint(
-          'Detected ${ids.length} markers in '
+          'Detected ${results.length} markers in '
           '${stopwatch.elapsedMilliseconds}ms',
         );
       }
       return results;
-    } catch (e, stack) {
-      if (kDebugMode) {
-        debugPrint('ArUco detection error: $e');
-        debugPrint('$stack');
-      }
-      return const [];
     } finally {
-      cornersVec?.dispose();
-      idsVec?.dispose();
-      rejectedVec?.dispose();
       mat.dispose();
     }
+  }
+
+  void _disposeDetectors() {
+    for (final detector in _detectors.values) {
+      detector.dispose();
+    }
+    _detectors.clear();
+    for (final dictionary in _dictionaries.values) {
+      dictionary.dispose();
+    }
+    _dictionaries.clear();
+    _detectorParams?.dispose();
+    _detectorParams = null;
   }
 
   Uint8List _extractGray(CameraImage image) {
@@ -441,11 +484,6 @@ class ArUcoService {
     stopScanning();
     await _controller?.dispose();
     _controller = null;
-    _detector?.dispose();
-    _detector = null;
-    _detectorParams?.dispose();
-    _detectorParams = null;
-    _dictionary?.dispose();
-    _dictionary = null;
+    _disposeDetectors();
   }
 }

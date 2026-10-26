@@ -24,11 +24,11 @@ class CleanOrphanMedia extends Command
 
         $orphans = [];
         foreach (['avatars', 'covers', 'models', 'thumbnails', 'markers', 'hotspots'] as $dir) {
-            if (!$disk->directoryExists($dir)) {
+            if (! $disk->directoryExists($dir)) {
                 continue;
             }
             foreach ($disk->allFiles($dir) as $file) {
-                if (!in_array($file, $referenced, true)) {
+                if (! in_array($file, $referenced, true)) {
                     $orphans[] = $file;
                 }
             }
@@ -36,6 +36,7 @@ class CleanOrphanMedia extends Command
 
         if (empty($orphans)) {
             $this->info('Bersih: tidak ada file yatim.');
+
             return self::SUCCESS;
         }
 
@@ -44,11 +45,12 @@ class CleanOrphanMedia extends Command
             $totalBytes += $disk->size($file);
         }
 
-        if (!$this->option('force')) {
-            $this->warn(count($orphans) . ' file yatim (' . $this->formatBytes($totalBytes) . ') — jalankan dengan --force untuk menghapus:');
+        if (! $this->option('force')) {
+            $this->warn(count($orphans).' file yatim ('.$this->formatBytes($totalBytes).') — jalankan dengan --force untuk menghapus:');
             foreach ($orphans as $file) {
                 $this->line("  - {$file}");
             }
+
             return self::SUCCESS;
         }
 
@@ -59,7 +61,7 @@ class CleanOrphanMedia extends Command
             }
         }
 
-        $this->info("Selesai: {$deleted}/" . count($orphans) . ' file yatim dihapus (' . $this->formatBytes($totalBytes) . ').');
+        $this->info("Selesai: {$deleted}/".count($orphans).' file yatim dihapus ('.$this->formatBytes($totalBytes).').');
 
         return self::SUCCESS;
     }
@@ -99,12 +101,12 @@ class CleanOrphanMedia extends Command
     private function formatBytes(int $bytes): string
     {
         if ($bytes < 1024) {
-            return $bytes . ' B';
+            return $bytes.' B';
         }
         if ($bytes < 1024 * 1024) {
-            return round($bytes / 1024, 1) . ' KB';
+            return round($bytes / 1024, 1).' KB';
         }
 
-        return round($bytes / 1024 / 1024, 2) . ' MB';
+        return round($bytes / 1024 / 1024, 2).' MB';
     }
 }

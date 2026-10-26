@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ArHotspot;
-use App\Models\ArModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -58,7 +57,7 @@ class ArHotspotApiController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'hotspots',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';
@@ -105,7 +104,7 @@ class ArHotspotApiController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'hotspots',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';

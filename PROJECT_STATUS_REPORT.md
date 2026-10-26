@@ -1,5 +1,15 @@
 # AR MOBILE LEARNING — PROJECT STATUS REPORT
 
+> **UPDATE 26 Oktober 2026 — status terkini:** temuan P0/P1 audit 26 Okt sudah
+> ditindaklanjuti di working tree: ArUco multi-dictionary, kolom `TEXT` untuk
+> validasi panjang, release guard `PROD_API_URL`, deploy gate berbasis CI,
+> envelope error API, throttle login admin, ownership Policy, update
+> `league/commonmark`, CORS yang tidak memantulkan origin asing, dan CI
+> Pint/audit/MySQL 8. Backend **180 test** lulus (1 skip), `pint --test`
+> bersih, `flutter analyze` bersih. Akun demo produksi **belum** dibersihkan —
+> jalankan `docs/PRODUCTION_SECURITY.md`. Isi laporan di bawah adalah snapshot
+> historis 5 Oktober 2026 dan tidak lagi menggambarkan status terkini.
+
 > **Terakhir diperbarui:** 5 Oktober 2026
 > **Versi aplikasi:** `1.0.8+9` (`frontend/pubspec.yaml:19`) · tag terbaru `v1.0.8`
 > **Commit terakhir:** `80c8e1a` — 3 Okt 2026

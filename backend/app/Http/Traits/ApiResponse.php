@@ -57,7 +57,7 @@ trait ApiResponse
      */
     protected function requestedPerPage(Request $request): ?int
     {
-        if (!$request->has('per_page')) {
+        if (! $request->has('per_page')) {
             return null;
         }
 

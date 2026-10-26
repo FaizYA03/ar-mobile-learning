@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\AppVersion;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 
 class SystemController extends Controller
 {
     public function settings()
     {
         $settings = AppSetting::orderBy('key')->get();
+
         return view('admin.system.settings', compact('settings'));
     }
 
@@ -25,7 +29,7 @@ class SystemController extends Controller
         ]);
 
         foreach ($validated['settings'] as $item) {
-            if (!empty($item['key'])) {
+            if (! empty($item['key'])) {
                 AppSetting::updateOrCreate(
                     ['key' => $item['key']],
                     [
@@ -36,7 +40,7 @@ class SystemController extends Controller
             }
         }
 
-        \App\Services\ActivityLogger::log('app_settings.updated', 'app_setting', null, 'App settings updated via admin');
+        ActivityLogger::log('app_settings.updated', 'app_setting', null, 'App settings updated via admin');
 
         return redirect()->route('admin.system.settings')->with('success', 'Settings berhasil disimpan.');
     }
@@ -73,7 +77,7 @@ class SystemController extends Controller
         $version = (int) AppSetting::getValue('ui_content_version', 1) + 1;
         AppSetting::setValue('ui_content_version', (string) $version, 'integer');
 
-        \App\Services\ActivityLogger::log('app_content.updated', 'app_setting', null, "Konten aplikasi ({$section}) diperbarui via admin");
+        ActivityLogger::log('app_content.updated', 'app_setting', null, "Konten aplikasi ({$section}) diperbarui via admin");
     }
 
     private function redirectContent(string $section, string $message)
@@ -97,12 +101,12 @@ class SystemController extends Controller
         $currentLogo = AppSetting::getValue('app_logo', '');
         if ($request->hasFile('app_logo')) {
             if ($currentLogo) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($currentLogo);
+                Storage::disk('public')->delete($currentLogo);
             }
             $path = $request->file('app_logo')->store('branding', 'public');
             AppSetting::setValue('app_logo', $path, 'string', 'Path logo aplikasi di storage');
         } elseif ($request->boolean('remove_logo') && $currentLogo) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($currentLogo);
+            Storage::disk('public')->delete($currentLogo);
             AppSetting::setValue('app_logo', '', 'string');
         }
 
@@ -186,7 +190,7 @@ class SystemController extends Controller
         ]);
 
         if (isset($validated['slides'])) {
-            $slides = array_values(array_filter($validated['slides'], fn ($s) => !empty($s['title'])));
+            $slides = array_values(array_filter($validated['slides'], fn ($s) => ! empty($s['title'])));
             AppSetting::setValue('onboarding_slides', array_values($slides), 'json', 'Slide onboarding (judul + deskripsi per slide)');
         }
 
@@ -203,18 +207,19 @@ class SystemController extends Controller
     {
         $cleared = [];
         foreach (['optimize:clear', 'cache:clear'] as $command) {
-            \Illuminate\Support\Facades\Artisan::call($command);
-            $cleared[] = $command . ' → ' . trim(\Illuminate\Support\Facades\Artisan::output());
+            Artisan::call($command);
+            $cleared[] = $command.' → '.trim(Artisan::output());
         }
 
-        \App\Services\ActivityLogger::log('app_cache.cleared', 'app_setting', null, 'Cache aplikasi dibersihkan via admin');
+        ActivityLogger::log('app_cache.cleared', 'app_setting', null, 'Cache aplikasi dibersihkan via admin');
 
-        return redirect()->route('admin.system.settings')->with('success', 'Cache dibersihkan: ' . implode(' | ', $cleared));
+        return redirect()->route('admin.system.settings')->with('success', 'Cache dibersihkan: '.implode(' | ', $cleared));
     }
 
     public function versions()
     {
         $versions = AppVersion::orderByDesc('created_at')->get();
+
         return view('admin.system.versions', compact('versions'));
     }
 
@@ -234,7 +239,7 @@ class SystemController extends Controller
 
         $appVersion = AppVersion::create($validated);
 
-        \App\Services\ActivityLogger::created('app_version', $appVersion->id, "App version {$validated['version']} ({$validated['platform']}) created via admin");
+        ActivityLogger::created('app_version', $appVersion->id, "App version {$validated['version']} ({$validated['platform']}) created via admin");
 
         return redirect()->route('admin.system.versions')->with('success', 'App version berhasil ditambahkan.');
     }
@@ -253,14 +258,14 @@ class SystemController extends Controller
 
         $appVersion->update($validated);
 
-        \App\Services\ActivityLogger::updated('app_version', $appVersion->id, "App version {$appVersion->version} updated via admin");
+        ActivityLogger::updated('app_version', $appVersion->id, "App version {$appVersion->version} updated via admin");
 
         return redirect()->route('admin.system.versions')->with('success', 'App version berhasil diperbarui.');
     }
 
     public function destroyVersion(AppVersion $appVersion)
     {
-        \App\Services\ActivityLogger::deleted('app_version', $appVersion->id, "App version {$appVersion->version} deleted via admin");
+        ActivityLogger::deleted('app_version', $appVersion->id, "App version {$appVersion->version} deleted via admin");
         $appVersion->delete();
 
         return redirect()->route('admin.system.versions')->with('success', 'App version berhasil dihapus.');

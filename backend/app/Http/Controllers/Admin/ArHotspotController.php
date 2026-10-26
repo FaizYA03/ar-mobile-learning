@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ArHotspot;
 use App\Models\ArModel;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -20,12 +21,14 @@ class ArHotspotController extends Controller
         }
 
         $hotspots = $query->orderByDesc('created_at')->paginate(15)->withQueryString();
+
         return view('admin.ar.hotspots', compact('hotspots'));
     }
 
     public function create()
     {
         $models = ArModel::orderBy('model_name')->get();
+
         return view('admin.ar.create-hotspot', compact('models'));
     }
 
@@ -45,7 +48,7 @@ class ArHotspotController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'hotspots',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';
@@ -55,7 +58,7 @@ class ArHotspotController extends Controller
 
         $hotspot = ArHotspot::create($validated);
 
-        \App\Services\ActivityLogger::created('ar_hotspot', $hotspot->id, "AR hotspot '{$hotspot->title}' created via admin");
+        ActivityLogger::created('ar_hotspot', $hotspot->id, "AR hotspot '{$hotspot->title}' created via admin");
 
         return redirect()->route('admin.ar.hotspots.index')->with('success', 'AR hotspot berhasil ditambahkan.');
     }
@@ -63,6 +66,7 @@ class ArHotspotController extends Controller
     public function edit(ArHotspot $hotspot)
     {
         $models = ArModel::orderBy('model_name')->get();
+
         return view('admin.ar.edit-hotspot', ['hotspot' => $hotspot, 'models' => $models]);
     }
 
@@ -85,7 +89,7 @@ class ArHotspotController extends Controller
             $imageFile = $request->file('image_path');
             $stored = $imageFile->storeAs(
                 'hotspots',
-                Str::uuid() . '.' . $imageFile->getClientOriginalExtension(),
+                Str::uuid().'.'.$imageFile->getClientOriginalExtension(),
                 'public'
             );
             $validated['image_path'] = $stored ? $stored : '';
@@ -93,7 +97,7 @@ class ArHotspotController extends Controller
 
         $hotspot->update($validated);
 
-        \App\Services\ActivityLogger::updated('ar_hotspot', $hotspot->id, "AR hotspot '{$hotspot->title}' updated via admin");
+        ActivityLogger::updated('ar_hotspot', $hotspot->id, "AR hotspot '{$hotspot->title}' updated via admin");
 
         return redirect()->route('admin.ar.hotspots.index')->with('success', 'AR hotspot berhasil diperbarui.');
     }
@@ -104,7 +108,7 @@ class ArHotspotController extends Controller
             Storage::disk('public')->delete($hotspot->image_path);
         }
 
-        \App\Services\ActivityLogger::deleted('ar_hotspot', $hotspot->id, "AR hotspot '{$hotspot->title}' deleted via admin");
+        ActivityLogger::deleted('ar_hotspot', $hotspot->id, "AR hotspot '{$hotspot->title}' deleted via admin");
 
         $hotspot->delete();
 

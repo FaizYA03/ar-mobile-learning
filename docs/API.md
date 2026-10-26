@@ -640,7 +640,7 @@ Aplikasi: fetch saat cold start (cache `SharedPreferences`, fallback default bil
 ```json
 {
   "success": false,
-  "message": "Unauthenticated"
+  "message": "Unauthenticated."
 }
 ```
 
@@ -648,7 +648,7 @@ Aplikasi: fetch saat cold start (cache `SharedPreferences`, fallback default bil
 ```json
 {
   "success": false,
-  "message": "Unauthorized"
+  "message": "Unauthorized. Anda tidak memiliki akses."
 }
 ```
 
@@ -656,6 +656,11 @@ Aplikasi: fetch saat cold start (cache `SharedPreferences`, fallback default bil
 ```json
 {
   "success": false,
-  "message": "Not found"
+  "message": "Data tidak ditemukan."
 }
 ```
+
+Endpoint yang tidak ada memakai `"Endpoint tidak ditemukan."`. Semua error API
+memakai envelope `success: false` + `message`; error 429 menambahkan pesan
+`"Terlalu banyak permintaan. Coba lagi nanti."` dan error 500 memakai
+`"Server Error"` saat `APP_DEBUG=false`.

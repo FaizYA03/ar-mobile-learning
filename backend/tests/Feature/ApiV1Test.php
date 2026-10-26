@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\ArModel;
-use App\Models\ArMarker;
-use App\Models\ArHotspot;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;

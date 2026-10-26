@@ -10,7 +10,6 @@ use App\Models\Materi;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -27,12 +26,13 @@ class MateriController extends Controller
             $query->where('tp_atp_id', $request->query('tp_atp_id'));
         }
 
-        if (!$request->user() || $request->user()->role === 'siswa') {
+        if (! $request->user() || $request->user()->role === 'siswa') {
             $query->where('is_published', true);
         }
 
         if ($perPage = $this->requestedPerPage($request)) {
             $paginator = $query->paginate($perPage);
+
             return $this->paginatedResources(
                 $paginator,
                 MateriResource::collection($paginator->items()),
@@ -51,6 +51,8 @@ class MateriController extends Controller
 
     public function show(Request $request, Materi $materi): JsonResponse
     {
+        $this->authorize('view', $materi);
+
         $materi->load([
             'tpAtp',
             'arModel.hotspots',
@@ -66,8 +68,11 @@ class MateriController extends Controller
 
     public function store(MateriStoreRequest $request): JsonResponse
     {
+        $this->authorize('create', Materi::class);
+
         $validated = $request->validated();
-        $validated['slug'] = Str::slug($validated['judul']) . '-' . Str::random(5);
+        $validated['created_by'] = $request->user()->id;
+        $validated['slug'] = Str::slug($validated['judul']).'-'.Str::random(5);
 
         if ($request->hasFile('gambar_cover')) {
             $path = $request->file('gambar_cover')->store('covers', 'public');
@@ -76,7 +81,7 @@ class MateriController extends Controller
             $validated['gambar_cover'] = $request->input('gambar_cover');
         }
 
-        if (!isset($validated['order'])) {
+        if (! isset($validated['order'])) {
             $maxOrder = Materi::where('tp_atp_id', $validated['tp_atp_id'])->max('order') ?? 0;
             $validated['order'] = $maxOrder + 1;
         }
@@ -95,10 +100,12 @@ class MateriController extends Controller
 
     public function update(MateriUpdateRequest $request, Materi $materi): JsonResponse
     {
+        $this->authorize('update', $materi);
+
         $validated = $request->validated();
 
         if (isset($validated['judul'])) {
-            $validated['slug'] = Str::slug($validated['judul']) . '-' . Str::random(5);
+            $validated['slug'] = Str::slug($validated['judul']).'-'.Str::random(5);
         }
 
         if ($request->hasFile('gambar_cover')) {
@@ -125,6 +132,8 @@ class MateriController extends Controller
 
     public function destroy(Materi $materi): JsonResponse
     {
+        $this->authorize('delete', $materi);
+
         if ($materi->gambar_cover && Storage::disk('public')->exists($materi->gambar_cover)) {
             Storage::disk('public')->delete($materi->gambar_cover);
         }

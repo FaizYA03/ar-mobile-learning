@@ -39,7 +39,7 @@ class ArMarker3dMapping extends Model
     public static function syncPivot(int $markerId, int $modelId): void
     {
         $marker = ArMarker::find($markerId);
-        if (!$marker) {
+        if (! $marker) {
             return;
         }
 

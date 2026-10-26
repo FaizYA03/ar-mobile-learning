@@ -1,23 +1,25 @@
 <?php
 
-use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\TpAtpController;
-use App\Http\Controllers\Admin\MateriController;
-use App\Http\Controllers\Admin\QuizController;
-use App\Http\Controllers\Admin\QuizAttemptController;
-use App\Http\Controllers\Admin\ArModelController;
-use App\Http\Controllers\Admin\ArMarkerController;
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\ArHotspotApiController;
 use App\Http\Controllers\Admin\ArHotspotController;
 use App\Http\Controllers\Admin\ArMappingController;
-use App\Http\Controllers\Admin\ArHotspotApiController;
-use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\ArMarkerController;
+use App\Http\Controllers\Admin\ArModelController;
+use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MateriController;
+use App\Http\Controllers\Admin\QuizAttemptController;
+use App\Http\Controllers\Admin\QuizController;
 use App\Http\Controllers\Admin\SystemController;
+use App\Http\Controllers\Admin\TpAtpController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('admin.login');
-Route::post('/login', [AuthController::class, 'login'])->name('admin.login.post');
+Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:10,1')
+    ->name('admin.login.post');
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

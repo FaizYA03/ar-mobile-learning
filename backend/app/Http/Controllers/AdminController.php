@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Traits\ApiResponse;
-use App\Models\User;
 use App\Models\QuizAttempt;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -84,7 +84,7 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'sometimes|string|email|max:255|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:6',
             'role' => 'sometimes|in:admin,guru,siswa',
         ]);
@@ -122,7 +122,7 @@ class AdminController extends Controller
     {
         ActivityLogger::deleted('user', $user->id, "User '{$user->name}' deleted");
         if ($user->avatar) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            Storage::disk('public')->delete($user->avatar);
         }
         $user->delete();
 

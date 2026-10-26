@@ -209,7 +209,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
     ModelAnchor? newAnchor;
 
     if (arActive && markers.isNotEmpty) {
-      previewCorners = _mapPreviewCorners(markers.first.corners);
+      previewCorners = _mapPreviewCorners(_activeMarkerFor(markers).corners);
       if (previewCorners != null && previewCorners.isNotEmpty) {
         final raw = previewCorners.map((p) => [p.dx, p.dy]).toList();
         final footprint = ArCameraProjector.computeMarkerFootprint(raw);
@@ -247,6 +247,29 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
         }
       }
     });
+  }
+
+  /// Pilih hasil deteksi yang cocok dengan model yang sedang ditampilkan.
+  /// Jika belum ada hasil resolve, pakai marker pertama.
+  ArUcoResult _activeMarkerFor(List<ArUcoResult> markers) {
+    final resolved = _arResolve?.marker;
+    if (resolved?.arUcoId != null) {
+      for (final marker in markers) {
+        if (marker.markerId == resolved!.arUcoId &&
+            (resolved.arucoDictionary == null ||
+                marker.arucoDictionary == resolved.arucoDictionary)) {
+          return marker;
+        }
+      }
+    }
+    return markers.first;
+  }
+
+  ArUcoResult? _findDetectedMarker(String markerId) {
+    for (final marker in _detectedMarkers) {
+      if (marker.markerId.toString() == markerId) return marker;
+    }
+    return _detectedMarkers.length == 1 ? _detectedMarkers.first : null;
   }
 
   /// Ruang gambar ternormalisasi (0..1) untuk overlay, atau null bila
@@ -324,8 +347,7 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
 
     ArDebugLog.log('Resolving marker: $markerId');
 
-    final detectedMarker =
-        _detectedMarkers.isNotEmpty ? _detectedMarkers.first : null;
+    final detectedMarker = _findDetectedMarker(markerId);
 
     ArResolveResult? resolveResult;
 
@@ -345,16 +367,24 @@ class _ArUcoScannerScreenState extends State<ArUcoScannerScreen>
       }
 
       if (arUcoId != null) {
-        final cachedItem = ArContentResolver.resolveByArucoId(arUcoId);
+        final cachedItem = ArContentResolver.resolveByArucoId(
+          arUcoId,
+          dictionary: detectedMarker?.arucoDictionary,
+        );
         if (cachedItem != null) {
+          final cachedMarker = cachedItem.markers.firstWhere(
+            (m) =>
+                m.arUcoId == arUcoId &&
+                (detectedMarker == null ||
+                    m.arucoDictionary == detectedMarker.arucoDictionary),
+            orElse: () => cachedItem.markers.first,
+          );
           resolveResult = ArResolveResult(
             marker: ArResolveMarker(
-              id: cachedItem.markers.isNotEmpty
-                  ? cachedItem.markers.first.id
-                  : 0,
-              markerId: cachedItem.markers.isNotEmpty
-                  ? cachedItem.markers.first.markerId
-                  : '',
+              id: cachedMarker.id,
+              markerId: cachedMarker.markerId,
+              arUcoId: cachedMarker.arUcoId,
+              arucoDictionary: cachedMarker.arucoDictionary,
               markerType: 'pattern',
               status: 'active',
             ),

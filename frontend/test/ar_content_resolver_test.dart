@@ -32,6 +32,55 @@ void main() {
       expect(ArContentResolver.resolveByArucoId(0), isNull);
     });
 
+    test('resolveByArucoId filters by dictionary when IDs collide', () {
+      ArContentResolver.setContentForTest([
+        ArContentItem(
+          id: 1,
+          modelName: 'CPU 4x4',
+          version: 1,
+          isActive: true,
+          markers: [
+            ArMarkerData(
+              id: 10,
+              markerId: 'MARKER-4X4',
+              markerType: 'pattern',
+              status: 'active',
+              arUcoId: 1,
+              arucoDictionary: 'DICT_4X4_50',
+            ),
+          ],
+          hotspots: [],
+        ),
+        ArContentItem(
+          id: 2,
+          modelName: 'CPU 5x5',
+          version: 1,
+          isActive: true,
+          markers: [
+            ArMarkerData(
+              id: 11,
+              markerId: 'MARKER-5X5',
+              markerType: 'pattern',
+              status: 'active',
+              arUcoId: 1,
+              arucoDictionary: 'DICT_5X5_100',
+            ),
+          ],
+          hotspots: [],
+        ),
+      ]);
+
+      expect(
+        ArContentResolver.resolveByArucoId(1, dictionary: 'DICT_4X4_50')?.id,
+        1,
+      );
+      expect(
+        ArContentResolver.resolveByArucoId(1, dictionary: 'DICT_5X5_100')?.id,
+        2,
+      );
+      expect(ArContentResolver.resolveByArucoId(1)?.id, 1);
+    });
+
     test('resolveHotspots returns empty list when content not loaded', () {
       expect(ArContentResolver.resolveHotspots(1), isEmpty);
     });

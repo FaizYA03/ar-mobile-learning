@@ -36,7 +36,7 @@ class QuestionStoreRequest extends FormRequest
 
                 $options = $this->input('options');
 
-                if (!is_array($options)) {
+                if (! is_array($options)) {
                     return;
                 }
 

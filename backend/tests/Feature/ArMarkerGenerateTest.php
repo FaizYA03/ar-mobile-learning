@@ -69,7 +69,7 @@ class ArMarkerGenerateTest extends TestCase
 
     public function test_generate_creates_marker_when_opencv_available(): void
     {
-        if (!ArMarkerGenerator::isAvailable()) {
+        if (! ArMarkerGenerator::isAvailable()) {
             $this->markTestSkipped('OpenCV (cv2.aruco) tidak tersedia di environment ini.');
         }
 

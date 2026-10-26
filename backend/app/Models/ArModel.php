@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ArModel extends Model
 {
@@ -14,6 +15,7 @@ class ArModel extends Model
     protected $table = 'ar_models';
 
     protected $fillable = [
+        'created_by',
         'model_name',
         'glb_path',
         'thumbnail_path',
@@ -27,6 +29,11 @@ class ArModel extends Model
         'is_active' => 'boolean',
         'version' => 'integer',
     ];
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function hotspots(): HasMany
     {

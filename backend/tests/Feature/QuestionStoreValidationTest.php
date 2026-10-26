@@ -39,7 +39,7 @@ class QuestionStoreValidationTest extends TestCase
 
         foreach ($flags as $index => $isCorrect) {
             $options[] = [
-                'text' => 'Opsi ' . ($index + 1),
+                'text' => 'Opsi '.($index + 1),
                 'is_correct' => $isCorrect,
             ];
         }
@@ -95,6 +95,34 @@ class QuestionStoreValidationTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('options', $response->json('errors'));
+    }
+
+    public function test_question_and_option_can_store_at_validation_limits(): void
+    {
+        Sanctum::actingAs($this->guru());
+
+        $questionText = str_repeat('S', 1000);
+        $optionText = str_repeat('O', 500);
+
+        $response = $this->postJson(
+            "/api/guru/quizzes/{$this->quiz()->id}/questions",
+            [
+                'text' => $questionText,
+                'options' => [
+                    ['text' => $optionText, 'is_correct' => true],
+                    ['text' => 'Opsi pendek', 'is_correct' => false],
+                ],
+            ]
+        );
+
+        $response->assertStatus(201);
+
+        $question = Question::latest('id')->first();
+        $this->assertSame($questionText, $question->text);
+        $this->assertSame(
+            $optionText,
+            $question->options()->where('is_correct', true)->first()->text
+        );
     }
 
     public function test_question_with_more_than_ten_options_is_rejected(): void

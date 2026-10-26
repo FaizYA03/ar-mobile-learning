@@ -27,6 +27,7 @@ class QuestionResource extends JsonResource
                     if ($isAdmin) {
                         $data['is_correct'] = $option->is_correct;
                     }
+
                     return $data;
                 });
             }),

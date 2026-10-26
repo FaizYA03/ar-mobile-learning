@@ -1,6 +1,8 @@
 name: Deploy Backend
 
-# Jalan otomatis tiap push ke main yang menyentuh backend/.
+# Jalan otomatis tiap push ke main yang menyentuh backend/landing.
+# Deploy menunggu workflow CI untuk commit yang sama selesai dengan status
+# success, sehingga kode yang gagal test tidak pernah sampai ke produksi.
 # Butuh Secrets (repo Settings → Secrets → Actions):
 #   VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_PATH
 on:
@@ -11,9 +13,47 @@ on:
       - "landing/**"
       - ".github/workflows/deploy-backend.yml"
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
+  wait-for-ci:
+    name: Wait for CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait until CI completes for this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 60); do
+            run=$(gh api \
+              "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${SHA}&event=push&per_page=1")
+            status=$(echo "$run" | jq -r '.workflow_runs[0].status // "missing"')
+            conclusion=$(echo "$run" | jq -r '.workflow_runs[0].conclusion // "null"')
+
+            if [ "$status" = "completed" ]; then
+              if [ "$conclusion" = "success" ]; then
+                echo "CI success for ${SHA}"
+                exit 0
+              fi
+              echo "::error::CI selesai dengan status '${conclusion}'. Deploy dibatalkan."
+              exit 1
+            fi
+
+            echo "CI status: ${status} (percobaan ${attempt}/60)"
+            sleep 15
+          done
+
+          echo "::error::Timeout menunggu CI untuk ${SHA}."
+          exit 1
+
   deploy:
     name: Deploy via SSH
+    needs: wait-for-ci
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to VPS
@@ -25,7 +65,8 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.VPS_PATH }}
-            git pull origin main
+            git fetch origin main
+            git checkout -f "${{ github.sha }}"
             cd backend
             composer install --no-dev --optimize-autoloader --no-interaction
             php artisan migrate --force
@@ -34,4 +75,4 @@ jobs:
             php artisan route:cache
             php artisan view:cache
             php artisan queue:restart || true
-            echo "Deploy OK: $(date -u)"
+            echo "Deploy OK: $(date -u) (${GITHUB_SHA:-${{ github.sha }}})"

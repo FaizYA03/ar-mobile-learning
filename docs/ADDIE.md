@@ -1,5 +1,10 @@
 # Draf Bab 3 — Metode Penelitian (R&D + ADDIE)
 
+> **UPDATE 26 Oktober 2026:** angka test di dokumen ini adalah snapshot 5 Oktober
+> 2026 (148 backend / 131 frontend). Kondisi working tree sekarang: **180 test
+> backend** lulus (1 skip), `pint --test` bersih, `flutter analyze` bersih.
+> Perbarui tabel §3.5.c dan §3.9 dengan hasil CI terbaru sebelum dikutip.
+
 > **Status:** draf kerangka + isi berbasis bukti nyata pada repo (commit `74573d5`, rilis `v1.0.7`).
 >
 > **Cara pakai:** bagian yang sudah terisi bersumber dari kode dan dokumen proyek, sehingga dapat

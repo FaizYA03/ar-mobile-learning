@@ -43,7 +43,7 @@ class TpAtpTest extends TestCase
         $tpAtp = TpAtp::first();
         Sanctum::actingAs($user);
 
-        $response = $this->getJson('/api/tp-atp/' . $tpAtp->id);
+        $response = $this->getJson('/api/tp-atp/'.$tpAtp->id);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -76,7 +76,7 @@ class TpAtpTest extends TestCase
 
         $createdId = $createResponse->json('data.id');
 
-        $updateResponse = $this->putJson('/api/guru/tp-atp/' . $createdId, [
+        $updateResponse = $this->putJson('/api/guru/tp-atp/'.$createdId, [
             'judul' => 'Judul Test TP Updated',
         ]);
 
@@ -88,7 +88,7 @@ class TpAtpTest extends TestCase
                 ],
             ]);
 
-        $deleteResponse = $this->deleteJson('/api/guru/tp-atp/' . $createdId);
+        $deleteResponse = $this->deleteJson('/api/guru/tp-atp/'.$createdId);
         $deleteResponse->assertStatus(200);
     }
 

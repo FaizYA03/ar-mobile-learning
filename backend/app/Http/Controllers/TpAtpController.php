@@ -6,7 +6,6 @@ use App\Http\Traits\ApiResponse;
 use App\Models\TpAtp;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class TpAtpController extends Controller
 {
@@ -16,7 +15,7 @@ class TpAtpController extends Controller
     {
         $query = TpAtp::withCount('materi')->orderBy('order', 'asc');
 
-        if (!$request->user() || $request->user()->role === 'siswa') {
+        if (! $request->user() || $request->user()->role === 'siswa') {
             $query->where('is_active', true);
         }
 
@@ -37,8 +36,10 @@ class TpAtpController extends Controller
 
     public function show(Request $request, TpAtp $tpAtp)
     {
+        $this->authorize('view', $tpAtp);
+
         $tpAtp->load(['materi' => function ($q) use ($request) {
-            if (!$request->user() || $request->user()->role === 'siswa') {
+            if (! $request->user() || $request->user()->role === 'siswa') {
                 $q->where('is_published', true);
             }
             $q->orderBy('order', 'asc');
@@ -52,6 +53,8 @@ class TpAtpController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', TpAtp::class);
+
         $validated = $request->validate([
             'kode' => 'required|string|max:50|unique:tp_atp,kode',
             'fase' => 'required|string|max:10',
@@ -62,10 +65,11 @@ class TpAtpController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        if (!isset($validated['order'])) {
+        if (! isset($validated['order'])) {
             $validated['order'] = (TpAtp::max('order') ?? 0) + 1;
         }
 
+        $validated['created_by'] = $request->user()->id;
         $tpAtp = TpAtp::create($validated);
 
         ActivityLogger::created('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' created");
@@ -79,8 +83,10 @@ class TpAtpController extends Controller
 
     public function update(Request $request, TpAtp $tpAtp)
     {
+        $this->authorize('update', $tpAtp);
+
         $validated = $request->validate([
-            'kode' => 'sometimes|string|max:50|unique:tp_atp,kode,' . $tpAtp->id,
+            'kode' => 'sometimes|string|max:50|unique:tp_atp,kode,'.$tpAtp->id,
             'fase' => 'sometimes|string|max:10',
             'elemen' => 'sometimes|string|max:100',
             'judul' => 'sometimes|string|max:255',
@@ -102,6 +108,8 @@ class TpAtpController extends Controller
 
     public function destroy(TpAtp $tpAtp)
     {
+        $this->authorize('delete', $tpAtp);
+
         ActivityLogger::deleted('tp_atp', $tpAtp->id, "TP/ATP '{$tpAtp->judul}' deleted");
         $tpAtp->delete();
 

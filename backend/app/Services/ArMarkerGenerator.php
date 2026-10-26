@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ArMarker;
-
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -33,7 +32,7 @@ class ArMarkerGenerator
         $process->setTimeout(15);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             return false;
         }
 
@@ -46,7 +45,7 @@ class ArMarkerGenerator
 
     public static function maxId(string $dictionary): int
     {
-        if (!isset(self::DICTIONARIES[$dictionary])) {
+        if (! isset(self::DICTIONARIES[$dictionary])) {
             throw new RuntimeException("Dictionary {$dictionary} tidak didukung.");
         }
 
@@ -70,7 +69,7 @@ class ArMarkerGenerator
         if ($dictionary === null || $id === null) {
             return 'Dictionary dan ID ArUco harus diisi bersamaan.';
         }
-        if (!isset(self::DICTIONARIES[$dictionary])) {
+        if (! isset(self::DICTIONARIES[$dictionary])) {
             return "Dictionary {$dictionary} tidak didukung.";
         }
         $max = self::DICTIONARIES[$dictionary] - 1;
@@ -107,11 +106,11 @@ class ArMarkerGenerator
             throw new RuntimeException("ID {$markerId} di luar rentang 0–{$max} untuk {$dictionary}.");
         }
 
-        if (!self::isAvailable()) {
+        if (! self::isAvailable()) {
             throw new RuntimeException('Generator tidak tersedia: instal opencv-python-headless + numpy di server (lihat docs/DEPLOY.md).');
         }
 
-        $tmp = sys_get_temp_dir() . '/aruco-' . Str::uuid() . '.png';
+        $tmp = sys_get_temp_dir().'/aruco-'.Str::uuid().'.png';
         $process = new Process([
             'python3',
             base_path('scripts/generate_aruco.py'),
@@ -123,9 +122,9 @@ class ArMarkerGenerator
         $process->setTimeout(60);
         $process->run();
 
-        if (!$process->isSuccessful() || !is_file($tmp)) {
+        if (! $process->isSuccessful() || ! is_file($tmp)) {
             @unlink($tmp);
-            throw new RuntimeException('Gagal generate marker: ' . trim($process->getErrorOutput() ?: $process->getOutput()));
+            throw new RuntimeException('Gagal generate marker: '.trim($process->getErrorOutput() ?: $process->getOutput()));
         }
 
         // Pastikan benar PNG sebelum disimpan permanen.

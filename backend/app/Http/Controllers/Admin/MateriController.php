@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Materi;
 use App\Models\TpAtp;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -19,7 +20,7 @@ class MateriController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('judul', 'like', "%{$search}%")
-                  ->orWhere('ringkasan', 'like', "%{$search}%");
+                    ->orWhere('ringkasan', 'like', "%{$search}%");
             });
         }
 
@@ -36,6 +37,7 @@ class MateriController extends Controller
     public function create()
     {
         $tpAtps = TpAtp::orderBy('order')->get();
+
         return view('admin.materi.create', compact('tpAtps'));
     }
 
@@ -51,7 +53,7 @@ class MateriController extends Controller
             'gambar_cover' => 'nullable|image|max:5120',
         ]);
 
-        $validated['slug'] = Str::slug($validated['judul']) . '-' . Str::random(5);
+        $validated['slug'] = Str::slug($validated['judul']).'-'.Str::random(5);
         $validated['order'] = Materi::where('tp_atp_id', $validated['tp_atp_id'])->max('order') + 1 ?? 1;
         $validated['is_published'] = $validated['is_published'] ?? true;
 
@@ -61,7 +63,7 @@ class MateriController extends Controller
 
         $materi = Materi::create($validated);
 
-        \App\Services\ActivityLogger::created('materi', $materi->id, "Materi '{$validated['judul']}' created via admin");
+        ActivityLogger::created('materi', $materi->id, "Materi '{$validated['judul']}' created via admin");
 
         return redirect()->route('admin.materi.index')->with('success', 'Materi berhasil ditambahkan.');
     }
@@ -69,6 +71,7 @@ class MateriController extends Controller
     public function edit(Materi $materi)
     {
         $tpAtps = TpAtp::orderBy('order')->get();
+
         return view('admin.materi.edit', compact('materi', 'tpAtps'));
     }
 
@@ -85,7 +88,7 @@ class MateriController extends Controller
         ]);
 
         if (isset($validated['judul'])) {
-            $validated['slug'] = Str::slug($validated['judul']) . '-' . Str::random(5);
+            $validated['slug'] = Str::slug($validated['judul']).'-'.Str::random(5);
         }
 
         if ($request->hasFile('gambar_cover')) {
@@ -97,7 +100,7 @@ class MateriController extends Controller
 
         $materi->update($validated);
 
-        \App\Services\ActivityLogger::updated('materi', $materi->id, "Materi '{$materi->judul}' updated via admin");
+        ActivityLogger::updated('materi', $materi->id, "Materi '{$materi->judul}' updated via admin");
 
         return redirect()->route('admin.materi.index')->with('success', 'Materi berhasil diperbarui.');
     }
@@ -108,7 +111,7 @@ class MateriController extends Controller
             Storage::disk('public')->delete($materi->gambar_cover);
         }
 
-        \App\Services\ActivityLogger::deleted('materi', $materi->id, "Materi '{$materi->judul}' deleted via admin");
+        ActivityLogger::deleted('materi', $materi->id, "Materi '{$materi->judul}' deleted via admin");
         $materi->delete();
 
         return redirect()->route('admin.materi.index')->with('success', 'Materi berhasil dihapus.');

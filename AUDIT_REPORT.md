@@ -1,5 +1,12 @@
 # AR Mobile Learning — AUDIT REPORT
 
+> **UPDATE 26 Oktober 2026:** audit baru pada `95d7e16` menemukan demo account
+> produksi aktif, ArUco dictionary mismatch, batas validasi vs `varchar(255)`,
+> serta celah CI/deploy. Temuan P0/P1 sudah diperbaiki di working tree
+> (backend 180 test, 1 skip; Pint/analyze bersih). Sisa tindakan produksi ada
+> di `docs/PRODUCTION_SECURITY.md`. Laporan di bawah tetap dipertahankan
+> sebagai snapshot audit 5 Oktober 2026.
+
 > **Audit terakhir:** 5 Oktober 2026 (commit `80c8e1a`, rilis `v1.0.7`)
 > **Metode:** pembacaan kode langsung + uji empiris (backend test dijalankan, `dart format`/`flutter analyze` dijalankan)
 > **Tidak ada file yang diubah tanpa persetujuan pengguna**

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\Quiz;
 use App\Models\User;
@@ -131,6 +130,25 @@ class QuizSecurityTest extends TestCase
             ->assertJsonStructure([
                 'data' => ['attempt_id', 'score', 'correct', 'total', 'passed'],
             ]);
+    }
+
+    public function test_quiz_description_can_store_at_validation_limit(): void
+    {
+        $guru = User::where('role', 'guru')->first();
+        Sanctum::actingAs($guru);
+
+        $description = str_repeat('D', 1000);
+
+        $response = $this->postJson('/api/guru/quizzes', [
+            'title' => 'Quiz Deskripsi Panjang',
+            'description' => $description,
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertSame(
+            $description,
+            Quiz::find($response->json('data.id'))->description
+        );
     }
 
     public function test_create_quiz_fails_without_title(): void

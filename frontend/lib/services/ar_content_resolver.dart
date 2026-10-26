@@ -64,11 +64,15 @@ class ArContentResolver {
     }
   }
 
-  static ArContentItem? resolveByArucoId(int arUcoId) {
+  static ArContentItem? resolveByArucoId(int arUcoId, {String? dictionary}) {
     if (_cachedContent == null) return null;
     try {
       return _cachedContent!.firstWhere(
-        (item) => item.markers.any((m) => m.arUcoId == arUcoId),
+        (item) => item.markers.any(
+          (m) =>
+              m.arUcoId == arUcoId &&
+              (dictionary == null || m.arucoDictionary == dictionary),
+        ),
       );
     } catch (_) {
       return null;

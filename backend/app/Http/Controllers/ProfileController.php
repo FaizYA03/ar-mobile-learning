@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateProfileRequest;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -45,7 +46,7 @@ class ProfileController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        if (!Hash::check($validated['current_password'], $user->password)) {
+        if (! Hash::check($validated['current_password'], $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => ['Password saat ini salah.'],
             ]);
@@ -79,7 +80,7 @@ class ProfileController extends Controller
             Storage::disk('public')->delete($user->avatar);
         }
 
-        /** @var \Illuminate\Http\UploadedFile $file */
+        /** @var UploadedFile $file */
         $file = $validated['avatar'];
         $user->avatar = $file->store('avatars', 'public');
         $user->save();

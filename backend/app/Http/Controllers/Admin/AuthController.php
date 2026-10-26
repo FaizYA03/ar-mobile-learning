@@ -13,6 +13,7 @@ class AuthController extends Controller
         if (Auth::check() && Auth::user()->role === 'admin') {
             return redirect()->route('admin.dashboard');
         }
+
         return view('auth.login');
     }
 
@@ -23,17 +24,19 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
             return back()->withErrors(['email' => 'Email atau password salah.'])->onlyInput('email');
         }
 
         $user = Auth::user();
         if ($user->role !== 'admin') {
             Auth::logout();
+
             return back()->withErrors(['email' => 'Anda tidak memiliki akses admin.'])->onlyInput('email');
         }
 
         $request->session()->regenerate();
+
         return redirect()->intended(route('admin.dashboard'));
     }
 
@@ -42,6 +45,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('admin.login');
     }
 }

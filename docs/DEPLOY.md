@@ -67,8 +67,14 @@ Tanpa ini, halaman Generate Marker menampilkan peringatan dan menolak generate
 (test otomatis skip bila OpenCV tidak ada).
 
 Deploy pertama (manual, sekali saja): copy `.env`, `composer install --no-dev`,
-`php artisan key:generate`, `migrate --seed`, `storage:link`,
+`php artisan key:generate`, `migrate --force`, `storage:link`,
 `config:cache route:cache view:cache`. Setelah itu otomatis via workflow.
+
+> **JANGAN jalankan `migrate --seed` di produksi.** Seeder membuat akun demo
+> (`admin@demo.com`, `guru@demo.com`, `siswa@demo.com`, `siswa2@demo.com`)
+> dengan password yang diketahui publik. Workflow deploy sudah memakai
+> `migrate --force`; lihat `docs/PRODUCTION_SECURITY.md` untuk membersihkan
+> akun demo yang terlanjur ada.
 
 ## 2. GitHub Secrets (repo Settings → Secrets → Actions)
 

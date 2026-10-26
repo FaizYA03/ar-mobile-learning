@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,6 +15,7 @@ class ArMarker extends Model
     protected $table = 'ar_markers';
 
     protected $fillable = [
+        'created_by',
         'marker_id',
         'ar_uco_id',
         'aruco_dictionary',
@@ -21,6 +23,11 @@ class ArMarker extends Model
         'image_path',
         'status',
     ];
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function models(): BelongsToMany
     {

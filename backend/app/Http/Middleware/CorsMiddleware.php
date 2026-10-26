@@ -10,7 +10,7 @@ class CorsMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $allowedOrigins = array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', '*')));
+        $allowedOrigins = config('cors.allowed_origins', ['*']);
         $isWildcard = in_array('*', $allowedOrigins, true);
         $origin = $request->headers->get('Origin');
 
@@ -26,13 +26,12 @@ class CorsMiddleware
             $response->headers->set('Access-Control-Allow-Origin', '*');
             $response->headers->remove('Access-Control-Allow-Credentials');
         } else {
-            $allowedOrigin = ($origin && in_array($origin, $allowedOrigins, true))
-                ? $origin
-                : ($allowedOrigins[0] ?? '');
-            if ($allowedOrigin !== '') {
-                $response->headers->set('Access-Control-Allow-Origin', $allowedOrigin);
+            // Vary harus selalu ada agar cache tidak menyajikan respons origin lain.
+            $response->headers->set('Vary', 'Origin', false);
+
+            if ($origin && in_array($origin, $allowedOrigins, true)) {
+                $response->headers->set('Access-Control-Allow-Origin', $origin);
                 $response->headers->set('Access-Control-Allow-Credentials', 'true');
-                $response->headers->set('Vary', 'Origin');
             }
         }
 

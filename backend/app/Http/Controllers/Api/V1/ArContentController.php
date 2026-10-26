@@ -99,7 +99,7 @@ class ArContentController extends Controller
             ])
             ->first();
 
-        if (!$marker) {
+        if (! $marker) {
             return response()->json([
                 'success' => false,
                 'message' => 'Marker tidak ditemukan untuk ArUco dictionary dan ID yang diberikan',
@@ -109,7 +109,7 @@ class ArContentController extends Controller
 
         $model = $marker->models->first();
 
-        if (!$model) {
+        if (! $model) {
             return response()->json([
                 'success' => false,
                 'message' => 'Marker ditemukan tetapi tidak ada model 3D yang terhubung',
@@ -177,7 +177,7 @@ class ArContentController extends Controller
             ])
             ->first();
 
-        if (!$marker) {
+        if (! $marker) {
             return response()->json([
                 'success' => false,
                 'message' => 'Marker tidak ditemukan',
@@ -187,7 +187,7 @@ class ArContentController extends Controller
 
         $model = $marker->models->first();
 
-        if (!$model) {
+        if (! $model) {
             return response()->json([
                 'success' => false,
                 'message' => 'Marker ditemukan tetapi tidak ada model 3D yang terhubung',

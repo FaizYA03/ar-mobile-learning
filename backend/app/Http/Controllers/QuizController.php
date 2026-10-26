@@ -16,7 +16,6 @@ use App\Models\QuizAttempt;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class QuizController extends Controller
 {
@@ -28,6 +27,7 @@ class QuizController extends Controller
 
         if ($perPage = $this->requestedPerPage($request)) {
             $paginator = $query->paginate($perPage);
+
             return $this->paginatedResources(
                 $paginator,
                 QuizResource::collection($paginator->items()),
@@ -62,7 +62,7 @@ class QuizController extends Controller
         $quizQuestionIds = $quiz->questions()->pluck('questions.id')->toArray();
 
         foreach ($validated['answers'] as $answer) {
-            if (!in_array($answer['question_id'], $quizQuestionIds)) {
+            if (! in_array($answer['question_id'], $quizQuestionIds)) {
                 return response()->json([
                     'success' => false,
                     'message' => "Soal #{$answer['question_id']} bukan bagian dari quiz ini.",
@@ -73,7 +73,7 @@ class QuizController extends Controller
                 ->where('question_id', $answer['question_id'])
                 ->exists();
 
-            if (!$optionBelongsToQuestion) {
+            if (! $optionBelongsToQuestion) {
                 return response()->json([
                     'success' => false,
                     'message' => "Jawaban #{$answer['option_id']} tidak valid untuk soal #{$answer['question_id']}.",
@@ -142,6 +142,7 @@ class QuizController extends Controller
 
         if ($perPage = $this->requestedPerPage($request)) {
             $paginator = $query->paginate($perPage);
+
             return $this->paginatedResources(
                 $paginator,
                 QuizResource::collection($paginator->items()),
@@ -160,7 +161,10 @@ class QuizController extends Controller
 
     public function guruStore(QuizStoreRequest $request): JsonResponse
     {
+        $this->authorize('create', Quiz::class);
+
         $validated = $request->validated();
+        $validated['created_by'] = $request->user()->id;
         $quiz = Quiz::create($validated);
 
         ActivityLogger::created('quiz', $quiz->id, "Quiz '{$quiz->title}' created");
@@ -174,6 +178,8 @@ class QuizController extends Controller
 
     public function guruUpdate(QuizUpdateRequest $request, Quiz $quiz): JsonResponse
     {
+        $this->authorize('update', $quiz);
+
         $quiz->update($request->validated());
 
         ActivityLogger::updated('quiz', $quiz->id, "Quiz '{$quiz->title}' updated");
@@ -187,6 +193,8 @@ class QuizController extends Controller
 
     public function guruDestroy(Quiz $quiz): JsonResponse
     {
+        $this->authorize('delete', $quiz);
+
         ActivityLogger::deleted('quiz', $quiz->id, "Quiz '{$quiz->title}' deleted");
         $quiz->delete();
 
@@ -198,6 +206,8 @@ class QuizController extends Controller
 
     public function addQuestion(QuestionStoreRequest $request, Quiz $quiz): JsonResponse
     {
+        $this->authorize('update', $quiz);
+
         $validated = $request->validated();
 
         $maxOrder = $quiz->questions()->max('order') ?? 0;
@@ -231,6 +241,8 @@ class QuizController extends Controller
     public function deleteQuestion(Question $question): JsonResponse
     {
         $quiz = $question->quiz;
+        $this->authorize('update', $quiz);
+
         $question->delete();
 
         ActivityLogger::deleted('quiz_question', $question->id, "Question deleted from quiz '{$quiz->title}'");
@@ -242,7 +254,8 @@ class QuizController extends Controller
     }
 
     public function attempts(Quiz $quiz, Request $request): JsonResponse
-    {        $attempts = QuizAttempt::where('user_id', $request->user()->id)
+    {
+        $attempts = QuizAttempt::where('user_id', $request->user()->id)
             ->where('quiz_id', $quiz->id)
             ->orderBy('created_at', 'desc')
             ->get();

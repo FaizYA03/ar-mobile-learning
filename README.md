@@ -113,15 +113,19 @@ Build debug mengizinkan cleartext lewat `android/app/src/debug/AndroidManifest.x
 - [Frontend Setup](frontend/README.md)
 - [API Reference](docs/API.md)
 - [Deploy](docs/DEPLOY.md)
+- [Production Security](docs/PRODUCTION_SECURITY.md)
 - [Status & Temuan](PROJECT_STATUS_REPORT.md)
 
 ## Testing
 
 ```bash
-# Backend — 148 test (SQLite in-memory, sesuai phpunit.xml)
+# Backend — 180 test (SQLite in-memory, sesuai phpunit.xml)
 cd backend && php artisan test
 
-# Frontend — 131 test
+# Windows: php artisan test tidak mewarisi -d extension=gd
+cd backend && php -d extension=gd vendor/bin/phpunit
+
+# Frontend — jalankan di CI/Android (butuh native dartcv4)
 cd frontend && flutter test
 
 # Static analysis
@@ -130,15 +134,12 @@ cd frontend && dart format --output=none --set-exit-if-changed .
 cd backend  && vendor/bin/pint --test
 ```
 
-> ⚠️ `vendor/bin/pint --test` saat ini **gagal pada 73 file** (utang format bawaan).
-> `pint` belum dijalankan di CI — lihat `AUDIT_REPORT.md` §A-2.
-> `dart format` dan `flutter analyze` **bersih**.
+> `dart format`, `flutter analyze`, dan `pint --test` **bersih**.
+> CI menjalankan Pint, `composer audit`, serta job MySQL 8 terpisah
+> (`backend/phpunit.mysql.xml`), sehingga skema produksi ikut diuji.
 >
 > ⚠️ `flutter test` butuh build native `dartcv4`. Di Windows sering gagal
 > (`gflags`/`glog` tidak terpasang) — jalankan di Android/CI.
->
-> Backend test berjalan di SQLite. Skema produksi (MySQL) bisa berbeda,
-> jadi migrasi baru tetap perlu diverifikasi manual dengan `php artisan migrate` di MySQL.
 
 ## Project Status
 
@@ -153,9 +154,9 @@ cd backend  && vendor/bin/pint --test
 | 9-11. Integration, Dashboard | Done |
 | 12-13. Bug fixes, Code quality | Done |
 | 14. Documentation | Done |
-| 15. Final testing & release | In progress (`v1.0.8`) |
+| 15. Final testing & release | In progress (`v1.0.10`) |
 
-Rilis: `git tag v1.0.9 && git push origin v1.0.9` → workflow `release-apk.yml`
+Rilis: `git tag v1.0.10 && git push origin v1.0.10` → workflow `release-apk.yml`
 build APK signed, mengarsipkan GitHub Release, dan mirror ke server unduhan + `versions.json`.
 
 > ⚠️ **Release butuh secret `PROD_API_URL`.** Kalau kosong, app jatuh ke fallback

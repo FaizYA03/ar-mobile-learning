@@ -12,6 +12,7 @@ class QuestionOptionResource extends JsonResource
     public function revealCorrect(bool $reveal): static
     {
         $this->revealCorrect = $reveal;
+
         return $this;
     }
 
